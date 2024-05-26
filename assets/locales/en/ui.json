@@ -10,7 +10,9 @@
     "setting": "Settings",
     "doc": "Docs",
     "scanner": "Scanners",
-    "archive": "Archive"
+    "archive": "Archive",
+    "loadouts": "Loadouts",
+    "builds": "Builds"
   },
   "social": {
     "paypal": "PayPal",
@@ -41,7 +43,6 @@
     "artsetkey": "Artifact Set",
     "efficiency": "Current RV",
     "mefficiency": "Maximum RV",
-    "probability": "Roll Probability",
     "lastEdit": "Recently Edited"
   },
   "delete": "Delete",
