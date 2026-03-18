@@ -88,6 +88,9 @@
       "@genshin-optimizer/gi/good": ["libs/gi/good/src/index.ts"],
       "@genshin-optimizer/gi/i18n": ["libs/gi/i18n/src/index.ts"],
       "@genshin-optimizer/gi/i18n-node": ["libs/gi/i18n-node/src/index.ts"],
+      "@genshin-optimizer/gi/lapic-adapter": [
+        "libs/gi/lapic-adapter/src/index.ts"
+      ],
       "@genshin-optimizer/gi/keymap": ["libs/gi/keymap/src/index.ts"],
       "@genshin-optimizer/gi/localization": [
         "libs/gi/localization/src/index.ts"
@@ -151,6 +154,9 @@
       "@genshin-optimizer/sr/formula-ui": ["libs/sr/formula-ui/src/index.ts"],
       "@genshin-optimizer/sr/i18n": ["libs/sr/i18n/src/index.ts"],
       "@genshin-optimizer/sr/i18n-node": ["libs/sr/i18n-node/src/index.ts"],
+      "@genshin-optimizer/sr/lapic-adapter": [
+        "libs/sr/lapic-adapter/src/index.ts"
+      ],
       "@genshin-optimizer/sr/page-characters": [
         "libs/sr/page-characters/src/index.tsx"
       ],
@@ -194,6 +200,9 @@
       "@genshin-optimizer/zzz/formula-ui": ["libs/zzz/formula-ui/src/index.ts"],
       "@genshin-optimizer/zzz/i18n": ["libs/zzz/i18n/src/index.ts"],
       "@genshin-optimizer/zzz/i18n-node": ["libs/zzz/i18n-node/src/index.ts"],
+      "@genshin-optimizer/zzz/lapic-adapter": [
+        "libs/zzz/lapic-adapter/src/index.ts"
+      ],
       "@genshin-optimizer/zzz/localization": [
         "libs/zzz/localization/src/index.ts"
       ],

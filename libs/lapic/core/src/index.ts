@@ -29,6 +29,29 @@ export type LapicCapabilityId = string
 export type LapicCounterId = string
 export type LapicMetadataKey = string
 export type LapicDigestSet = readonly LapicDigest[]
+export type LapicPotentialSolveMode =
+  | 'current-only'
+  | 'current-plus-governed-bonus'
+  | 'potential-aware-rerank'
+  | 'full-potential-aware-exact'
+export type LapicPotentialParticipationMode =
+  | 'auxiliary-only'
+  | 'governed-bonus'
+  | 'rerank'
+  | 'full-ranking'
+export type LapicPotentialDescriptorKind =
+  | 'explicit-frontier'
+  | 'exact-combinatorial'
+  | 'certified-upper-envelope'
+  | 'bounded-hybrid'
+export type LapicPotentialExactnessPolicy =
+  | 'exact-only'
+  | 'certified-envelope-allowed'
+export type LapicGraphOutputExactness =
+  | 'exact'
+  | 'upper-envelope'
+  | 'lower-envelope'
+  | 'mixed'
 
 export type LapicDiagnosticSeverity = 'error' | 'warning' | 'info'
 export type LapicErrorCode =
@@ -232,17 +255,51 @@ export interface LapicCanonicalConstraint {
 export interface LapicOrderingPolicy {
   readonly tieBreakDimensions: readonly string[]
   readonly canonicalCandidateOrdering: readonly string[]
+  readonly potentialParticipationMode?: LapicPotentialParticipationMode
+  readonly potentialTieBreakDimensions?: readonly string[]
 }
 
 export interface LapicAuxiliaryOutputDescriptor {
   readonly kind: string
   readonly payloadDigest: LapicDigest
+  readonly participatesInOrdering?: boolean
+}
+
+export interface LapicGraphAuxiliaryOutputDescriptor
+  extends LapicAuxiliaryOutputDescriptor {
+  readonly xAxisKind: string
+  readonly yAxisKind: string
+  readonly graphExactness: LapicGraphOutputExactness
+}
+
+export interface LapicUpgradeFrontierDescriptor {
+  readonly frontierDigest: LapicDigest
+  readonly descriptorKind: LapicPotentialDescriptorKind
+  readonly legalityConstraintDigests: readonly LapicDigest[]
+  readonly orderingRelevant: boolean
+  readonly hiddenStateDigest?: LapicDigest
+}
+
+export interface LapicPotentialSummaryDescriptor {
+  readonly summaryKind: string
+  readonly summaryDigest: LapicDigest
+  readonly orderingRelevant: boolean
+}
+
+export interface LapicPotentialConfiguration {
+  readonly solveMode: LapicPotentialSolveMode
+  readonly participationMode: LapicPotentialParticipationMode
+  readonly exactnessPolicy: LapicPotentialExactnessPolicy
+  readonly upgradeFrontiers: readonly LapicUpgradeFrontierDescriptor[]
+  readonly rankingSummaryKinds: readonly string[]
+  readonly graphOutputKinds: readonly string[]
 }
 
 export interface LapicAdapterMetadata {
   readonly adapterKind: string
   readonly adapterVersion: string
   readonly sourceSnapshotDigests: LapicDigestSet
+  readonly supportedPotentialSolveModes?: readonly LapicPotentialSolveMode[]
   readonly declaredUnsupportedFeatures: readonly string[]
   readonly metadata: Readonly<Record<LapicMetadataKey, string>>
 }
@@ -255,6 +312,8 @@ export interface LapicCandidateDescriptor {
   readonly additiveFeatureDigest: LapicDigest
   readonly discreteCounters: readonly LapicAggregateCountFact[]
   readonly categoricalSignatureDigest: LapicDigest
+  readonly potentialFrontier?: LapicUpgradeFrontierDescriptor
+  readonly potentialSummaries?: readonly LapicPotentialSummaryDescriptor[]
   readonly provenance: LapicSlotCandidateProvenance
 }
 
@@ -285,6 +344,7 @@ export interface LapicCanonicalProblem {
   readonly constraints: readonly LapicCanonicalConstraint[]
   readonly topN: number
   readonly orderingPolicy: LapicOrderingPolicy
+  readonly potentialConfiguration?: LapicPotentialConfiguration
   readonly auxiliaryOutputs: readonly LapicAuxiliaryOutputDescriptor[]
   readonly adapterMetadata: LapicAdapterMetadata
   readonly provenance: LapicTeamProvenance
@@ -301,6 +361,7 @@ export interface LapicProblemNormalizationInput {
   readonly constraints: readonly LapicCanonicalConstraint[]
   readonly topN: number
   readonly orderingPolicy: LapicOrderingPolicy
+  readonly potentialConfiguration?: LapicPotentialConfiguration
   readonly auxiliaryOutputs?: readonly LapicAuxiliaryOutputDescriptor[]
   readonly adapterMetadata: LapicAdapterMetadata
   readonly provenance: LapicTeamProvenance
@@ -325,6 +386,8 @@ export interface LapicSirState {
   readonly exactSignatureGroupKey: LapicExactSignatureGroupKey
   readonly compatibilitySignature: LapicCompatibilitySignature
   readonly dominanceProjection: LapicDominanceProjection
+  readonly potentialOrderingDigest?: LapicDigest
+  readonly potentialSummaryDigests?: readonly LapicDigest[]
   readonly provenance: LapicTeamProvenance
 }
 

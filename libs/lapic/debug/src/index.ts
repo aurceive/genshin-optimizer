@@ -1,12 +1,15 @@
 import type {
   LapicCertificate,
   LapicFinalOptimalitySummary,
+  LapicPotentialDecisionBasis,
   LapicReplayResult,
 } from '@genshin-optimizer/lapic/cert'
 import type {
+  LapicCandidateId,
   LapicCompatibilitySignature,
   LapicDigest,
   LapicExactSignatureGroupKey,
+  LapicPotentialSummaryDescriptor,
   LapicTeamProvenance,
 } from '@genshin-optimizer/lapic/core'
 import type {
@@ -29,22 +32,27 @@ export type LapicDebugSchemaVersion = typeof lapicDebugSchemaVersion
 export interface LapicInspectionRequest {
   readonly artifactRef: LapicArtifactRef
   readonly includePayloadSummary: boolean
+  readonly includePotentialViews?: boolean
 }
 
 export interface LapicArtifactSummary {
   readonly artifactRef: LapicArtifactRef
   readonly envelopeDigest: LapicDigest
+  readonly potentialSummaryDigests?: readonly LapicDigest[]
 }
 
 export interface LapicStateBlockInspectionView {
   readonly blockRef: LapicArtifactRef
   readonly compatibilitySignature?: LapicCompatibilitySignature
   readonly exactSignatureGroupKey?: LapicExactSignatureGroupKey
+  readonly potentialFrontierDigests?: readonly LapicDigest[]
+  readonly potentialSummaries?: readonly LapicPotentialSummaryDescriptor[]
   readonly provenance?: LapicTeamProvenance
 }
 
 export interface LapicCertificateInspectionView {
   readonly certificate: LapicCertificate
+  readonly potentialDecisionBasis?: LapicPotentialDecisionBasis
   readonly replaySummary?: LapicReplayResult
 }
 
@@ -56,6 +64,17 @@ export interface LapicFrontierSkylineVisualizationExportDescriptor {
 export interface LapicFormulaRegionDecompositionExportDescriptor {
   readonly regionDigest: LapicDigest
   readonly exportDigest: LapicDigest
+}
+
+export interface LapicPotentialSummaryView {
+  readonly candidateId: LapicCandidateId
+  readonly summaries: readonly LapicPotentialSummaryDescriptor[]
+}
+
+export interface LapicPotentialGraphInspectionDescriptor {
+  readonly outputDigest: LapicDigest
+  readonly graphKind: string
+  readonly exactness: string
 }
 
 export interface LapicTraceQuery {
@@ -81,6 +100,7 @@ export interface LapicFailureTimelineView {
 export interface LapicAuditReportRequest {
   readonly sessionId: string
   readonly includeReplayCoverage: boolean
+  readonly includePotentialAudit?: boolean
 }
 
 export interface LapicCertificateReplayCoverageSummary {
@@ -125,6 +145,8 @@ export interface LapicBenchmarkReport {
   readonly benchmarkId: string
   readonly environmentLabel: string
   readonly correctnessQualified: boolean
+  readonly upgradeFrontierCostShare?: number
+  readonly graphOutputCostShare?: number
 }
 
 export interface LapicRegressionClassificationSummary {
@@ -138,11 +160,18 @@ export interface LapicPublicationReadyReportManifest {
   readonly finalOptimality?: LapicFinalOptimalitySummary
 }
 
+export interface LapicPotentialAuditSummary {
+  readonly rankingRelevantCertificateCount: number
+  readonly auxiliaryOnlyOutputCount: number
+  readonly graphOutputCount: number
+}
+
 export interface LapicAuditReport {
   readonly session: LapicSessionSummary
   readonly traceEvents: readonly LapicTraceEvent[]
   readonly replayCoverage?: LapicCertificateReplayCoverageSummary
   readonly integrityScan?: LapicIntegrityScanResult
+  readonly potentialAuditSummary?: LapicPotentialAuditSummary
 }
 
 export interface LapicDebugSkeletonMarker {

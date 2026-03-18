@@ -1,0 +1,8 @@
+{
+  "name": "zzz-lapic-adapter",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/zzz/lapic-adapter/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {}
+}

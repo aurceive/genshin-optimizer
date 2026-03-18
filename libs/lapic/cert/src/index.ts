@@ -2,6 +2,8 @@ import type {
   LapicArithmeticPolicyId,
   LapicBlockId,
   LapicDigest,
+  LapicPotentialParticipationMode,
+  LapicPotentialSolveMode,
   LapicProblemId,
   LapicRegionId,
   LapicRelaxId,
@@ -33,10 +35,18 @@ export type LapicCertificateValidationStatus =
 export interface LapicReplayRecipe {
   readonly requiredIrObjects: readonly LapicDigest[]
   readonly requiredRegionPredicates: readonly string[]
+  readonly requiredUpgradeFrontierDigests?: readonly LapicDigest[]
   readonly arithmeticMode: string
   readonly replayPathKind: string
   readonly exactComparisonRule: string
   readonly expectedVerdict: LapicReplayVerdict
+}
+
+export interface LapicPotentialDecisionBasis {
+  readonly solveMode: LapicPotentialSolveMode
+  readonly participationMode: LapicPotentialParticipationMode
+  readonly envelopeDigest?: LapicDigest
+  readonly envelopeKind?: string
 }
 
 export interface LapicBranchReachabilityPayload {
@@ -55,6 +65,7 @@ export interface LapicBoundPrunePayload {
   readonly thresholdDigest: LapicDigest
   readonly boundSourceClass: LapicEvidenceSourceClass
   readonly boundValue: string
+  readonly potentialDecisionBasis?: LapicPotentialDecisionBasis
   readonly dangerZoneRecord?: LapicDangerZoneHandlingRecord
 }
 
@@ -62,12 +73,14 @@ export interface LapicDominancePayload {
   readonly dominatingStateId: LapicStateId
   readonly dominatedStateId: LapicStateId
   readonly comparisonDigest: LapicDigest
+  readonly potentialComparisonDigest?: LapicDigest
 }
 
 export interface LapicFinalOptimalityPayload {
   readonly winningStateId: LapicStateId
   readonly optimalityGap: string
   readonly finalThresholdDigest: LapicDigest
+  readonly potentialDecisionBasis?: LapicPotentialDecisionBasis
 }
 
 export interface LapicBaseCertificate {
@@ -172,6 +185,7 @@ export interface LapicReplayResult {
   readonly arithmeticModeUsed: string
   readonly mismatchExplanation?: LapicReplayMismatch
   readonly referencedEvidenceDigests: readonly LapicDigest[]
+  readonly referencedUpgradeFrontierDigests?: readonly LapicDigest[]
   readonly providerPathUsed?: string
   readonly exactReplayInvoked: boolean
 }
