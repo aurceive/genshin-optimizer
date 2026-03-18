@@ -70,6 +70,8 @@ The `artifact-inspection` surface MUST export:
 - frontier skyline visualization export descriptor type,
 - formula region decomposition export descriptor type.
 
+Where potential-aware optimization is supported, this surface MUST also export graph-capable potential inspection view descriptors and per-result potential summary views.
+
 Inspection outputs MUST be deterministic for the same referenced canonical artifacts.
 
 ### 4.2 trace-view
@@ -94,6 +96,8 @@ The `audit-report` surface MUST export:
 - integrity scan summary type,
 - checkpoint closure audit summary type.
 
+Potential-aware audit reports MUST be able to distinguish between auxiliary-only potential reporting and ranking-relevant potential semantics.
+
 ### 4.4 replay-tools
 
 The `replay-tools` surface MUST export:
@@ -115,6 +119,8 @@ The `validation-harness` surface MUST export:
 - adapter parity validation summary types,
 - harness report manifest types.
 
+Where potential-aware optimization is supported, the harness surface MUST also expose potential-aware oracle configuration and graph-output reconstruction check helpers.
+
 The harness surface may orchestrate existing package APIs, but it MUST NOT redefine correctness criteria that belong to parent specs.
 
 ### 4.6 benchmark-reporting
@@ -126,6 +132,8 @@ The `benchmark-reporting` surface MUST export:
 - environment descriptor formatting helpers,
 - profile-class labeling helpers,
 - publication-ready report manifest types.
+
+Potential-aware benchmark reporting MUST distinguish ordinary solve cost from upgrade-frontier handling cost and auxiliary graph-output cost.
 
 ## 5. Cross-Package Dependency Rules
 

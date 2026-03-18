@@ -392,6 +392,15 @@ Queue priority is lexicographic:
 
 The queue policy must be deterministic.
 
+For this ordering:
+
+- `upper bound` means the queue-entry upper-bound ordering tuple expressed under the same total ordering basis used for result ranking,
+- `uncertainty gap` means a deterministic, persisted comparison-distance key derived from the queue-entry upper-bound tuple and the current threshold tuple under that same ordering basis,
+- `estimated residual work` means a deterministic cost-model output computed only from persisted queue-entry metadata, never from ambient worker or machine state,
+- `deterministic tie-break key` means a persisted total-order key that is stable for a fixed engine version and queue entry payload.
+
+`uncertainty gap` and `estimated residual work` are scheduling quantities, not legality quantities. They may influence exploration order only after the admissible upper-bound ordering tuple is fixed and must never justify a prune on their own.
+
 ### 10.4 Exact Top-N Maintenance
 
 The incumbent store maintains the global top N with stable ordering by:

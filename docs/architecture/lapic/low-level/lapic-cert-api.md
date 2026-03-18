@@ -104,6 +104,8 @@ The public package surface MUST include typed models for:
 - `DominanceCert`
 - `FinalOptimalityCert`
 
+Potential-aware solve modes do not require a separate top-level certificate family, but any certificate whose legality depends on a potential envelope or upgrade frontier MUST carry typed payload fields sufficient to replay that dependency.
+
 ### 4.2 evidence-model
 
 The `evidence-model` surface MUST export:
@@ -169,6 +171,8 @@ The replay result type MUST contain:
 - `referencedEvidenceDigests`
 - `providerPathUsed`
 - `exactReplayInvoked`
+
+Potential-aware replay payloads MUST additionally be able to name any required upgrade-frontier descriptors or potential-envelope digests when those objects participate in legality.
 
 ### 4.4 validate
 
@@ -236,6 +240,12 @@ The typed payload MUST include:
 - numeric diagnostics reference,
 - danger-zone handling record.
 
+If the prune legality depends on potential-aware ranking semantics, the payload MUST additionally include:
+
+- potential-envelope digest or equivalent frontier reference,
+- explicit statement of whether the envelope is exact or certified upper,
+- replay requirement for the potential-sensitive comparison path.
+
 ### 5.4 DominanceCert
 
 The typed payload MUST include:
@@ -257,6 +267,8 @@ The typed payload MUST include:
 - threshold-sensitive prune count and digest summary,
 - escalated replay status summary,
 - stable-order completeness proof reference.
+
+If final ranking semantics are potential-aware, the payload MUST also summarize whether potential participation was current-only auxiliary, governed rerank, or full potential-aware ranking.
 
 ## 6. Evidence Digest Rules
 

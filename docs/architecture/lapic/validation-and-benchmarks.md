@@ -55,6 +55,7 @@ Validation covers all correctness-critical layers:
 - certificate validity and replay,
 - frontier storage round-trip fidelity,
 - runtime pause and resume behavior,
+- potential-aware ordering, envelope legality, and auxiliary-output reconstruction where supported,
 - final result optimality and stable ordering.
 
 ## 4. Benchmark Scope
@@ -66,9 +67,11 @@ Benchmarking covers:
 - frontier construction cost,
 - search cost,
 - certificate cost,
+- upgrade-frontier handling cost where supported,
 - spill and reload cost,
 - pause and checkpoint cost,
 - resume cost,
+- graph-capable auxiliary output reconstruction cost where supported,
 - total wall-clock solve time,
 - peak memory and storage footprint.
 
@@ -99,6 +102,13 @@ Required coverage:
 - tie-break correctness,
 - plot or auxiliary output correctness when applicable.
 
+Where potential-aware semantics are supported, required coverage MUST additionally include:
+
+- current-only versus potential-aware membership separation,
+- ordering correctness under the declared potential participation mode,
+- exact-oracle or approved-envelope validation for upgrade-frontier summaries,
+- graph-capable output reconstruction correctness when claimed.
+
 ### 5.3 Differential Engine Tests
 
 These tests compare the new engine against:
@@ -117,7 +127,24 @@ Required properties:
 - every omitted result is either below threshold or dominated under certified rules,
 - no pruned region contains a solution above the certified threshold,
 - serialization and deserialization preserve exact state,
-- replayed certificate verdict equals original verdict.
+- replayed certificate verdict equals original verdict,
+- replayed scheduler ordering key equals original ordering key for the same queue entry and threshold snapshot.
+
+Where potential-aware semantics are supported, the property family MUST additionally validate that:
+
+- auxiliary-only potential outputs never change result membership,
+- ranking-relevant potential semantics do change membership and ordering only according to the declared canonical policy,
+- replayed potential-sensitive prune verdict equals original verdict under the same arithmetic policy.
+
+### 5.4.1 Potential-Aware Validation Family
+
+When an adapter or runtime path claims potential-aware support, the validation suite MUST include a dedicated family covering at least:
+
+- small exact upgrade-frontier oracle cases,
+- differential or approved semantic-delta checks against current repository behavior where parity is claimed,
+- replay tests for potential-sensitive prune and final-order decisions,
+- graph-capable auxiliary-output reconstruction checks,
+- top-N membership and tie-break checks under each supported potential participation mode.
 
 ### 5.5 Adversarial Formula Tests
 
@@ -139,7 +166,8 @@ These tests stress:
 - checkpoint immediately after threshold updates,
 - worker failure during provisional artifact emission,
 - resume after large frontier spill,
-- import of corrupted or partial checkpoint closures.
+- import of corrupted or partial checkpoint closures,
+- worker-count variation with identical scheduler ordering-key replay.
 
 ### 5.7 Migration and Compatibility Tests
 
@@ -204,6 +232,13 @@ Use representative real-world optimization workloads from GI, SR, and ZZZ with f
 
 Designed to minimize pruning quality, maximize ambiguity in tie-breaks, or induce heavy spill and replay load.
 
+Potential-aware benchmark families MUST additionally include cases that separate:
+
+- ordinary current-only solve cost,
+- upgrade-frontier compression or envelope cost,
+- graph-capable auxiliary-output reconstruction cost,
+- adversarial frontiers where naive future-state expansion would explode.
+
 ## 8. Benchmark Input Freezing
 
 ### 8.1 Input Snapshot Requirements
@@ -224,6 +259,8 @@ Benchmark results must not be compared across silently changed datasets or adapt
 ## 9. Metric Definitions
 
 The benchmark system must use the following formally defined metrics.
+
+Any scheduler metric used for regression gating must be defined in terms of persisted ordering-key material rather than ambient runtime observations.
 
 ### 9.1 RawSpaceSize
 

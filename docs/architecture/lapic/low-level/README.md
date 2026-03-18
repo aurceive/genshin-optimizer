@@ -11,6 +11,7 @@
   - [Frontier Storage and Codec Specification](../frontier-storage-and-codec.md)
   - [Runtime and Checkpoint Specification](../runtime-and-checkpoints.md)
   - [Validation and Benchmark Specification](../validation-and-benchmarks.md)
+  - [Potential-Aware Optimization Architecture](../potential-aware-optimization.md)
   - [Implementation Roadmap](../implementation-roadmap.md)
 
 ## 1. Purpose

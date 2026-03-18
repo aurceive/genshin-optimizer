@@ -13,14 +13,15 @@
 
 ### D-001 Decision
 
-The canonical correctness-critical scalar representation is exact-decimal.
+The canonical correctness-critical scalar policy is decimal-first, not decimal-only.
 
 The architecture will use a decimal-first model:
 
-- persisted correctness-critical values use normalized exact-decimal representation,
-- deterministic ordering and canonical hashing are defined over that representation,
+- persisted correctness-critical values default to normalized exact-decimal representation,
+- parent schemas MUST classify each correctness-critical scalar field as `canonicalDecimal`, `canonicalRational`, `verificationRationalOnly`, or `nonCanonicalTelemetry`,
+- deterministic ordering and canonical hashing are defined over the field-classified canonical representation rather than by an implicit decimal-only rule,
 - runtime may use verified floating arithmetic for performance,
-- exact rational arithmetic remains available as a verification escape hatch where a local replay path requires it.
+- exact rational arithmetic remains available both for canonical fields whose operator family is not decimal-closed and for verification escape paths where local replay requires it.
 
 ### D-001 Rationale
 
@@ -30,7 +31,7 @@ The architecture will use a decimal-first model:
 
 ### D-001 Constraint
 
-This decision may remain the primary implementation strategy only while it remains effective and semantics-preserving for the supported operator set.
+This decision may remain the primary implementation strategy only while all supported operator families are explicitly classified under the scalar field matrix and no correctness-critical field relies on an unproven decimal-closure assumption.
 
 ## D-002 Production LP Provider Strategy
 
@@ -64,13 +65,22 @@ GI uses a dual-path adapter architecture.
 
 - Legacy Waverider compatibility mode remains a supported production path for the new engine.
 - Canonical Pando-backed GI mode remains the long-term target path.
-- Production-default cutover to the canonical GI path is deferred until parity or approved semantic delta is validated.
+- Production-default cutover to the canonical GI path is gated by an explicit migration lifecycle rather than left as an open-ended deferment.
+- Any parity claim MUST name the bounded validation corpus, adapter version, and benchmark policy under which parity was established.
+- Any approved semantic delta MUST be documented explicitly and treated as a governed migration state transition, not as an implicit behavior drift.
+
+The GI migration lifecycle is:
+
+- `legacyValidated`: legacy compatibility path is validated and production-eligible,
+- `dualValidated`: both legacy and canonical paths are validated against the same declared corpus,
+- `canonicalDefault`: canonical path is the default production emitter while legacy remains available only as a governed fallback,
+- `legacyRetired`: legacy path is no longer a production path.
 
 ### D-003 Rationale
 
 - GI is the highest-risk migration case in the repository.
 - The dual-path adapter keeps the optimizer core clean while isolating legacy semantics inside the adapter boundary.
-- This avoids forcing a premature product decision while keeping the architecture internally coherent.
+- This avoids forcing a premature product decision while keeping the architecture internally coherent and auditable.
 
 ## D-004 Convex Mixed-Integer Scope Boundary
 

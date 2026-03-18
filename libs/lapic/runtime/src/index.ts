@@ -23,11 +23,27 @@ export const lapicRuntimePackageName = 'lapic-runtime'
 export const lapicRuntimeProtocolVersion = '0.1.0-draft'
 
 export type LapicRuntimeProtocolVersion = typeof lapicRuntimeProtocolVersion
-export type LapicSolveState =
+export type LapicInternalSolveState =
   | 'created'
-  | 'running'
+  | 'initializing'
+  | 'frontier-building'
+  | 'search-running'
   | 'pausing'
   | 'paused'
+  | 'checkpointing'
+  | 'resuming'
+  | 'finalizing'
+  | 'completed'
+  | 'cancelled'
+  | 'failed'
+export type LapicSolveState =
+  | 'created'
+  | 'active'
+  | 'pausing'
+  | 'paused'
+  | 'checkpointing'
+  | 'resuming'
+  | 'finalizing'
   | 'completed'
   | 'cancelled'
   | 'failed'
@@ -80,6 +96,7 @@ export interface LapicSessionIdentity {
 export interface LapicSessionSummary {
   readonly identity: LapicSessionIdentity
   readonly solveState: LapicSolveState
+  readonly internalState?: LapicInternalSolveState
   readonly activePhase?: LapicActivePhase
 }
 
@@ -147,8 +164,11 @@ export interface LapicPublicSolveHandle {
 }
 
 export interface LapicPriorityDescriptor {
-  readonly priorityBucket: number
-  readonly orderingDigest: LapicDigest
+  readonly upperBoundOrderingDigest: LapicDigest
+  readonly uncertaintyGapDigest: LapicDigest
+  readonly residualCostDigest: LapicDigest
+  readonly deterministicTieBreakDigest: LapicDigest
+  readonly costModelVersion: string
 }
 
 export interface LapicRetryPolicy {

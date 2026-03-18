@@ -130,6 +130,44 @@ Every transition that changes the set of correctness-relevant in-memory artifact
 - be fully reconstructible from already persisted state, or
 - be checkpointed before the previous stable state is discarded.
 
+### 4.3 Public Lifecycle Contract
+
+The full solve state machine is an internal authoritative machine. The public solve session state is a stable projection of that machine.
+
+The public state projection is:
+
+- `created`: internal `Created`,
+- `active`: internal `Initializing`, `FrontierBuilding`, or `SearchRunning`,
+- `pausing`: internal `Pausing`,
+- `paused`: internal `Paused`,
+- `checkpointing`: internal `Checkpointing`,
+- `resuming`: internal `Resuming`,
+- `finalizing`: internal `Finalizing`,
+- `completed`: internal `Completed`,
+- `cancelled`: internal `Cancelled`,
+- `failed`: internal `Failed`.
+
+The public solve handle MUST expose the projected public state and MAY expose a finer-grained active phase as observational metadata.
+
+The internal machine remains authoritative for replay and checkpoint legality. The projected public state exists so application code does not need to track internal stage names that are not themselves correctness boundaries.
+
+### 4.4 Replay-Relevant and Checkpoint-Relevant States
+
+The following internal states are replay-relevant and MUST be reconstructible from authoritative persisted state:
+
+- `FrontierBuilding`,
+- `SearchRunning`,
+- `Checkpointing`,
+- `Resuming`,
+- `Finalizing`.
+
+The following public states are checkpoint-relevant:
+
+- `paused`, because normal checkpoint creation begins only from a quiescent paused authority boundary,
+- `checkpointing`, because closure export is in progress and not yet authoritative,
+- `completed`, because terminal checkpoint export may materialize a final proof closure,
+- `failed`, only for explicitly non-resumable debugging closures.
+
 ## 5. Solve Session Model
 
 ### 5.1 Session Identity
@@ -166,6 +204,8 @@ The public solve handle must support:
 - inspectSessionState
 
 These APIs must not expose mutable runtime internals that can bypass protocol guarantees.
+
+The solve handle MUST report the projected public lifecycle state, not raw internal machine state names, unless an inspection API explicitly requests internal diagnostic detail.
 
 ## 6. Work Unit Model
 
@@ -221,7 +261,42 @@ For search work, the scheduler must order queue entries using the ordering defin
 3. lowest estimated residual cost,
 4. deterministic tie-break key.
 
-The exact key material used for tie-breaks must be part of replay state.
+The exact key material used for this ordering must be part of replay state.
+
+### 7.2.1 Ordering Key Schema
+
+Every correctness-critical search queue entry MUST carry a persisted ordering key with at least:
+
+- `upperBoundOrderingKey`, representing the queue-entry admissible upper-bound tuple under result-order semantics,
+- `uncertaintyGapKey`, representing deterministic threshold proximity under the same ordering basis,
+- `residualCostKey`, representing deterministic residual-work estimate produced by a versioned cost model,
+- `deterministicTieBreakKey`, representing a stable total-order fallback,
+- `costModelVersion`, identifying the exact residual-cost model semantics.
+
+### 7.2.2 Uncertainty Gap Definition
+
+`uncertaintyGapKey` is not an informal heuristic.
+
+It is the deterministic persisted key derived from:
+
+- the queue-entry admissible upper-bound tuple,
+- the authoritative threshold tuple current at queue-publication time,
+- the solve ordering policy.
+
+If the ordering basis is lexicographic and no single scalar subtraction is semantically valid, the uncertainty-gap key MUST encode the first comparison-relevant differing component together with enough exact payload to reproduce the same comparison ordering.
+
+### 7.2.3 Residual Cost Definition
+
+`residualCostKey` is a deterministic scheduling estimate only.
+
+It MUST satisfy all of the following:
+
+- it is computed only from persisted queue-entry metadata,
+- it depends only on versioned cost-model semantics and replay-visible inputs,
+- it MUST NOT depend on live worker count, memory pressure, wall-clock timing, or backend-specific incidental state,
+- it MAY change exploration order but MUST NOT affect legality, certificate validity, or final result semantics.
+
+If a residual-cost model changes semantically, `costModelVersion` MUST change as well.
 
 ### 7.3 Scheduler Freedom
 
@@ -230,6 +305,8 @@ The scheduler may assign work to workers in any way that preserves:
 - the same legal decision set,
 - deterministic threshold lineage,
 - deterministic final proof state.
+
+Scheduler freedom does not permit recomputing ordering keys from ambient runtime conditions that are absent from replay state.
 
 ### 7.4 Preemption Rules
 
@@ -349,13 +426,15 @@ The solve handle must report Paused only after these conditions are satisfied.
 
 The runtime must support:
 
-- online checkpoint while paused,
+- paused-session checkpoint export,
 - terminal checkpoint at Completed,
 - failure checkpoint when enough closure exists for debugging.
 
 ### 12.2 Checkpoint Preconditions
 
 A normal checkpoint requires the session to be in Paused or Finalizing unless a specialized crash-safe incremental checkpoint protocol is defined. No such protocol is frozen at this time.
+
+Normal checkpoint creation begins from the quiescent internal `Paused` authority boundary. The public `checkpointing` state denotes that closure materialization or export packaging is in progress and MUST NOT yet be treated as an authoritative reusable checkpoint.
 
 ### 12.3 Checkpoint Manifest Contents
 
@@ -384,6 +463,15 @@ The checkpoint must include the complete artifact closure necessary to:
 ### 12.5 Checkpoint Export Contract
 
 Checkpoint export must be deterministic. Export packaging order must not depend on filesystem or IndexedDB iteration order.
+
+Checkpoint export becomes authoritative only after all of the following are complete:
+
+- checkpoint manifest publication,
+- closure inventory publication,
+- integrity verification of the exported closure,
+- stable binding of the export descriptor to the published manifest digest.
+
+Before that point, the runtime may expose only a provisional in-progress checkpoint identity.
 
 ## 13. Resume Protocol
 

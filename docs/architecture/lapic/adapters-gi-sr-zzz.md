@@ -77,6 +77,7 @@ Every adapter must accept a typed request with the following logical fields.
 - objective definition,
 - top-N and ordering policy,
 - optional auxiliary outputs,
+- potential-aware solve request fields where the game exposes upgrade-capable semantics,
 - runtime preference hints that do not affect correctness.
 
 ### 4.2 Output Contract
@@ -92,6 +93,7 @@ Every adapter must produce a canonical problem model containing:
 - canonical candidate domains,
 - canonical frame axis when applicable,
 - partitioning hints if derivable,
+- explicit potential-aware capability and export metadata where supported,
 - declared unsupported features if any.
 
 ### 4.3 Canonical Candidate Contract
@@ -106,6 +108,13 @@ Each candidate must be represented canonically with:
 - categorical signature,
 - provenance payload sufficient for reconstruction.
 
+If a candidate is upgrade-capable under the request semantics, the canonical payload MUST additionally expose:
+
+- current realized state identity,
+- remaining upgrade frontier or equivalent descriptor,
+- legality-relevant hidden-versus-revealed upgrade state where applicable,
+- enough provenance to reconstruct both current state and reachable frontier under the declared adapter semantics.
+
 ### 4.4 Canonical Solve Target Contract
 
 The adapter must convert game-specific optimization UI concepts into:
@@ -114,6 +123,13 @@ The adapter must convert game-specific optimization UI concepts into:
 - zero or more hard feasibility constraints,
 - stable tie-break tuple,
 - optional auxiliary outputs such as plot axis or diagnostic probes.
+
+If potential-aware optimization is requested, the canonical solve target MUST also make explicit:
+
+- whether potential participates in ranking or is auxiliary only,
+- which potential-aware solve mode is requested,
+- whether the potential basis is exact or certified-envelope based,
+- which graph-capable auxiliary outputs are canonical outputs rather than presentation-only projections.
 
 ## 5. Source Snapshot Model
 
@@ -250,6 +266,28 @@ The GI TC solver is structurally distinct because it optimizes roll distribution
 - its own canonical candidate domain model,
 - explicit materializability assumptions,
 - separate validation corpus.
+
+### 8.9 GI Migration Governance
+
+GI dual-path support is a governed migration policy, not an indefinite semantic fork.
+
+Any GI path status claim MUST be one of:
+
+- `legacyValidated`,
+- `dualValidated`,
+- `canonicalDefault`,
+- `legacyRetired`.
+
+For GI, parity means parity against a named bounded validation corpus with fixed source snapshots, adapter version, and benchmark policy.
+
+If full parity is not claimed, the adapter MUST publish an approved semantic-delta record describing:
+
+- the exact affected semantics,
+- the expected user-visible behavior change,
+- the validation suites that remain comparable,
+- the migration state being advanced.
+
+Legacy Waverider mode and canonical Pando mode MUST share the same certificate, replay, source-snapshot, and benchmark-governance rules. They may differ only in adapter-local translation path and in approved semantic deltas that are explicitly documented.
 
 ## 9. SR Adapter Specification
 
@@ -500,6 +538,12 @@ Team-level and multi-entity semantics are now frozen in [team-level-adapter-boun
 Single-entity, fixed-support, and full multi-slot optimization are different operating modes of the same canonical team model rather than separate architectural families.
 
 The low-level source snapshot packaging policy is now frozen in [low-level/source-snapshot-packaging.md](./low-level/source-snapshot-packaging.md).
+
+### 19.2 Potential-Aware Optimization Adapters
+
+lapic-side architecture for potential-aware optimization is now frozen in [potential-aware-optimization.md](./potential-aware-optimization.md).
+
+Adapter packages remain responsible for mapping game-local upgrade semantics into canonical upgrade-capable candidate descriptors without leaking UI-specific graph behavior into lapic core.
 
 ## 20. Accepted Decisions
 

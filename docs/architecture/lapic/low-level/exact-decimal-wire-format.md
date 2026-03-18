@@ -18,13 +18,14 @@ It refines decision D-001 without changing it.
 The goal is to define:
 
 - the canonical exact-decimal logical model,
+- the canonical exact-rational logical model for fields whose parent schema classifies them as `canonicalRational`,
 - the byte-level wire representation used for persisted payloads,
 - the normalization rules required before hashing and storage,
 - the escape representation used only when rational replay is required.
 
 ## 2. Non-Negotiable Rules
 
-- Correctness-critical persisted scalars MUST use canonical exact-decimal encoding unless the field is explicitly declared verification-only rational escape data.
+- Correctness-critical persisted scalars MUST use the encoding class declared by the parent schema: `decimalCanonicalV1` for `canonicalDecimal`, `rationalCanonicalV1` for `canonicalRational`, or `rationalVerificationV1` for `verificationRationalOnly`.
 - Native binary floating-point payload bytes MUST NOT appear in correctness-critical canonical payloads.
 - Canonical bytes MUST be stable across browser and Node runtimes.
 - Canonical hashing MUST operate over post-normalization serialized bytes.
@@ -61,7 +62,26 @@ Zero MUST have a single canonical form:
 
 Negative zero is forbidden.
 
-### 3.3 Verification Escape Domain
+### 3.3 Canonical Rational Value
+
+The canonical exact-rational value domain is:
+
+`value = sign * numerator / denominator`
+
+where:
+
+- sign is one of `-1`, `0`, `+1`,
+- numerator is a non-negative integer,
+- denominator is a positive integer.
+
+Canonical rational values MUST satisfy:
+
+- numerator and denominator are coprime,
+- denominator > 0,
+- zero is encoded with sign `0`, numerator `0`, denominator `1`,
+- negative denominator is forbidden.
+
+### 3.4 Verification Escape Domain
 
 General rational representation is permitted only for verification-only payloads where exact local replay cannot be expressed in canonical decimal form without semantic loss.
 
@@ -71,7 +91,7 @@ Such payloads MUST be marked as verification-only and MUST NOT be used as canoni
 
 Every correctness-critical scalar field serialized outside a larger typed struct MUST use the following envelope.
 
-- scalarEncodingKind: `decimalCanonicalV1` or `rationalVerificationV1`
+- scalarEncodingKind: `decimalCanonicalV1`, `rationalCanonicalV1`, or `rationalVerificationV1`
 - payloadLength
 - payloadBytes
 
@@ -124,6 +144,40 @@ The following are forbidden:
 
 ## 7. Rational Verification Escape Layout
 
+## 7. Canonical Rational Payload Layout
+
+The `rationalCanonicalV1` payload layout is:
+
+1. `numeratorSignCode : u8`
+2. `numeratorByteLength : ULEB128`
+3. `numeratorMagnitude : byte[numeratorByteLength]`
+4. `denominatorByteLength : ULEB128`
+5. `denominatorMagnitude : byte[denominatorByteLength]`
+
+### 7.1 Canonical Rational Normalization
+
+Canonical rational payloads MUST satisfy:
+
+- denominator > 0,
+- numerator and denominator are coprime,
+- zero is encoded as numerator sign zero, numerator magnitude empty, denominator magnitude equal to `0x01`,
+- negative denominator is forbidden.
+
+### 7.2 Canonical Rational Usage Rule
+
+`rationalCanonicalV1` MAY appear only where the parent schema explicitly classifies the field as `canonicalRational`.
+
+It MAY appear in:
+
+- canonical ordering fields whose operator family is not decimal-closed,
+- persisted threshold-comparison operands,
+- F-IR or A-IR constant payloads whose exact value is not finite decimal,
+- S-IR or R-IR fields whose exact legality semantics require rational canonicalization.
+
+It MUST NOT appear in fields classified as `canonicalDecimal` or `nonCanonicalTelemetry`.
+
+## 8. Rational Verification Escape Layout
+
 The `rationalVerificationV1` payload layout is:
 
 1. `numeratorSignCode : u8`
@@ -132,7 +186,7 @@ The `rationalVerificationV1` payload layout is:
 4. `denominatorByteLength : ULEB128`
 5. `denominatorMagnitude : byte[denominatorByteLength]`
 
-### 7.1 Rational Normalization
+### 8.1 Rational Normalization
 
 Rational verification payloads MUST satisfy:
 
@@ -141,7 +195,7 @@ Rational verification payloads MUST satisfy:
 - zero is encoded as numerator sign zero, numerator magnitude empty, denominator magnitude equal to `0x01`,
 - negative denominator is forbidden.
 
-### 7.2 Usage Restriction
+### 8.2 Usage Restriction
 
 `rationalVerificationV1` MAY appear only in:
 
@@ -153,12 +207,12 @@ It MUST NOT appear in:
 
 - frontier state keys,
 - compatibility signatures,
-- canonical state ordering payloads,
+- canonical state ordering payloads when the parent schema classifies those fields as `canonicalDecimal`,
 - any artifact identity field that is declared decimal-canonical by parent schema.
 
-## 8. Ordering Semantics
+## 9. Ordering Semantics
 
-### 8.1 Numeric Ordering
+### 9.1 Numeric Ordering
 
 Canonical byte order is not the numeric comparison rule.
 
@@ -168,19 +222,27 @@ Numeric comparison of two decimal-canonical values MUST follow mathematical comp
 
 Implementations MUST use an exact comparison algorithm. They MUST NOT compare via lossy float conversion.
 
-### 8.2 Equality
+Numeric comparison of two rational-canonical values MUST follow mathematical comparison of:
+
+`sign * numerator / denominator`
+
+Implementations MUST use an exact comparison algorithm. They MUST NOT compare via lossy float conversion.
+
+### 9.2 Equality
 
 Two canonical decimal payloads are equal if and only if their serialized bytes are equal.
 
 This holds because the normalization rules prohibit alternate encodings of the same value.
 
-### 8.3 Stable Ordering Key Derivation
+Two canonical rational payloads are equal if and only if their serialized bytes are equal.
+
+### 9.3 Stable Ordering Key Derivation
 
 If a schema requires a sortable comparison key for block-local ordering, the key MUST be derived from exact arithmetic semantics, not lexicographic payload bytes.
 
 The derived ordering key algorithm MUST be fixed by the parent schema that uses it.
 
-## 9. Hashing and Content Identity
+## 10. Hashing and Content Identity
 
 - Canonical content hashes MUST include the scalar encoding kind.
 - Canonical content hashes MUST include only normalized bytes.
@@ -189,17 +251,18 @@ The derived ordering key algorithm MUST be fixed by the parent schema that uses 
 
 Any change to normalization or primitive encoding rules requires a new schema version.
 
-## 10. Field Classification Rules
+## 11. Field Classification Rules
 
 Every scalar-bearing parent schema MUST classify each scalar field as one of:
 
 - `canonicalDecimal`
+- `canonicalRational`
 - `verificationRationalOnly`
 - `nonCanonicalTelemetry`
 
 `nonCanonicalTelemetry` fields are outside this canonical wire format and MUST NOT participate in correctness-critical identity or ordering.
 
-## 11. Validation Rules
+## 12. Validation Rules
 
 A decoder MUST reject any payload that violates one or more of the following:
 
@@ -207,17 +270,20 @@ A decoder MUST reject any payload that violates one or more of the following:
 - non-minimal magnitude encoding,
 - zero encoded with non-zero scale or non-empty coefficient,
 - non-zero coefficient divisible by 10,
+- rational-canonical payload with non-coprime numerator and denominator,
+- rational-canonical payload with zero or negative denominator,
 - rational payload with non-coprime numerator and denominator,
 - rational payload with zero or negative denominator,
 - scalar kind not permitted by the parent schema.
 
-## 12. Compatibility and Migration
+## 13. Compatibility and Migration
 
 - `decimalCanonicalV1` is the required canonical scalar encoding for initial lapic implementation.
+- `rationalCanonicalV1` is also part of the initial canonical scalar vocabulary for fields explicitly classified as `canonicalRational`.
 - Future packed-decimal or limb-based variants require a new encoding kind and explicit compatibility policy.
 - Backward readers MAY support older versions, but forward writers MUST emit the current canonical version only.
 
-## 13. Implementation Checklist
+## 14. Implementation Checklist
 
 Before a package may claim compliance with this specification, it MUST demonstrate:
 

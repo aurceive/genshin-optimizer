@@ -73,6 +73,8 @@ The `problem` surface MUST export:
 - problem digest function,
 - problem validation function.
 
+Where potential-aware optimization is supported, this surface MUST also export the canonical types needed to describe upgrade-capable candidates, potential-aware solve mode, and canonical graph-capable auxiliary output descriptors.
+
 #### 4.1.1 Canonical Problem Type
 
 The canonical problem type MUST include typed fields for at least:
@@ -146,6 +148,8 @@ The `sir` surface MUST export:
 - exact signature group key type,
 - compatibility signature type,
 - dominance projection types,
+- potential frontier descriptor types,
+- potential summary descriptor types,
 - provenance handle types,
 - state validator,
 - exact comparison helpers required by state identity.
@@ -169,6 +173,7 @@ It MUST expose typed fields covering at least:
 - occupied slot mask,
 - logical actor uniqueness claims,
 - exclusive resource claims,
+- reservation class for each exclusive resource claim,
 - categorical aggregate counts,
 - remaining categorical obligations,
 - provided capability facts,
@@ -177,6 +182,14 @@ It MUST expose typed fields covering at least:
 - adapter semantic mode.
 
 The exact signature group key type MUST be derivable from a compatibility signature plus other state-local exact discrete data without consulting adapter-private code.
+
+Potential-aware state payloads MUST distinguish between:
+
+- current realized value inputs,
+- upgrade-frontier descriptors used only for auxiliary outputs,
+- upgrade-frontier or potential-envelope descriptors that participate in legality or ordering.
+
+No core API may silently treat a diagnostic-only potential descriptor as ranking-relevant state.
 
 ### 4.5 identity
 
@@ -210,6 +223,8 @@ The `validate` surface MUST export structured validators for:
 - S-IR,
 - state layout descriptors,
 - core-owned hashes and IDs where structural validation applies.
+
+Where potential-aware optimization is supported, validators MUST also cover upgrade-frontier descriptor legality, potential-aware ordering participation, and graph-capable auxiliary-output request legality.
 
 Validation MUST return machine-readable diagnostics, not only thrown exceptions.
 

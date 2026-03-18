@@ -78,6 +78,7 @@ The `request-model` surface MUST export:
 - typed objective and ordering request model,
 - typed hard-filter and exclusion model,
 - typed auxiliary output request model,
+- typed potential-aware request model where supported,
 - request normalization entrypoint.
 
 #### 5.1.1 Common Request Fields
@@ -96,6 +97,16 @@ Every adapter request type MUST provide logical fields covering at least:
 - runtime preference hints that do not affect correctness.
 
 The normalized request MUST be deterministic under identical input payload.
+
+#### 5.1.1.1 Potential-Aware Request Fields
+
+If a request asks lapic to account for future upgrade potential, it MUST additionally provide typed fields for at least:
+
+- requested potential-aware solve mode,
+- current-value versus potential-value ranking participation mode,
+- candidate upgrade frontier policy,
+- requested potential summary fields,
+- requested graph-capable auxiliary output modes if any.
 
 #### 5.1.2 Team-Level Request Fields
 
@@ -123,6 +134,7 @@ Every adapter package MUST provide a typed capabilities query that can answer at
 
 - supported formula compilation modes,
 - supported auxiliary output modes,
+- supported potential-aware solve modes,
 - supported candidate domain classes,
 - supported legacy compatibility paths,
 - explicitly unsupported semantics.
@@ -154,6 +166,16 @@ The export result type MUST include typed fields for at least:
 
 The export result MUST NOT depend on lapic runtime or lapic storage objects.
 
+#### 5.3.1.1 Potential-Aware Canonical Export Fields
+
+If the canonical export represents a potential-aware problem, it MUST additionally include typed fields for at least:
+
+- `potentialSolveMode`
+- `potentialParticipationMode`
+- `upgradeFrontierDescriptorSet`
+- `potentialSummarySchemaVersion`
+- `supportedGraphOutputModes`
+
 #### 5.3.2 Team-Level Canonical Export Fields
 
 If the canonical export represents a multi-entity problem, it MUST additionally include typed fields for at least:
@@ -182,7 +204,15 @@ If a candidate belongs to a team-level export, its provenance payload MUST also 
 - owning slot,
 - logical actor identity,
 - exclusive resource claims,
+- reservation class for each claim,
 - any adapter-local team capability facts contributed by the candidate.
+
+If a candidate belongs to a potential-aware export, its payload MUST additionally identify:
+
+- whether the candidate is upgrade-capable,
+- the upgrade-frontier descriptor or descriptor digest,
+- current realized state digest,
+- supported potential summary kinds for that candidate.
 
 ### 5.4 snapshot-model
 

@@ -71,8 +71,13 @@ export type LapicSlotOrderSemantics = 'semantic' | 'canonical-only'
 export type LapicFrameAxisKind = 'none' | 'implicit-single' | 'explicit'
 export type LapicEquipmentOwnershipModel =
   | 'none'
-  | 'exclusive-inventory'
-  | 'shared-summary'
+  | 'hard-reserved-inventory'
+  | 'summary-reserved'
+  | 'non-reserving-summary'
+export type LapicResourceReservationClass =
+  | 'hardReserved'
+  | 'summaryReserved'
+  | 'nonReserving'
 
 export interface LapicTeamLayoutDescriptor {
   readonly teamKind: string
@@ -142,6 +147,7 @@ export interface LapicResourceClaim {
   readonly resourceKind: string
   readonly resourceId: LapicResourceId
   readonly claimedBySlotId: LapicSlotId
+  readonly reservationClass: LapicResourceReservationClass
 }
 
 export interface LapicActorUniquenessClaim {
@@ -189,6 +195,7 @@ export interface LapicSlotCandidateProvenance {
   readonly sourceRecordDigests: readonly LapicDigest[]
   readonly buildVariantId?: string
   readonly exclusiveResourceClaims: readonly LapicResourceClaim[]
+  readonly concreteInventoryBacked: boolean
   readonly featureExtractionDigest: LapicDigest
 }
 

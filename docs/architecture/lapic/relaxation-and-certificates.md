@@ -79,6 +79,14 @@ Determines that the solve is complete because every unresolved block has been ex
 
 Each decision class must have a dedicated certificate form.
 
+Potential-aware optimization does not introduce a separate top-level decision class, but it does strengthen the legality requirements of existing decision classes.
+
+If ranking semantics depend on upgrade potential, then:
+
+- bound prune decisions MUST compare against the declared potential-aware ordering basis rather than current value alone,
+- dominance decisions MUST preserve any legality-relevant upgrade-frontier context,
+- final optimality decisions MUST certify completeness against the declared potential-aware ordering policy.
+
 ## 5. Relaxation Taxonomy
 
 The architecture defines a layered relaxation taxonomy.

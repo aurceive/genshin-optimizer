@@ -90,6 +90,22 @@ The architecture supports the following canonical participation modes.
 - `fixedBuild`: occupant and build are fixed but still contribute team semantics.
 - `externalSummary`: no concrete inventory ownership is optimized, but the slot contributes explicit summarized team context.
 
+### 3.4.1 Ownership and Reservation Semantics
+
+Participation mode alone is not sufficient to determine join legality. Every slot contribution must also declare its reservation class for exclusive resources.
+
+The canonical reservation classes are:
+
+- `hardReserved`: the slot claims concrete exclusive resources from the same optimizer-owned inventory and any conflicting join is illegal,
+- `summaryReserved`: the slot does not consume optimizer-owned concrete inventory identities, but it still claims logical actor or semantic exclusivity that must block conflicting joins,
+- `nonReserving`: the slot contributes no exclusive resource ownership and affects joins only through explicit shared team facts or capability predicates.
+
+The minimum mode-to-reservation rules are:
+
+- `optimizedBuild` and `optimizedOccupantAndBuild` use `hardReserved` for concrete inventory resources they own,
+- `fixedBuild` uses `hardReserved` when backed by current optimizer-owned inventory and `summaryReserved` when represented only by external fixed-loadout summaries,
+- `externalSummary` is `nonReserving` for concrete inventory resources but may still emit `summaryReserved` logical actor or semantic-family claims through explicit compatibility facts.
+
 ### 3.5 Shared Team Context
 
 Shared team context must carry all correctness-relevant state not owned by a single slot, including at least:
@@ -156,6 +172,16 @@ These may include:
 
 If a resource is exclusive, the canonical problem must represent that exclusivity as a hard compatibility rule, not an informal adapter convention.
 
+### 4.3.1 Reservation-Class Rule
+
+Exclusive-resource modeling MUST distinguish between:
+
+- concrete inventory exclusivity enforced by `hardReserved` claims,
+- logical or semantic exclusivity enforced by `summaryReserved` claims,
+- non-owning contributions that remain `nonReserving` and therefore cannot silently consume inventory identity.
+
+Adapters MUST NOT encode a concrete inventory reservation as `externalSummary` or otherwise hide it inside shared team context.
+
 ### 4.4 Team Aggregate Semantics
 
 Aggregate semantics such as resonance, faction thresholds, set-team buffs, or squad-trigger conditions must be represented as explicit team facts rather than implicit re-reading behavior hidden in calculator code.
@@ -184,6 +210,7 @@ It must include at least:
 - occupancy requirements for still-open slots,
 - actor uniqueness and mutual-exclusion families,
 - exclusive resource claims,
+- reservation classes for those claims,
 - categorical aggregate counts already achieved,
 - categorical lower-bound obligations still unmet,
 - provided capability facts,
@@ -196,7 +223,9 @@ It must include at least:
 Two partial states are join-compatible only if all of the following hold.
 
 - Their occupied slot sets do not conflict.
-- Their exclusive resource claims do not conflict.
+- Their `hardReserved` resource claims do not conflict on any concrete exclusive identity.
+- Their `summaryReserved` claims do not conflict on any logical actor or declared semantic exclusivity family.
+- No `nonReserving` contribution is treated as consuming concrete exclusive inventory identity.
 - Their actor uniqueness families do not conflict.
 - Their semantic mode and frame-axis identities are join-compatible.
 - Their combined aggregate counts and capability facts do not violate any hard team rule.
@@ -215,6 +244,7 @@ Every candidate assigned to a team slot must retain provenance sufficient to rec
 - source record digests,
 - chosen build or equipment variant,
 - exclusive resource claims,
+- reservation class for each claim,
 - slot assignment,
 - adapter-local derivations used for canonical feature extraction.
 

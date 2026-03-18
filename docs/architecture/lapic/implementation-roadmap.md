@@ -267,6 +267,7 @@ These phases overlap, but their gate ordering is strict.
 - implement legacy Waverider compatibility adapter,
 - implement canonical GI candidate extraction for artifacts and set logic,
 - define explicit GI plot objective mapping,
+- define canonical GI upgrade-capable candidate export and potential-aware capability flags,
 - define separate TC adapter sub-family,
 - begin GI canonical pando mode only where semantics are fully specified.
 
@@ -275,6 +276,7 @@ These phases overlap, but their gate ordering is strict.
 - implement calculator detachment adapter,
 - implement relic and light cone candidate extraction,
 - implement cavern and planar set filter mapping,
+- define potential-aware export only for upgrade semantics that can be expressed canonically,
 - implement frame-based objective mapping.
 
 ### 11.5 ZZZ Work Items
@@ -282,11 +284,12 @@ These phases overlap, but their gate ordering is strict.
 - implement calculator detachment adapter,
 - implement disc and wengine candidate extraction,
 - implement decimal normalization policy,
+- define potential-aware export only for upgrade semantics that can be expressed canonically,
 - implement 2-piece and 4-piece disc set filter mapping.
 
 ### 11.6 Blockers
 
-- GI full canonical pando cutover remains blocked where the architecture still marks it unresolved.
+- GI canonical-default cutover is gated by the governed migration lifecycle from [decision-log.md](./decision-log.md) and the adapter validation rules in [adapters-gi-sr-zzz.md](./adapters-gi-sr-zzz.md).
 
 ### 11.7 Exit Gate
 
@@ -314,7 +317,8 @@ These phases overlap, but their gate ordering is strict.
 - checkpoint resume divergence harness,
 - benchmark corpus registry,
 - report generation tooling,
-- regression classifier tooling.
+- regression classifier tooling,
+- potential-aware validation and benchmark families.
 
 ### 12.4 Exit Gate
 
@@ -341,7 +345,8 @@ These phases overlap, but their gate ordering is strict.
 
 - applications interact with lapic runtime through stable solve-handle APIs,
 - no application code consumes internal block or certificate formats directly,
-- side-by-side comparison mode must preserve explicit labeling of legacy versus new engine results.
+- side-by-side comparison mode must preserve explicit labeling of legacy versus new engine results,
+- potential-aware graph-capable outputs are consumed only through stable lapic auxiliary-output contracts rather than game-local internal calculator state.
 
 ### 13.4 Exit Gate
 
@@ -383,12 +388,14 @@ GI must not fully cut over until the repository chooses and validates its final 
 
 - phase 1: package skeleton and shared type boundaries
 - phase 2: IR, analysis, state model, initial search primitives
+- phase 2 and 3 follow-on: potential-aware candidate and envelope semantics
 - phase 3 onward: stable dependency for all other packages
 
 ### 15.2 lapic cert
 
 - phase 1: package skeleton
 - phase 2: certificate model and replay framework
+- phase 2 and 4 follow-on: potential-sensitive prune legality and replay
 - phase 4: threshold lineage and runtime integration
 - phase 6: replay validation tooling
 
@@ -415,6 +422,7 @@ GI must not fully cut over until the repository chooses and validates its final 
 ### 15.6 Game Adapters
 
 - phase 5: full realization
+- phase 5 follow-on: potential-aware canonical export where supported
 - phase 7: app integration
 - phase 8: cutover qualification
 
@@ -500,5 +508,5 @@ Given the current document set, the immediate next implementation-planning tasks
 1. Create package skeletons for lapic core, lapic cert, lapic storage, lapic runtime, and lapic debug.
 2. Choose whether to scaffold the benchmark repository layout immediately or defer physical directory creation until package skeleton creation.
 3. Decide whether the first scaffolding batch should include lapic debug or keep it in a second wave after runtime and storage.
-4. Decide whether to keep team-level scope explicitly deferred during initial package creation or open a separate architecture track for it now.
-5. Prepare the first package-by-package scaffolding order and dependency cut list.
+4. Prepare the first package-by-package scaffolding order and dependency cut list.
+5. Stage the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.

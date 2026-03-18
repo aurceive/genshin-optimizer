@@ -64,11 +64,14 @@ The initial export families are:
 
 The `session-model` surface MUST export:
 
-- solve state enum,
+- public solve state enum,
+- optional internal diagnostic state enum,
 - session identity type,
 - session summary type,
 - runtime protocol version descriptor,
 - active phase descriptor.
+
+The public solve state enum MUST project the internal runtime state machine into the stable externally observable states defined by [runtime-and-checkpoints.md](../runtime-and-checkpoints.md).
 
 #### 4.1.1 Session Identity Type
 
@@ -107,6 +110,8 @@ The public solve handle MUST support typed entrypoints corresponding to:
 
 These entrypoints MUST NOT expose mutable scheduler or storage internals directly.
 
+`inspectSessionState` MAY expose internal diagnostic state detail, but ordinary progress and completion APIs MUST use the projected public solve state.
+
 ### 4.3 work-units
 
 The `work-units` surface MUST export:
@@ -117,6 +122,8 @@ The `work-units` surface MUST export:
 - priority descriptor type,
 - retry policy type,
 - work result summary type.
+
+The priority descriptor type MUST expose the replay-visible ordering-key material required by [runtime-and-checkpoints.md](../runtime-and-checkpoints.md).
 
 The minimum required work unit kinds are:
 
@@ -164,6 +171,12 @@ The `checkpoint-api` surface MUST export:
 - pause-to-checkpoint transition summary type.
 
 Checkpoint APIs MUST be sufficient to export and import full correctness-critical closure through lapic storage abstractions.
+
+The checkpoint API surface MUST distinguish between:
+
+- paused authority boundary reached,
+- checkpoint materialization in progress,
+- authoritative checkpoint export completed.
 
 ### 4.6 failure-model
 

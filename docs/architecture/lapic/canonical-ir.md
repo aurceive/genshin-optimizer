@@ -64,6 +64,12 @@ The complete IR stack MUST satisfy all of the following.
 - R-IR bounds are admissible for every concrete build represented by the referenced state region.
 - C-IR certificates are sufficient to replay the original decision.
 
+Where a problem declares potential-aware semantics, these invariants additionally apply:
+
+- current realized value, potential envelope, and potential summary remain explicitly distinguished in canonical IR,
+- auxiliary-only potential payloads do not silently participate in ordering, dominance, or prune legality,
+- any upgrade-frontier descriptor that participates in legality or ordering is part of the canonical replayable state context.
+
 ### 4.2 Identity Invariants
 
 - Every F-IR node has a stable content identity within a problem instance.
@@ -97,6 +103,13 @@ The canonical problem model MUST contain:
 - optional auxiliary outputs
 - adapter metadata
 
+Where the request is potential-aware, the canonical problem model MUST also contain:
+
+- declared potential-aware solve mode,
+- explicit statement of whether potential participates in ranking or auxiliary output only,
+- canonical upgrade-frontier participation rules,
+- graph-capable auxiliary-output semantics when requested.
+
 ### 5.2 Adapter Boundary
 
 Game-specific code MUST terminate at the adapter boundary.
@@ -109,6 +122,26 @@ Adapters are responsible for:
 - providing game-specific categorical compatibility semantics.
 
 Core optimizer layers MUST NOT depend on game-specific tags, enum names, or storage schemas.
+
+### 5.3 Scalar Classification Matrix
+
+Every correctness-critical scalar-bearing field in the IR stack MUST be classified as exactly one of:
+
+- `canonicalDecimal`: normalized exact-decimal payload is the canonical persisted and hashed form,
+- `canonicalRational`: normalized exact-rational payload is the canonical persisted and hashed form,
+- `verificationRationalOnly`: rational payload is allowed only in replay or escalation artifacts and is forbidden from canonical identity and ordering fields,
+- `nonCanonicalTelemetry`: payload is observational only and forbidden from correctness-critical identity, ordering, or legality.
+
+The following initial matrix is frozen for the current architecture.
+
+- F-IR and A-IR numeric constants whose exact value is finite decimal are `canonicalDecimal`.
+- F-IR and A-IR numeric constants whose exact value is not finite decimal are `canonicalRational`.
+- S-IR discrete counters, categorical aggregates, and exact signature-group fields are `canonicalDecimal` unless the parent schema proves they are purely integral and stores them as non-scalar integer primitives.
+- S-IR additive feature fields, kernel-input fields, threshold-comparison operands, and block-ordering keys derived from operator families that are not provably decimal-closed MUST be `canonicalRational`.
+- Certificate replay-only witness payloads may use `verificationRationalOnly`.
+- Diagnostics-only numeric payloads are `nonCanonicalTelemetry`.
+
+No parent schema may silently downgrade a `canonicalRational` field into `canonicalDecimal` merely because current game data is usually decimal-shaped.
 
 ## 6. F-IR Specification
 
@@ -265,6 +298,19 @@ Custom operators are allowed only if all of the following are explicit:
 
 If any of these are missing, the operator is not admissible into F-IR.
 
+### 6.10 Scalar Closure Rule for Operator Families
+
+Every operator family admitted into F-IR MUST declare whether its exact output domain is closed under canonical decimal representation for the contexts in which lapic uses that result.
+
+At minimum:
+
+- `Add`, `Sub`, `Neg`, `Min`, `Max`, and exact affine forms over decimal-closed inputs may remain `canonicalDecimal`,
+- `Mul` is `canonicalDecimal` only when the exact product of the declared input classes remains finite decimal,
+- `RatioSum`, `ResistanceTransform`, and any bounded ratio-like kernel MUST be treated as `canonicalRational` for correctness-critical persisted fields unless the parent schema proves a tighter decimal-closed subdomain,
+- replay-only local derivations may still use `verificationRationalOnly` when the field is not part of canonical identity or ordering.
+
+If the exact closure class of an operator output is not proven, the operator output MUST be classified conservatively as `canonicalRational`.
+
 ## 7. Canonical Node Identity and Hashing
 
 ### 7.1 Identity Contract
@@ -358,7 +404,7 @@ Each S-IR state MUST contain:
 
 - stateId
 - partitionId
-- itemSelectionMask or equivalent exact provenance reference
+- slotProvenanceSelection or equivalent exact provenance reference
 - additiveFeatureVector
 - discreteCounterVector
 - categoricalSignature
@@ -366,6 +412,7 @@ Each S-IR state MUST contain:
 - unresolvedRegionFrontier
 - kernelInputVector
 - compatibilitySignature
+- ownershipClaimVector
 - objectiveLowerBound if available
 - certificateContext
 
@@ -409,13 +456,15 @@ The canonical state key is the concatenation of:
 
 Fields must use deterministic binary encodings. Floating-point byte layout MUST NOT be used directly for correctness-critical keys unless wrapped by a canonical exact-decimal or rational encoding layer.
 
+Fields classified as `verificationRationalOnly` or `nonCanonicalTelemetry` MUST NOT appear in the canonical state key.
+
 ### 9.6 Compatibility Signature
 
 The compatibilitySignature MUST summarize all future completion constraints relevant to joins, including:
 
 - occupied slot mask and required remaining slot classes,
 - logical actor uniqueness claims,
-- exclusive resource claims,
+- exclusive resource claims together with reservation class,
 - categorical aggregate counts and still-unmet lower-bound obligations,
 - provided and still-required capability facts,
 - frame-axis identity and frame-sensitive shared-state summary,
@@ -424,6 +473,8 @@ The compatibilitySignature MUST summarize all future completion constraints rele
 - categorical mutual exclusions,
 - branch-conditioned compatibility effects,
 - team-level occupancy or uniqueness rules when applicable.
+
+No compatibility signature may treat a summary-only slot contribution as a concrete inventory reservation unless the parent schema explicitly marks the claim as `hardReserved`.
 
 ### 9.7 Skyline Dominance Interface
 
