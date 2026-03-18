@@ -52,6 +52,11 @@
       ],
       "@genshin-optimizer/common/ui": ["libs/common/ui/src/index.ts"],
       "@genshin-optimizer/common/util": ["libs/common/util/src/index.ts"],
+      "@genshin-optimizer/lapic/cert": ["libs/lapic/cert/src/index.ts"],
+      "@genshin-optimizer/lapic/core": ["libs/lapic/core/src/index.ts"],
+      "@genshin-optimizer/lapic/debug": ["libs/lapic/debug/src/index.ts"],
+      "@genshin-optimizer/lapic/runtime": ["libs/lapic/runtime/src/index.ts"],
+      "@genshin-optimizer/lapic/storage": ["libs/lapic/storage/src/index.ts"],
       "@genshin-optimizer/game-opt/engine": [
         "libs/game-opt/engine/src/index.ts"
       ],
