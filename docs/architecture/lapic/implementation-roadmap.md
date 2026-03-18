@@ -462,7 +462,7 @@ The following areas are currently blocked from final implementation closure.
 
 ### 18.1 Team-Level Adapter Generalization
 
-Blocked until canonical multi-entity team-level adapter semantics are frozen.
+Blocked until canonical multi-entity team-level adapter semantics are frozen. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
 Affected areas:
 
@@ -474,9 +474,9 @@ Affected areas:
 
 The high-level architecture is decided, but final implementation closure still depends on low-level freezes for:
 
-- exact-decimal wire layout details,
-- HiGHS evidence payload schema and deterministic configuration freeze,
-- benchmark corpus governance and browser noise policy.
+- exact-decimal wire layout details, now specified in [low-level/exact-decimal-wire-format.md](./low-level/exact-decimal-wire-format.md),
+- HiGHS evidence payload schema and deterministic configuration freeze, now specified in [low-level/highs-evidence-and-deterministic-config.md](./low-level/highs-evidence-and-deterministic-config.md),
+- benchmark corpus governance and browser noise policy, now specified in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md).
 
 These are no longer top-level architectural blockers, but they remain implementation freeze points.
 
@@ -498,7 +498,7 @@ The roadmap is considered successfully executed only if:
 Given the current document set, the immediate next implementation-planning tasks are:
 
 1. Create package skeletons for optimizer-core, optimizer-cert, optimizer-storage, optimizer-runtime, and optimizer-debug.
-2. Write low-level module specs for optimizer-core IR APIs and optimizer-cert certificate APIs.
-3. Write the next low-level freeze documents in [low-level/README.md](./low-level/README.md), starting with exact-decimal wire layout and HiGHS evidence payload specifications.
-4. Define benchmark corpus ownership and fixture storage layout.
-5. Draft GI, SR, and ZZZ adapter package APIs before code implementation begins.
+2. Choose whether to scaffold the benchmark repository layout immediately or defer physical directory creation until package skeleton creation.
+3. Decide whether the first scaffolding batch should include optimizer-debug or keep it in a second wave after runtime and storage.
+4. Decide whether to keep team-level scope explicitly deferred during initial package creation or open a separate architecture track for it now.
+5. Prepare the first package-by-package scaffolding order and dependency cut list.

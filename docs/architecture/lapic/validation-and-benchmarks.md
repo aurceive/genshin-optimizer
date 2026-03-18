@@ -482,23 +482,13 @@ For retained runs, the system must preserve:
 
 ## 18. Open Design Questions
 
-### 18.1 Long-Horizon Benchmark Corpus Governance
+The remaining high-level validation architecture is materially complete.
 
-место требует дополнительного анализа
+The following low-level governance policy is now frozen in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md):
 
-The process for evolving the long-term benchmark corpus without invalidating historical comparisons is not yet frozen.
-
-### 18.2 Exact Noise Model for Browser Benchmarks
-
-место требует дополнительного анализа
-
-Browser environments exhibit higher jitter; the formal noise model and acceptable gating strategy are not yet frozen.
-
-### 18.3 Public Versus Internal Benchmark Profiles
-
-место требует дополнительного анализа
-
-It is likely useful to maintain separate public and internal benchmark profiles, but final policy is not yet frozen.
+- long-horizon benchmark corpus governance,
+- browser benchmark noise model and gating policy,
+- public versus internal benchmark profile policy.
 
 ## 19. Compliance Checklist
 

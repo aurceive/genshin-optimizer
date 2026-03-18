@@ -26,6 +26,7 @@ docs/architecture/
     runtime-and-checkpoints.md
     validation-and-benchmarks.md
     adapters-gi-sr-zzz.md
+    team-level-adapter-boundary.md
     implementation-roadmap.md
     low-level/
       README.md
@@ -41,6 +42,7 @@ docs/architecture/
 - [runtime-and-checkpoints.md](./runtime-and-checkpoints.md): runtime protocol, scheduling, pause/resume, and checkpoints.
 - [validation-and-benchmarks.md](./validation-and-benchmarks.md): correctness validation, replay checks, and benchmark governance.
 - [adapters-gi-sr-zzz.md](./adapters-gi-sr-zzz.md): game adapter contracts for GI, SR, and ZZZ.
+- [team-level-adapter-boundary.md](./team-level-adapter-boundary.md): explicit deferred-scope boundary for multi-entity and team-level adapter semantics.
 - [implementation-roadmap.md](./implementation-roadmap.md): sequencing, gates, and cutover planning.
 - [low-level/README.md](./low-level/README.md): index for low-level freeze documents.
 

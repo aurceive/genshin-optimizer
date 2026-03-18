@@ -493,13 +493,9 @@ No game may cut over to the new optimizer as its primary path until:
 
 место требует дополнительного анализа
 
-Single-entity build optimization is covered by this document. Full team-level adapters require additional canonical entity and compatibility design.
+Single-entity build optimization is covered by this document. Full team-level adapters require additional canonical entity and compatibility design. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
-### 19.2 Source Snapshot Packaging Policy
-
-место требует дополнительного анализа
-
-The exact packaging of source snapshots for replay and benchmark retention is not yet frozen.
+The low-level source snapshot packaging policy is now frozen in [low-level/source-snapshot-packaging.md](./low-level/source-snapshot-packaging.md).
 
 ## 20. Accepted Decisions
 
