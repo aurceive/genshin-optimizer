@@ -3,8 +3,8 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
 - Scope: admissible relaxations, numeric verification, and replayable certificate contracts
 - Audience: solver, certification, numeric runtime, and storage maintainers
 
@@ -578,8 +578,8 @@ The relaxation and certificate system is compliant only if all answers below are
 
 This document must be followed by:
 
-1. [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md).
-2. [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md).
-3. [Validation and Benchmark Specification](./validation-and-benchmark-specification.md).
+1. [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md).
+2. [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md).
+3. [Validation and Benchmark Specification](./validation-and-benchmarks.md).
 
 These are required before correctness-critical implementation is considered architecturally ready.

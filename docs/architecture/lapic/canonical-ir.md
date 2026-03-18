@@ -3,13 +3,13 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Scope: canonical intermediate representations used by the exact optimizer engine
+- Depends on: [lapic Architecture](./overview.md)
+- Scope: canonical intermediate representations used by lapic
 - Audience: formula, solver, certification, runtime, and storage maintainers
 
 ## 1. Purpose
 
-This document specifies the canonical intermediate representations used by the exact optimizer engine.
+This document specifies the canonical intermediate representations used by lapic.
 
 The IR stack must satisfy five goals simultaneously:
 
@@ -681,9 +681,9 @@ An implementation is IR-compliant only if all answers below are yes.
 
 This document requires the following detailed documents:
 
-1. [Relaxation and Certificate Specification](./relaxation-and-certificate-system.md).
-2. [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md).
-3. [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md).
+1. [Relaxation and Certificate Specification](./relaxation-and-certificates.md).
+2. [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md).
+3. [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md).
 4. Adapter Specification for GI, SR, and ZZZ.
 
 Implementation of production search and certificate modules must not begin before these documents exist.

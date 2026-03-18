@@ -1,10 +1,10 @@
-# Exact Optimizer Engine Decision Log
+# lapic Decision Log
 
 ## Status
 
 - Draft
 - Scope: accepted architecture decisions that close previously open questions
-- Audience: all maintainers working on the new exact optimizer engine
+- Audience: all maintainers working on lapic
 
 ## D-001 Canonical Scalar Strategy
 

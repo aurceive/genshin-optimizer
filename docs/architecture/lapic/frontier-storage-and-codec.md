@@ -3,15 +3,15 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
-- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificate-system.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
+- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificates.md)
 - Scope: persistence contracts for frontier blocks, indexes, spill files, and checkpoint-compatible storage artifacts
 - Audience: storage, solver, runtime, certification, and tooling maintainers
 
 ## 1. Purpose
 
-This document specifies the persistent and in-memory storage architecture for the exact optimizer engine.
+This document specifies the persistent and in-memory storage architecture for lapic.
 
 The storage subsystem must support all of the following without weakening correctness:
 
@@ -597,7 +597,7 @@ The storage subsystem is compliant only if all answers below are yes.
 
 This document must be followed by:
 
-1. [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md).
-2. [Validation and Benchmark Specification](./validation-and-benchmark-specification.md).
+1. [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md).
+2. [Validation and Benchmark Specification](./validation-and-benchmarks.md).
 
 These are required before production storage implementation is considered architecturally ready.

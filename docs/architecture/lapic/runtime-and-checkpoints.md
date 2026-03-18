@@ -3,16 +3,16 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
-- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificate-system.md)
-- Depends on: [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
+- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificates.md)
+- Depends on: [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md)
 - Scope: execution runtime, inter-component protocol, worker orchestration, solve lifecycle, pause and resume, and checkpoint semantics
 - Audience: runtime, solver, storage, certification, and tooling maintainers
 
 ## 1. Purpose
 
-This document specifies the runtime contract for executing an exact optimization solve.
+This document specifies the runtime contract for executing a lapic solve.
 
 The runtime is responsible for:
 
@@ -570,7 +570,7 @@ The runtime subsystem is compliant only if all answers below are yes.
 
 This document must be followed by:
 
-1. [Validation and Benchmark Specification](./validation-and-benchmark-specification.md).
-2. [Adapter Specification for GI, SR, and ZZZ](./adapter-specification-gi-sr-zzz.md).
+1. [Validation and Benchmark Specification](./validation-and-benchmarks.md).
+2. [Adapter Specification for GI, SR, and ZZZ](./adapters-gi-sr-zzz.md).
 
 These are required before production runtime implementation is considered architecturally ready.

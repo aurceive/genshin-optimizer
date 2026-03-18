@@ -1,4 +1,4 @@
-# Exact Optimizer Engine
+# lapic Architecture
 
 ## Status
 
@@ -10,7 +10,7 @@
 
 ## 1. Purpose
 
-This document defines the target architecture of a new optimization engine that must outperform the current engines on search spaces larger than 10^10 candidate builds while preserving exactness.
+This document defines the target architecture of lapic, a new optimization engine that must outperform the current engines on search spaces larger than 10^10 candidate builds while preserving exactness.
 
 Exactness means all of the following are mandatory:
 
@@ -758,15 +758,15 @@ The engine is considered architecturally successful only if all of the following
 
 This document is the top-level architecture. It must be followed by:
 
-1. [Canonical optimizer IR specification](./canonical-optimizer-ir.md).
-2. [Relaxation and certificate specification](./relaxation-and-certificate-system.md).
-3. [Frontier storage and block codec specification](./frontier-storage-and-block-codec.md).
-4. [Runtime protocol and checkpoint specification](./runtime-protocol-and-checkpoint-specification.md).
-5. [Game adapter specification for GI, SR, and ZZZ](./adapter-specification-gi-sr-zzz.md).
-6. [Validation and benchmark specification](./validation-and-benchmark-specification.md).
+1. [Canonical IR specification](./canonical-ir.md).
+2. [Relaxation and certificate specification](./relaxation-and-certificates.md).
+3. [Frontier storage and codec specification](./frontier-storage-and-codec.md).
+4. [Runtime and checkpoint specification](./runtime-and-checkpoints.md).
+5. [Game adapter specification for GI, SR, and ZZZ](./adapters-gi-sr-zzz.md).
+6. [Validation and benchmark specification](./validation-and-benchmarks.md).
 
 These documents are required before implementation of correctness-critical modules begins.
 
 ## 25. Companion Planning Document
 
-Implementation sequencing is tracked separately in [Exact Optimizer Engine Implementation Roadmap](./implementation-roadmap.md).
+Implementation sequencing is tracked separately in [lapic Implementation Roadmap](./implementation-roadmap.md).

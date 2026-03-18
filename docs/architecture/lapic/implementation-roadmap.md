@@ -1,21 +1,22 @@
-# Exact Optimizer Engine Implementation Roadmap
+# lapic Implementation Roadmap
 
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
-- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificate-system.md)
-- Depends on: [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md)
-- Depends on: [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md)
-- Depends on: [Validation and Benchmark Specification](./validation-and-benchmark-specification.md)
-- Depends on: [Adapter Specification for GI, SR, and ZZZ](./adapter-specification-gi-sr-zzz.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
+- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificates.md)
+- Depends on: [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md)
+- Depends on: [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md)
+- Depends on: [Validation and Benchmark Specification](./validation-and-benchmarks.md)
+- Depends on: [Adapter Specification for GI, SR, and ZZZ](./adapters-gi-sr-zzz.md)
+- Supports low-level freeze documents in: [low-level/README.md](./low-level/README.md)
 - Scope: sequencing of full implementation across repository packages, workstreams, readiness gates, and cutover criteria
 - Audience: maintainers responsible for planning and executing the implementation
 
 ## 1. Purpose
 
-This document defines the implementation roadmap for the exact optimizer engine.
+This document defines the implementation roadmap for lapic.
 
 The roadmap is not an MVP plan. It is a full implementation sequencing plan constrained by the architecture documents already defined.
 
@@ -479,6 +480,8 @@ The high-level architecture is decided, but final implementation closure still d
 
 These are no longer top-level architectural blockers, but they remain implementation freeze points.
 
+These freezes should be specified in the dedicated [low-level/README.md](./low-level/README.md) document set rather than as additional flat top-level architecture documents.
+
 ## 19. Success Conditions for the Roadmap
 
 The roadmap is considered successfully executed only if:
@@ -496,6 +499,6 @@ Given the current document set, the immediate next implementation-planning tasks
 
 1. Create package skeletons for optimizer-core, optimizer-cert, optimizer-storage, optimizer-runtime, and optimizer-debug.
 2. Write low-level module specs for optimizer-core IR APIs and optimizer-cert certificate APIs.
-3. Freeze the canonical scalar encoding decision if possible; otherwise isolate it behind final-shape interfaces and mark the unresolved sections explicitly.
+3. Write the next low-level freeze documents in [low-level/README.md](./low-level/README.md), starting with exact-decimal wire layout and HiGHS evidence payload specifications.
 4. Define benchmark corpus ownership and fixture storage layout.
 5. Draft GI, SR, and ZZZ adapter package APIs before code implementation begins.

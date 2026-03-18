@@ -3,18 +3,18 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
-- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificate-system.md)
-- Depends on: [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md)
-- Depends on: [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md)
-- Depends on: [Validation and Benchmark Specification](./validation-and-benchmark-specification.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
+- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificates.md)
+- Depends on: [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md)
+- Depends on: [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md)
+- Depends on: [Validation and Benchmark Specification](./validation-and-benchmarks.md)
 - Scope: adapter contracts for Genshin Impact, Star Rail, and Zenless Zone Zero
 - Audience: formula, data, optimizer, and frontend maintainers
 
 ## 1. Purpose
 
-This document specifies how game-specific data, formulas, filters, and optimization requests are translated into the canonical optimizer problem model.
+This document specifies how game-specific data, formulas, filters, and optimization requests are translated into the lapic canonical optimizer problem model.
 
 The adapter layer is the only layer allowed to know game-specific semantics such as:
 
@@ -517,7 +517,7 @@ An adapter implementation is compliant only if all answers below are yes.
 
 ## 22. Architectural Completion
 
-With this document in place, the high-level architecture set for the exact optimizer engine is structurally complete.
+With this document in place, the high-level architecture set for lapic is structurally complete.
 
 Remaining work after this point belongs to:
 

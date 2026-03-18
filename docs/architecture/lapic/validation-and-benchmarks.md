@@ -3,17 +3,17 @@
 ## Status
 
 - Draft
-- Depends on: [Exact Optimizer Engine](./exact-optimizer-engine.md)
-- Depends on: [Canonical Optimizer IR Specification](./canonical-optimizer-ir.md)
-- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificate-system.md)
-- Depends on: [Frontier Storage and Block Codec Specification](./frontier-storage-and-block-codec.md)
-- Depends on: [Runtime Protocol and Checkpoint Specification](./runtime-protocol-and-checkpoint-specification.md)
+- Depends on: [lapic Architecture](./overview.md)
+- Depends on: [Canonical Optimizer IR Specification](./canonical-ir.md)
+- Depends on: [Relaxation and Certificate System Specification](./relaxation-and-certificates.md)
+- Depends on: [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md)
+- Depends on: [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md)
 - Scope: correctness validation, replay validation, differential testing, performance benchmarking, regression gating, and reporting rules
 - Audience: solver, runtime, storage, certification, CI, and performance maintainers
 
 ## 1. Purpose
 
-This document specifies how the exact optimizer engine is validated and benchmarked.
+This document specifies how lapic is validated and benchmarked.
 
 The validation system must answer two independent questions:
 
