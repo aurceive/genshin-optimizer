@@ -29,12 +29,12 @@ The initial document set in this directory is:
 - [highs-evidence-and-deterministic-config.md](./highs-evidence-and-deterministic-config.md): deterministic HiGHS profile, structured evidence schema, and danger-zone metadata contract.
 - [benchmark-governance-and-browser-noise.md](./benchmark-governance-and-browser-noise.md): corpus versioning, benchmark profile classes, browser noise model, and regression gating policy.
 - [benchmark-fixture-layout.md](./benchmark-fixture-layout.md): repository-level directory layout, ownership mapping, fixture classes, retained artifacts, and report storage rules.
-- [optimizer-core-ir-api.md](./optimizer-core-ir-api.md): public package surface for canonical problem, IR builders, validators, identities, and state-model contracts.
-- [optimizer-cert-api.md](./optimizer-cert-api.md): public package surface for certificate models, evidence references, replay requests, replay results, and audit helpers.
-- [optimizer-storage-api.md](./optimizer-storage-api.md): public package surface for artifact envelopes, block codecs, manifests, backends, checkpoint closures, and integrity tooling.
-- [optimizer-runtime-api.md](./optimizer-runtime-api.md): public package surface for solve sessions, solve handles, work units, worker protocol, checkpoints, failures, and diagnostics.
+- [lapic-core-ir-api.md](./lapic-core-ir-api.md): lapic core package surface for canonical problem, IR builders, validators, identities, and state-model contracts.
+- [lapic-cert-api.md](./lapic-cert-api.md): lapic cert package surface for certificate models, evidence references, replay requests, replay results, and audit helpers.
+- [lapic-storage-api.md](./lapic-storage-api.md): lapic storage package surface for artifact envelopes, block codecs, manifests, backends, checkpoint closures, and integrity tooling.
+- [lapic-runtime-api.md](./lapic-runtime-api.md): lapic runtime package surface for solve sessions, solve handles, work units, worker protocol, checkpoints, failures, and diagnostics.
 - [adapters-gi-sr-zzz-api.md](./adapters-gi-sr-zzz-api.md): public package surfaces for GI, SR, and ZZZ adapter requests, canonical exports, snapshot metadata, capabilities, and validation hooks.
-- [optimizer-debug-api.md](./optimizer-debug-api.md): public package surface for inspection, trace views, audit reports, replay-oriented tools, and validation and benchmark helpers.
+- [lapic-debug-api.md](./lapic-debug-api.md): lapic debug package surface for inspection, trace views, audit reports, replay-oriented tools, and validation and benchmark helpers.
 - [source-snapshot-packaging.md](./source-snapshot-packaging.md): canonical packaging policy for adapter source snapshots used in replay and benchmark retention.
 
 ## 3. Rules

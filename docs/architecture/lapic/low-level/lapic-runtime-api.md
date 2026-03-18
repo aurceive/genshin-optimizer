@@ -1,18 +1,18 @@
-# optimizer-runtime Session and Protocol API Specification
+# lapic runtime Session and Protocol API Specification
 
 ## Status
 
 - Draft
 - Depends on: [Runtime and Checkpoint Specification](../runtime-and-checkpoints.md)
 - Depends on: [Frontier Storage and Codec Specification](../frontier-storage-and-codec.md)
-- Depends on: [optimizer-storage-api.md](./optimizer-storage-api.md)
-- Depends on: [optimizer-cert-api.md](./optimizer-cert-api.md)
-- Scope: public package surface for libs/game-opt/optimizer-runtime, including solve session model, solve handle API, work units, worker protocol, checkpoint APIs, and failure model
-- Audience: optimizer-runtime, optimizer-storage, optimizer-cert, adapter, app integration, and tooling maintainers
+- Depends on: [lapic-storage-api.md](./lapic-storage-api.md)
+- Depends on: [lapic-cert-api.md](./lapic-cert-api.md)
+- Scope: public package surface for libs/lapic/runtime, including solve session model, solve handle API, work units, worker protocol, checkpoint APIs, and failure model
+- Audience: lapic runtime, lapic storage, lapic cert, adapter, app integration, and tooling maintainers
 
 ## 1. Purpose
 
-This document freezes the low-level public API surface for `libs/game-opt/optimizer-runtime`.
+This document freezes the low-level public API surface for `libs/lapic/runtime`.
 
 It refines the runtime architecture into package-level contracts that applications, adapters, storage, and certification can depend on without leaking worker or backend implementation details.
 
@@ -26,7 +26,7 @@ The goal is to define:
 
 ## 2. Package Responsibility Boundary
 
-`optimizer-runtime` owns:
+`lapic runtime` owns:
 
 - solve state machine execution,
 - session controller and public solve handle,
@@ -36,7 +36,7 @@ The goal is to define:
 - failure record model,
 - progress and diagnostics stream contracts.
 
-`optimizer-runtime` MUST NOT own:
+`lapic runtime` MUST NOT own:
 
 - canonical IR construction,
 - persistence codec implementation,
@@ -163,7 +163,7 @@ The `checkpoint-api` surface MUST export:
 - checkpoint completion result type,
 - pause-to-checkpoint transition summary type.
 
-Checkpoint APIs MUST be sufficient to export and import full correctness-critical closure through optimizer-storage abstractions.
+Checkpoint APIs MUST be sufficient to export and import full correctness-critical closure through lapic storage abstractions.
 
 ### 4.6 failure-model
 
@@ -197,9 +197,9 @@ Diagnostics streams MUST be explicitly observational and MUST NOT be the sole so
 
 ## 5. Cross-Package Dependency Rules
 
-### 5.1 optimizer-runtime to optimizer-core
+### 5.1 lapic runtime to lapic core
 
-optimizer-runtime MAY depend on stable optimizer-core surfaces for:
+lapic runtime MAY depend on stable lapic core surfaces for:
 
 - canonical problem references,
 - work planning inputs,
@@ -207,29 +207,29 @@ optimizer-runtime MAY depend on stable optimizer-core surfaces for:
 - threshold snapshot shapes,
 - state and region references.
 
-optimizer-runtime MUST NOT depend on optimizer-core package-private caches or builder internals.
+lapic runtime MUST NOT depend on lapic core package-private caches or builder internals.
 
-### 5.2 optimizer-runtime to optimizer-storage
+### 5.2 lapic runtime to lapic storage
 
-optimizer-runtime MAY depend on:
+lapic runtime MAY depend on:
 
 - artifact store interfaces,
 - checkpoint closure APIs,
 - manifest models,
 - integrity verification entrypoints.
 
-optimizer-runtime MUST NOT depend on backend-native storage handles.
+lapic runtime MUST NOT depend on backend-native storage handles.
 
-### 5.3 optimizer-runtime to optimizer-cert
+### 5.3 lapic runtime to lapic cert
 
-optimizer-runtime MAY depend on:
+lapic runtime MAY depend on:
 
 - certificate publication contracts,
 - replay request hooks,
 - validation entrypoints,
 - final optimality summary models.
 
-optimizer-runtime MUST NOT depend on provider-specific certification internals.
+lapic runtime MUST NOT depend on provider-specific certification internals.
 
 ## 6. Mutability and Ownership Rules
 
@@ -240,7 +240,7 @@ optimizer-runtime MUST NOT depend on provider-specific certification internals.
 
 ## 7. Error Model
 
-The optimizer-runtime public surface MUST use a structured error model with at least:
+The lapic runtime public surface MUST use a structured error model with at least:
 
 - `InvalidStateTransition`
 - `ProtocolValidationFailure`
@@ -269,7 +269,7 @@ They MUST NOT depend on:
 
 ## 9. Forbidden Public API Shapes
 
-The following are forbidden in the optimizer-runtime public surface:
+The following are forbidden in the lapic runtime public surface:
 
 - public scheduler mutation APIs that bypass the solve state machine,
 - raw worker handle exposure as correctness-critical control surfaces,
@@ -299,7 +299,7 @@ This internal layout is recommended, not yet mandatory, but the export-family sp
 
 ## 12. Compliance Checklist
 
-Before `optimizer-runtime` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
+Before `lapic runtime` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
 
 - a stable public solve handle contract,
 - protocol-validated worker message families,

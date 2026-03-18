@@ -52,3 +52,20 @@ docs/architecture/
 - Implementation-freeze details belong under [low-level/README.md](./low-level/README.md).
 - A low-level document may refine a high-level spec, but it must not silently replace it.
 - Cross-document dependencies should prefer relative links inside the lapic directory.
+
+## 5. Naming Rules
+
+- Repository paths for core lapic packages must use the top-level namespace under `libs/lapic/*`.
+- Repository paths for game bridge packages must use `libs/<game>/lapic-adapter` rather than `libs/<game>/optimizer-adapter`.
+- Prefer `lapic core`, `lapic runtime`, `lapic cert`, `lapic storage`, and `lapic debug` in prose when referring to concrete package families. Reserve `optimizer-*` wording for historical references or existing file names only.
+
+## 6. Draft Exit Conditions
+
+This document set is not ready to leave Draft status yet.
+
+The remaining blockers are:
+
+- the deferred team-level boundary is still explicitly open in [team-level-adapter-boundary.md](./team-level-adapter-boundary.md), so the architecture is only frozen for single-entity optimization,
+- the mixed-integer relaxation backend choice is still marked as `место требует дополнительного анализа` in [overview.md](./overview.md),
+- the global partitioning cost model is still marked as `место требует дополнительного анализа` in [overview.md](./overview.md),
+- Draft can only be removed after all repository path examples use lapic naming consistently and the remaining unresolved sections are either resolved or explicitly narrowed out of the claimed production scope.

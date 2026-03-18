@@ -5,16 +5,16 @@
 - Draft
 - Depends on: [Adapter Specification for GI, SR, and ZZZ](../adapters-gi-sr-zzz.md)
 - Depends on: [Canonical Optimizer IR Specification](../canonical-ir.md)
-- Depends on: [optimizer-core-ir-api.md](./optimizer-core-ir-api.md)
+- Depends on: [lapic-core-ir-api.md](./lapic-core-ir-api.md)
 - Depends on: [Implementation Roadmap](../implementation-roadmap.md)
-- Scope: public package surfaces for libs/gi/optimizer-adapter, libs/sr/optimizer-adapter, and libs/zzz/optimizer-adapter, including request models, canonical problem export, snapshot metadata, capability reporting, and validation hooks
-- Audience: adapter, optimizer-core, frontend, validation, and migration maintainers
+- Scope: public package surfaces for libs/gi/lapic-adapter, libs/sr/lapic-adapter, and libs/zzz/lapic-adapter, including request models, canonical problem export, snapshot metadata, capability reporting, and validation hooks
+- Audience: adapter, lapic core, frontend, validation, and migration maintainers
 
 ## 1. Purpose
 
 This document freezes the low-level public API surfaces for the lapic game adapter packages.
 
-It refines the high-level adapter architecture into package-level contracts that frontend entrypoints, migration tooling, validation, and optimizer-core can depend on.
+It refines the high-level adapter architecture into package-level contracts that frontend entrypoints, migration tooling, validation, and lapic core can depend on.
 
 The goal is to define:
 
@@ -38,7 +38,7 @@ Each adapter package owns:
 
 Adapter packages MUST NOT own:
 
-- optimizer-core IR internals,
+- lapic core IR internals,
 - runtime session orchestration,
 - certificate replay execution,
 - storage envelope or checkpoint codec implementation,
@@ -48,9 +48,9 @@ Adapter packages MUST NOT own:
 
 This specification applies to:
 
-- `libs/gi/optimizer-adapter`
-- `libs/sr/optimizer-adapter`
-- `libs/zzz/optimizer-adapter`
+- `libs/gi/lapic-adapter`
+- `libs/sr/lapic-adapter`
+- `libs/zzz/lapic-adapter`
 
 All three packages MUST implement a common adapter surface shape, even where game-specific extension payloads differ.
 
@@ -139,7 +139,7 @@ The export result type MUST include typed fields for at least:
 - `unsupportedFeatureList`
 - `replayReconstructionHints`
 
-The export result MUST NOT depend on optimizer-runtime or optimizer-storage objects.
+The export result MUST NOT depend on lapic runtime or lapic storage objects.
 
 #### 5.3.2 Candidate Export Contract
 
@@ -186,13 +186,13 @@ These hooks may be test-facing, but their data shapes are part of the stable ada
 
 ### 5.6 game-extensions
 
-The `game-extensions` surface MAY export game-specific typed request fragments and metadata types, but only when they terminate at adapter boundary and do not leak into optimizer-core.
+The `game-extensions` surface MAY export game-specific typed request fragments and metadata types, but only when they terminate at adapter boundary and do not leak into lapic core.
 
 Game-extension exports MUST be explicitly namespaced by game package.
 
 ## 6. Cross-Package Dependency Rules
 
-### 6.1 Adapters to optimizer-core
+### 6.1 Adapters to lapic core
 
 Adapter packages MAY depend on:
 
@@ -201,7 +201,7 @@ Adapter packages MAY depend on:
 - schema and validation entrypoints,
 - deterministic identity helpers.
 
-Adapter packages MUST NOT depend on optimizer-core package-private analysis or search internals.
+Adapter packages MUST NOT depend on lapic core package-private analysis or search internals.
 
 ### 6.2 Adapters to runtime, storage, and certification
 
@@ -248,7 +248,7 @@ They MUST NOT depend on:
 
 ### 9.1 Additional Export Requirements
 
-`libs/gi/optimizer-adapter` MUST additionally export:
+`libs/gi/lapic-adapter` MUST additionally export:
 
 - GI optimization frame descriptor types,
 - GI set-rule and rainbow-exclusion request fragments,
@@ -273,7 +273,7 @@ If GI TC support is surfaced through the same package, its API MUST be explicitl
 
 ### 10.1 Additional Export Requirements
 
-`libs/sr/optimizer-adapter` MUST additionally export:
+`libs/sr/lapic-adapter` MUST additionally export:
 
 - relic and light-cone request fragments,
 - cavern and planar set-filter request fragments,
@@ -288,7 +288,7 @@ The SR adapter surface SHOULD remain single-path unless a second formula family 
 
 ### 11.1 Additional Export Requirements
 
-`libs/zzz/optimizer-adapter` MUST additionally export:
+`libs/zzz/lapic-adapter` MUST additionally export:
 
 - disc and wengine request fragments,
 - slot taxonomy descriptor types,
@@ -304,7 +304,7 @@ ZZZ-specific request fragments MAY evolve, but all ranking semantics and hard-fi
 The following are forbidden in adapter package public surfaces:
 
 - exporting game-local formula graph internals as part of canonical export contract,
-- returning optimizer-runtime session handles from canonical export entrypoints,
+- returning lapic runtime session handles from canonical export entrypoints,
 - implicit feature omission on unsupported semantics,
 - request shapes whose correctness depends on frontend component state not serialized into the request,
 - cross-game shared enums that silently encode game-specific meaning differently per package.

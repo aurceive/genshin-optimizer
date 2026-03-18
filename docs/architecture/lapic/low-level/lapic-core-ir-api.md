@@ -1,4 +1,4 @@
-# optimizer-core IR API Specification
+# lapic core IR API Specification
 
 ## Status
 
@@ -7,25 +7,25 @@
 - Depends on: [Canonical Optimizer IR Specification](../canonical-ir.md)
 - Depends on: [Implementation Roadmap](../implementation-roadmap.md)
 - Depends on: [exact-decimal-wire-format.md](./exact-decimal-wire-format.md)
-- Scope: public package surface for libs/game-opt/optimizer-core, including canonical problem types, IR builders, validators, deterministic identity utilities, and state-model interfaces
-- Audience: optimizer-core, adapter, runtime, storage, certification, and validation maintainers
+- Scope: public package surface for libs/lapic/core, including canonical problem types, IR builders, validators, deterministic identity utilities, and state-model interfaces
+- Audience: lapic core, adapter, runtime, storage, certification, and validation maintainers
 
 ## 1. Purpose
 
-This document freezes the low-level public API surface for `libs/game-opt/optimizer-core`.
+This document freezes the low-level public API surface for `libs/lapic/core`.
 
 It refines the canonical IR architecture into package-level contracts that other packages may depend on.
 
 The goal is to define:
 
 - which exports are public and stable,
-- which concerns belong inside optimizer-core,
+- which concerns belong inside lapic core,
 - which object identities and registries must be shared across packages,
 - which interfaces adapters, runtime, storage, and certification are allowed to consume.
 
 ## 2. Package Responsibility Boundary
 
-`optimizer-core` owns:
+`lapic core` owns:
 
 - canonical problem model types,
 - F-IR and A-IR construction,
@@ -35,7 +35,7 @@ The goal is to define:
 - region decomposition scaffolding,
 - non-provider-specific bound scaffolding and search primitives.
 
-`optimizer-core` MUST NOT own:
+`lapic core` MUST NOT own:
 
 - persistence codecs and storage envelopes,
 - certificate persistence or replay execution,
@@ -180,7 +180,7 @@ The `schema` surface MUST export:
 - schema compatibility descriptors,
 - field classification enums needed by core types.
 
-The schema registry is normative for other packages that consume optimizer-core artifacts.
+The schema registry is normative for other packages that consume lapic core artifacts.
 
 ### 4.7 validate
 
@@ -228,7 +228,7 @@ Full scheduler orchestration or worker protocol objects are forbidden here.
 
 ## 6. Error Model
 
-The optimizer-core public surface MUST use a structured error model with at least:
+The lapic core public surface MUST use a structured error model with at least:
 
 - `SchemaViolation`
 - `NormalizationFailure`
@@ -243,7 +243,7 @@ Construction-oriented entrypoints MAY throw only typed errors or return typed fa
 
 ## 7. Determinism Rules
 
-Every public construction entrypoint in optimizer-core MUST be deterministic with respect to:
+Every public construction entrypoint in lapic core MUST be deterministic with respect to:
 
 - canonical input payload,
 - schema version,
@@ -259,7 +259,7 @@ It MUST NOT depend on:
 
 ## 8. Exact-Encoding Abstraction Boundary
 
-optimizer-core MUST depend only on abstract scalar encoding interfaces, not on storage envelopes.
+lapic core MUST depend only on abstract scalar encoding interfaces, not on storage envelopes.
 
 The minimum required scalar abstraction exports are:
 
@@ -270,11 +270,11 @@ The minimum required scalar abstraction exports are:
 - normalization interfaces,
 - canonical payload derivation interfaces for core-owned identities.
 
-The concrete byte-level format is frozen by [exact-decimal-wire-format.md](./exact-decimal-wire-format.md), but storage framing remains outside optimizer-core.
+The concrete byte-level format is frozen by [exact-decimal-wire-format.md](./exact-decimal-wire-format.md), but storage framing remains outside lapic core.
 
 ## 9. Cross-Package Dependency Rules
 
-### 9.1 Adapters to optimizer-core
+### 9.1 Adapters to lapic core
 
 Adapter packages MAY depend on:
 
@@ -285,9 +285,9 @@ Adapter packages MAY depend on:
 
 Adapter packages MUST NOT depend on package-private analysis or search internals.
 
-### 9.2 optimizer-cert to optimizer-core
+### 9.2 lapic cert to lapic core
 
-optimizer-cert MAY depend on:
+lapic cert MAY depend on:
 
 - canonical IDs,
 - S-IR state references,
@@ -295,26 +295,26 @@ optimizer-cert MAY depend on:
 - core schema registry values,
 - threshold snapshot and bound result shapes shared for certificate assembly.
 
-optimizer-core MUST NOT depend back on optimizer-cert.
+lapic core MUST NOT depend back on lapic cert.
 
-### 9.3 optimizer-storage to optimizer-core
+### 9.3 lapic storage to lapic core
 
-optimizer-storage MAY depend on:
+lapic storage MAY depend on:
 
 - state layout descriptors,
 - canonical identity helpers,
 - schema version constants,
 - scalar abstraction interfaces.
 
-optimizer-core MUST NOT depend on storage envelope types.
+lapic core MUST NOT depend on storage envelope types.
 
-### 9.4 optimizer-runtime to optimizer-core
+### 9.4 lapic runtime to lapic core
 
-optimizer-runtime MAY depend on all stable public export families, but runtime-specific worker messages remain outside optimizer-core.
+lapic runtime MAY depend on all stable public export families, but runtime-specific worker messages remain outside lapic core.
 
 ## 10. Forbidden Public API Shapes
 
-The following are forbidden in the optimizer-core public surface:
+The following are forbidden in the lapic core public surface:
 
 - callbacks that expose mutable internal IR graphs,
 - public methods returning provider-specific LP objects,
@@ -346,7 +346,7 @@ This internal layout is recommended, not yet mandatory, but the export-family sp
 
 ## 13. Compliance Checklist
 
-Before `optimizer-core` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
+Before `lapic core` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
 
 - deterministic canonical problem normalization,
 - deterministic F-IR construction from identical canonical problems,

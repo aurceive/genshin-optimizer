@@ -1,4 +1,4 @@
-# optimizer-storage Persistence API Specification
+# lapic storage Persistence API Specification
 
 ## Status
 
@@ -6,12 +6,12 @@
 - Depends on: [Frontier Storage and Codec Specification](../frontier-storage-and-codec.md)
 - Depends on: [Canonical Optimizer IR Specification](../canonical-ir.md)
 - Depends on: [exact-decimal-wire-format.md](./exact-decimal-wire-format.md)
-- Scope: public package surface for libs/game-opt/optimizer-storage, including artifact envelopes, block codecs, manifests, storage backends, checkpoint closures, and integrity tooling contracts
-- Audience: optimizer-storage, optimizer-runtime, optimizer-cert, optimizer-core, and tooling maintainers
+- Scope: public package surface for libs/lapic/storage, including artifact envelopes, block codecs, manifests, storage backends, checkpoint closures, and integrity tooling contracts
+- Audience: lapic storage, lapic runtime, lapic cert, lapic core, and tooling maintainers
 
 ## 1. Purpose
 
-This document freezes the low-level public API surface for `libs/game-opt/optimizer-storage`.
+This document freezes the low-level public API surface for `libs/lapic/storage`.
 
 It refines the storage architecture into package-level contracts that runtime, certification, and tooling may depend on without reaching into backend-specific internals.
 
@@ -25,7 +25,7 @@ The goal is to define:
 
 ## 2. Package Responsibility Boundary
 
-`optimizer-storage` owns:
+`lapic storage` owns:
 
 - canonical artifact envelope encoding and decoding,
 - frontier block and index codec interfaces,
@@ -35,7 +35,7 @@ The goal is to define:
 - artifact integrity verification and scan helpers,
 - deterministic debug export framing for persisted artifacts.
 
-`optimizer-storage` MUST NOT own:
+`lapic storage` MUST NOT own:
 
 - canonical IR construction,
 - certificate replay logic,
@@ -167,37 +167,37 @@ Debug exports MUST be explicitly classified as non-canonical and MUST NOT be usa
 
 ## 5. Cross-Package Dependency Rules
 
-### 5.1 optimizer-storage to optimizer-core
+### 5.1 lapic storage to lapic core
 
-optimizer-storage MAY depend on:
+lapic storage MAY depend on:
 
 - state layout descriptors,
 - canonical identity helpers,
 - schema constants,
 - scalar abstraction interfaces.
 
-optimizer-storage MUST NOT depend on optimizer-core builder internals.
+lapic storage MUST NOT depend on lapic core builder internals.
 
-### 5.2 optimizer-runtime to optimizer-storage
+### 5.2 lapic runtime to lapic storage
 
-optimizer-runtime MAY depend on:
+lapic runtime MAY depend on:
 
 - artifact store interfaces,
 - checkpoint closure APIs,
 - integrity verification entrypoints,
 - manifest models.
 
-optimizer-storage MUST NOT depend on runtime worker protocol messages.
+lapic storage MUST NOT depend on runtime worker protocol messages.
 
-### 5.3 optimizer-cert to optimizer-storage
+### 5.3 lapic cert to lapic storage
 
-optimizer-cert MAY depend on:
+lapic cert MAY depend on:
 
 - certificate and relaxation record artifact references,
 - evidence retention descriptors,
 - checkpoint closure inventory interfaces.
 
-optimizer-storage MUST NOT depend on certificate replay execution.
+lapic storage MUST NOT depend on certificate replay execution.
 
 ## 6. Mutability and Ownership Rules
 
@@ -208,7 +208,7 @@ optimizer-storage MUST NOT depend on certificate replay execution.
 
 ## 7. Error Model
 
-The optimizer-storage public surface MUST use a structured error model with at least:
+The lapic storage public surface MUST use a structured error model with at least:
 
 - `EnvelopeSchemaViolation`
 - `CodecSchemaViolation`
@@ -236,7 +236,7 @@ They MUST NOT depend on:
 
 ## 9. Forbidden Public API Shapes
 
-The following are forbidden in the optimizer-storage public surface:
+The following are forbidden in the lapic storage public surface:
 
 - APIs that accept or return raw IndexedDB transaction handles,
 - APIs that require Node filesystem paths as the primary logical artifact identity,
@@ -266,7 +266,7 @@ This internal layout is recommended, not yet mandatory, but the export-family sp
 
 ## 12. Compliance Checklist
 
-Before `optimizer-storage` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
+Before `lapic storage` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
 
 - lossless frontier block round-trip on governed fixtures,
 - deterministic manifest lineage behavior,

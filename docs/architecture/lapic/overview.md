@@ -641,21 +641,21 @@ Implicit tolerance is forbidden.
 
 The intended codebase shape is:
 
-- libs/game-opt/optimizer-core
-- libs/game-opt/optimizer-runtime
-- libs/game-opt/optimizer-cert
-- libs/game-opt/optimizer-storage
-- libs/game-opt/optimizer-debug
-- libs/gi/optimizer-adapter
-- libs/sr/optimizer-adapter
-- libs/zzz/optimizer-adapter
+- libs/lapic/core
+- libs/lapic/runtime
+- libs/lapic/cert
+- libs/lapic/storage
+- libs/lapic/debug
+- libs/gi/lapic-adapter
+- libs/sr/lapic-adapter
+- libs/zzz/lapic-adapter
 
 Responsibilities:
 
-- optimizer-core owns IR, analysis, compression, search, and bounds.
-- optimizer-runtime owns workers, scheduling, checkpointing, and backend selection.
-- optimizer-cert owns certificate data model and replay validation.
-- optimizer-storage owns block store abstractions and persistence codecs.
+- lapic core owns IR, analysis, compression, search, and bounds.
+- lapic runtime owns workers, scheduling, checkpointing, and backend selection.
+- lapic cert owns certificate data model and replay validation.
+- lapic storage owns block store abstractions and persistence codecs.
 - adapters convert game-specific formulas and items into the canonical problem API.
 
 The existing pando and wr code should not be coupled directly into search internals. They should feed the canonical problem API through adapters.

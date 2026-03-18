@@ -8,7 +8,7 @@
 - Depends on: [Runtime and Checkpoint Specification](../runtime-and-checkpoints.md)
 - Depends on: [Validation and Benchmark Specification](../validation-and-benchmarks.md)
 - Scope: deterministic HiGHS operating profile, evidence serialization, danger-zone metadata, and replay contract for correctness-critical LP use
-- Audience: optimizer-cert, optimizer-runtime, optimizer-storage, validation, and provider maintainers
+- Audience: lapic cert, lapic runtime, lapic storage, validation, and provider maintainers
 
 ## 1. Purpose
 

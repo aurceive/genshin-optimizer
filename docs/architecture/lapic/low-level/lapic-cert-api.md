@@ -1,4 +1,4 @@
-# optimizer-cert Certificate API and Replay Payload Specification
+# lapic cert Certificate API and Replay Payload Specification
 
 ## Status
 
@@ -8,12 +8,12 @@
 - Depends on: [Runtime and Checkpoint Specification](../runtime-and-checkpoints.md)
 - Depends on: [highs-evidence-and-deterministic-config.md](./highs-evidence-and-deterministic-config.md)
 - Depends on: [exact-decimal-wire-format.md](./exact-decimal-wire-format.md)
-- Scope: public package surface for libs/game-opt/optimizer-cert, including certificate types, evidence references, replay requests, replay results, and validation APIs
-- Audience: optimizer-cert, optimizer-core, optimizer-runtime, optimizer-storage, validation, and audit maintainers
+- Scope: public package surface for libs/lapic/cert, including certificate types, evidence references, replay requests, replay results, and validation APIs
+- Audience: lapic cert, lapic core, lapic runtime, lapic storage, validation, and audit maintainers
 
 ## 1. Purpose
 
-This document freezes the low-level public API surface for `libs/game-opt/optimizer-cert`.
+This document freezes the low-level public API surface for `libs/lapic/cert`.
 
 It refines the certificate and replay architecture into package-level contracts that runtime, storage, and validation may depend on.
 
@@ -27,7 +27,7 @@ The goal is to define:
 
 ## 2. Package Responsibility Boundary
 
-`optimizer-cert` owns:
+`lapic cert` owns:
 
 - certificate public data model,
 - evidence reference model,
@@ -38,7 +38,7 @@ The goal is to define:
 - final optimality summary model,
 - certificate audit helpers.
 
-`optimizer-cert` MUST NOT own:
+`lapic cert` MUST NOT own:
 
 - canonical IR construction,
 - provider-specific solver implementations,
@@ -273,7 +273,7 @@ The typed payload MUST include:
 
 ## 8. Error Model
 
-The optimizer-cert public surface MUST use a structured error model with at least:
+The lapic cert public surface MUST use a structured error model with at least:
 
 - `CertificateSchemaViolation`
 - `ReplayRecipeViolation`
@@ -285,9 +285,9 @@ The optimizer-cert public surface MUST use a structured error model with at leas
 
 ## 9. Cross-Package Dependency Rules
 
-### 9.1 optimizer-cert to optimizer-core
+### 9.1 lapic cert to lapic core
 
-optimizer-cert MAY depend on:
+lapic cert MAY depend on:
 
 - canonical IDs,
 - S-IR and region references,
@@ -295,28 +295,28 @@ optimizer-cert MAY depend on:
 - relaxation references,
 - arithmetic policy descriptors.
 
-optimizer-cert MUST NOT require direct mutation of optimizer-core IR objects.
+lapic cert MUST NOT require direct mutation of lapic core IR objects.
 
-### 9.2 optimizer-runtime to optimizer-cert
+### 9.2 lapic runtime to lapic cert
 
-optimizer-runtime MAY depend on:
+lapic runtime MAY depend on:
 
 - replay request and result types,
 - certificate validation entrypoints,
 - certificate publication contracts,
 - audit summaries for progress and completion reports.
 
-optimizer-cert MUST NOT depend on runtime worker protocol messages.
+lapic cert MUST NOT depend on runtime worker protocol messages.
 
-### 9.3 optimizer-storage to optimizer-cert
+### 9.3 lapic storage to lapic cert
 
-optimizer-storage MAY depend on:
+lapic storage MAY depend on:
 
 - certificate schema version constants,
 - evidence manifest descriptors,
 - replay payload framing interfaces.
 
-optimizer-cert MUST NOT depend on storage envelope implementations.
+lapic cert MUST NOT depend on storage envelope implementations.
 
 ## 10. Determinism Rules
 
@@ -337,7 +337,7 @@ They MUST NOT depend on:
 
 ## 11. Forbidden Public API Shapes
 
-The following are forbidden in the optimizer-cert public surface:
+The following are forbidden in the lapic cert public surface:
 
 - APIs that require a live provider object with opaque mutable state,
 - certificate constructors that silently invent missing evidence,
@@ -366,7 +366,7 @@ This internal layout is recommended, not yet mandatory, but the export-family sp
 
 ## 14. Compliance Checklist
 
-Before `optimizer-cert` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
+Before `lapic cert` may be treated as a stable dependency for other lapic packages, it MUST demonstrate:
 
 - typed models for all required certificate kinds,
 - stable replay request and result contracts,

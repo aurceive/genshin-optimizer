@@ -49,14 +49,14 @@ No package, workstream, or migration step is considered ready until its gate cri
 
 The roadmap assumes the following module family will be introduced.
 
-- libs/game-opt/optimizer-core
-- libs/game-opt/optimizer-runtime
-- libs/game-opt/optimizer-cert
-- libs/game-opt/optimizer-storage
-- libs/game-opt/optimizer-debug
-- libs/gi/optimizer-adapter
-- libs/sr/optimizer-adapter
-- libs/zzz/optimizer-adapter
+- libs/lapic/core
+- libs/lapic/runtime
+- libs/lapic/cert
+- libs/lapic/storage
+- libs/lapic/debug
+- libs/gi/lapic-adapter
+- libs/sr/lapic-adapter
+- libs/zzz/lapic-adapter
 
 Additional support modules may be introduced if they do not fracture ownership or blur package boundaries.
 
@@ -79,11 +79,11 @@ Each workstream contains phases with entry and exit gates.
 
 ### 5.1 Hard Dependencies
 
-- optimizer-core depends on the IR specification and the resolved parts of the scalar representation policy.
-- optimizer-cert depends on optimizer-core and the relaxation specification.
-- optimizer-storage depends on optimizer-core, optimizer-cert, and the resolved parts of the canonical wire format.
-- optimizer-runtime depends on optimizer-core, optimizer-cert, and optimizer-storage.
-- game adapters depend on optimizer-core contracts and current game-local formula and data packages.
+- lapic core depends on the IR specification and the resolved parts of the scalar representation policy.
+- lapic cert depends on lapic core and the relaxation specification.
+- lapic storage depends on lapic core, lapic cert, and the resolved parts of the canonical wire format.
+- lapic runtime depends on lapic core, lapic cert, and lapic storage.
+- game adapters depend on lapic core contracts and current game-local formula and data packages.
 - validation infrastructure depends on all correctness-critical package surfaces.
 - app integration depends on runtime plus at least one validated adapter.
 
@@ -118,7 +118,7 @@ These phases overlap, but their gate ordering is strict.
 
 ### 7.2 Deliverables
 
-- package manifests and build configs for optimizer-core, optimizer-cert, optimizer-storage, optimizer-runtime, optimizer-debug,
+- package manifests and build configs for lapic core, lapic cert, lapic storage, lapic runtime, and lapic debug,
 - shared schema registry and artifact kind registry,
 - deterministic hashing utilities,
 - exact-encoding abstraction interfaces,
@@ -146,8 +146,8 @@ These phases overlap, but their gate ordering is strict.
 
 ### 8.2 Target Packages
 
-- libs/game-opt/optimizer-core
-- libs/game-opt/optimizer-cert
+- libs/lapic/core
+- libs/lapic/cert
 
 ### 8.3 Required Subsystems
 
@@ -181,8 +181,8 @@ These phases overlap, but their gate ordering is strict.
 
 ### 9.2 Target Packages
 
-- libs/game-opt/optimizer-storage
-- libs/game-opt/optimizer-debug
+- libs/lapic/storage
+- libs/lapic/debug
 
 ### 9.3 Required Subsystems
 
@@ -224,8 +224,8 @@ These phases overlap, but their gate ordering is strict.
 
 ### 10.2 Target Packages
 
-- libs/game-opt/optimizer-runtime
-- libs/game-opt/optimizer-debug
+- libs/lapic/runtime
+- libs/lapic/debug
 
 ### 10.3 Required Subsystems
 
@@ -238,8 +238,8 @@ These phases overlap, but their gate ordering is strict.
 
 ### 10.4 Critical Integration Dependencies
 
-- optimizer-storage must already provide authoritative artifact visibility and integrity checks,
-- optimizer-cert must already provide threshold-sensitive certificate shapes and replay hooks.
+- lapic storage must already provide authoritative artifact visibility and integrity checks,
+- lapic cert must already provide threshold-sensitive certificate shapes and replay hooks.
 
 ### 10.5 Exit Gate
 
@@ -258,9 +258,9 @@ These phases overlap, but their gate ordering is strict.
 
 ### 11.2 Target Packages
 
-- libs/gi/optimizer-adapter
-- libs/sr/optimizer-adapter
-- libs/zzz/optimizer-adapter
+- libs/gi/lapic-adapter
+- libs/sr/lapic-adapter
+- libs/zzz/lapic-adapter
 
 ### 11.3 GI Work Items
 
@@ -303,7 +303,7 @@ These phases overlap, but their gate ordering is strict.
 
 ### 12.2 Target Packages
 
-- libs/game-opt/optimizer-debug
+- libs/lapic/debug
 - dedicated benchmark and validation workspace tooling under tools or dedicated support packages as needed
 
 ### 12.3 Required Subsystems
@@ -339,7 +339,7 @@ These phases overlap, but their gate ordering is strict.
 
 ### 13.3 Required Integration Rules
 
-- applications interact with optimizer-runtime through stable solve-handle APIs,
+- applications interact with lapic runtime through stable solve-handle APIs,
 - no application code consumes internal block or certificate formats directly,
 - side-by-side comparison mode must preserve explicit labeling of legacy versus new engine results.
 
@@ -379,33 +379,33 @@ GI must not fully cut over until the repository chooses and validates its final 
 
 ## 15. Cross-Phase Deliverables Matrix
 
-### 15.1 optimizer-core
+### 15.1 lapic core
 
 - phase 1: package skeleton and shared type boundaries
 - phase 2: IR, analysis, state model, initial search primitives
 - phase 3 onward: stable dependency for all other packages
 
-### 15.2 optimizer-cert
+### 15.2 lapic cert
 
 - phase 1: package skeleton
 - phase 2: certificate model and replay framework
 - phase 4: threshold lineage and runtime integration
 - phase 6: replay validation tooling
 
-### 15.3 optimizer-storage
+### 15.3 lapic storage
 
 - phase 1: package skeleton and storage contracts
 - phase 3: artifact envelope, manifests, codecs, backends
 - phase 4: checkpoint integration
 - phase 6: integrity and audit tooling
 
-### 15.4 optimizer-runtime
+### 15.4 lapic runtime
 
 - phase 1: package skeleton and protocol stubs
 - phase 4: full runtime implementation
 - phase 7: application-facing solve-handle integration
 
-### 15.5 optimizer-debug
+### 15.5 lapic debug
 
 - phase 1: package skeleton
 - phase 3: artifact inspection helpers
@@ -422,9 +422,9 @@ GI must not fully cut over until the repository chooses and validates its final 
 
 The following work can proceed in parallel once phase 1 is complete.
 
-- optimizer-core IR and validator work,
-- optimizer-cert schema and replay framework,
-- optimizer-storage manifest and backend abstraction work,
+- lapic core IR and validator work,
+- lapic cert schema and replay framework,
+- lapic storage manifest and backend abstraction work,
 - validation harness scaffolding,
 - adapter prototype planning against final package contracts.
 
@@ -497,8 +497,8 @@ The roadmap is considered successfully executed only if:
 
 Given the current document set, the immediate next implementation-planning tasks are:
 
-1. Create package skeletons for optimizer-core, optimizer-cert, optimizer-storage, optimizer-runtime, and optimizer-debug.
+1. Create package skeletons for lapic core, lapic cert, lapic storage, lapic runtime, and lapic debug.
 2. Choose whether to scaffold the benchmark repository layout immediately or defer physical directory creation until package skeleton creation.
-3. Decide whether the first scaffolding batch should include optimizer-debug or keep it in a second wave after runtime and storage.
+3. Decide whether the first scaffolding batch should include lapic debug or keep it in a second wave after runtime and storage.
 4. Decide whether to keep team-level scope explicitly deferred during initial package creation or open a separate architecture track for it now.
 5. Prepare the first package-by-package scaffolding order and dependency cut list.

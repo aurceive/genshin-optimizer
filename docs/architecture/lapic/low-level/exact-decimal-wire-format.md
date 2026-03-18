@@ -7,7 +7,7 @@
 - Depends on: [Canonical Optimizer IR Specification](../canonical-ir.md)
 - Depends on: [Frontier Storage and Codec Specification](../frontier-storage-and-codec.md)
 - Scope: canonical persisted representation, hashing payload, ordering payload, and verification escape encoding for correctness-critical scalar values
-- Audience: optimizer-core, optimizer-storage, optimizer-cert, runtime, and replay maintainers
+- Audience: lapic core, lapic storage, lapic cert, runtime, and replay maintainers
 
 ## 1. Purpose
 
@@ -36,7 +36,7 @@ The goal is to define:
 
 The canonical exact-decimal value domain is:
 
-value = sign * coefficient * 10^(-scale)
+`value = sign * coefficient * 10^(-scale)`
 
 where:
 
@@ -164,7 +164,7 @@ Canonical byte order is not the numeric comparison rule.
 
 Numeric comparison of two decimal-canonical values MUST follow mathematical comparison of:
 
-sign * coefficient * 10^(-scale)
+`sign * coefficient * 10^(-scale)`
 
 Implementations MUST use an exact comparison algorithm. They MUST NOT compare via lossy float conversion.
 

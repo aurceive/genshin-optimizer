@@ -4,7 +4,7 @@
 
 - Draft
 - Scope: explicit deferred architectural boundary for multi-entity and team-level adapter semantics in lapic
-- Audience: adapter, optimizer-core, validation, and roadmap maintainers
+- Audience: adapter, lapic core, validation, and roadmap maintainers
 
 ## 1. Purpose
 

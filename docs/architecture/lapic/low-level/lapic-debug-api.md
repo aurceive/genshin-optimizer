@@ -1,18 +1,18 @@
-# optimizer-debug Inspection and Audit API Specification
+# lapic debug Inspection and Audit API Specification
 
 ## Status
 
 - Draft
-- Depends on: [optimizer-storage-api.md](./optimizer-storage-api.md)
-- Depends on: [optimizer-runtime-api.md](./optimizer-runtime-api.md)
-- Depends on: [optimizer-cert-api.md](./optimizer-cert-api.md)
+- Depends on: [lapic-storage-api.md](./lapic-storage-api.md)
+- Depends on: [lapic-runtime-api.md](./lapic-runtime-api.md)
+- Depends on: [lapic-cert-api.md](./lapic-cert-api.md)
 - Depends on: [Validation and Benchmark Specification](../validation-and-benchmarks.md)
-- Scope: public package surface for libs/game-opt/optimizer-debug, including artifact inspection, trace views, replay-oriented audit reports, validation harness facades, and benchmark reporting helpers
-- Audience: optimizer-debug, validation, audit, CI, frontend migration, and developer-tooling maintainers
+- Scope: public package surface for libs/lapic/debug, including artifact inspection, trace views, replay-oriented audit reports, validation harness facades, and benchmark reporting helpers
+- Audience: lapic debug, validation, audit, CI, frontend migration, and developer-tooling maintainers
 
 ## 1. Purpose
 
-This document freezes the low-level public API surface for `libs/game-opt/optimizer-debug`.
+This document freezes the low-level public API surface for `libs/lapic/debug`.
 
 It defines the diagnostic and audit-facing contracts that sit above storage, runtime, and certification surfaces without becoming correctness-critical persistence themselves.
 
@@ -26,7 +26,7 @@ The goal is to define:
 
 ## 2. Package Responsibility Boundary
 
-`optimizer-debug` owns:
+`lapic debug` owns:
 
 - artifact inspection helpers,
 - deterministic diagnostic text and structured debug views,
@@ -36,7 +36,7 @@ The goal is to define:
 - benchmark report shaping helpers,
 - offline developer introspection utilities.
 
-`optimizer-debug` MUST NOT own:
+`lapic debug` MUST NOT own:
 
 - canonical artifact identity,
 - storage envelopes or checkpoint closure truth,
@@ -103,7 +103,7 @@ The `replay-tools` surface MUST export:
 - replay closure summary type,
 - offline replay bundle descriptor type.
 
-These helpers MAY depend on `optimizer-cert` replay contracts but MUST NOT invent new replay legality semantics.
+These helpers MAY depend on `lapic cert` replay contracts but MUST NOT invent new replay legality semantics.
 
 ### 4.5 validation-harness
 
@@ -129,23 +129,23 @@ The `benchmark-reporting` surface MUST export:
 
 ## 5. Cross-Package Dependency Rules
 
-### 5.1 optimizer-debug to other lapic packages
+### 5.1 lapic debug to other lapic packages
 
-optimizer-debug MAY depend on stable public surfaces from:
+lapic debug MAY depend on stable public surfaces from:
 
-- optimizer-storage,
-- optimizer-runtime,
-- optimizer-cert,
-- optimizer-core,
+- lapic storage,
+- lapic runtime,
+- lapic cert,
+- lapic core,
 - adapter packages for validation hooks only.
 
 All such dependencies MUST be read-only or report-oriented from the perspective of correctness.
 
 ### 5.2 Reverse Dependencies
 
-Other lapic packages MUST NOT require optimizer-debug for correctness-critical execution.
+Other lapic packages MUST NOT require lapic debug for correctness-critical execution.
 
-optimizer-debug is allowed to be absent from a minimal production execution path as long as canonical audit and replay artifacts remain valid.
+lapic debug is allowed to be absent from a minimal production execution path as long as canonical audit and replay artifacts remain valid.
 
 ## 6. Mutability and Ownership Rules
 
@@ -155,7 +155,7 @@ optimizer-debug is allowed to be absent from a minimal production execution path
 
 ## 7. Error Model
 
-The optimizer-debug public surface MUST use a structured error model with at least:
+The lapic debug public surface MUST use a structured error model with at least:
 
 - `InspectionInputFailure`
 - `TraceProjectionFailure`
@@ -166,7 +166,7 @@ The optimizer-debug public surface MUST use a structured error model with at lea
 
 ## 8. Determinism Rules
 
-All public optimizer-debug entrypoints that operate on canonical artifacts MUST be deterministic with respect to:
+All public lapic debug entrypoints that operate on canonical artifacts MUST be deterministic with respect to:
 
 - referenced artifact digests,
 - schema versions,
@@ -181,7 +181,7 @@ They MUST NOT depend on:
 
 ## 9. Forbidden Public API Shapes
 
-The following are forbidden in the optimizer-debug public surface:
+The following are forbidden in the lapic debug public surface:
 
 - debug views used as primary correctness-critical persistence,
 - APIs that mutate runtime legality state through inspection actions,
@@ -193,7 +193,7 @@ The following are forbidden in the optimizer-debug public surface:
 
 - Breaking semantic changes to debug view meaning or audit report content require package-major or explicit report-schema version increments.
 - Additive observational fields are allowed only when omission remains unambiguous for consumers.
-- optimizer-debug version changes MUST NOT imply changes to canonical artifact identity.
+- lapic debug version changes MUST NOT imply changes to canonical artifact identity.
 
 ## 11. Initial Package Layout Recommendation
 
@@ -210,7 +210,7 @@ This internal layout is recommended, not yet mandatory, but the export-family sp
 
 ## 12. Compliance Checklist
 
-Before `optimizer-debug` may be treated as a stable lapic package surface, it MUST demonstrate:
+Before `lapic debug` may be treated as a stable lapic package surface, it MUST demonstrate:
 
 - deterministic inspection output for canonical artifacts,
 - trace summaries that remain observational only,

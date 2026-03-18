@@ -460,13 +460,13 @@ Adapter benchmark reports must identify whether cost increases come from adapter
 
 The intended repository module layout is:
 
-- libs/gi/optimizer-adapter
-- libs/sr/optimizer-adapter
-- libs/zzz/optimizer-adapter
+- libs/gi/lapic-adapter
+- libs/sr/lapic-adapter
+- libs/zzz/lapic-adapter
 
-These adapter packages must depend on existing game-local formula and data packages but must expose only canonical problem APIs to optimizer-core.
+These adapter packages must depend on existing game-local formula and data packages but must expose only canonical problem APIs to lapic core.
 
-The optimizer-core package must not depend on current gi, sr, or zzz formula packages directly.
+The lapic core package must not depend on current gi, sr, or zzz formula packages directly.
 
 ## 18. Migration Strategy
 
@@ -509,7 +509,7 @@ An adapter implementation is compliant only if all answers below are yes.
 2. Does it preserve source semantics exactly or fail explicitly when it cannot?
 3. Are all filter transformations and objective mappings explicit and replayable?
 4. Can it reconstruct canonical candidates and formulas from retained snapshots?
-5. Is game-specific logic fully isolated from optimizer-core?
+5. Is game-specific logic fully isolated from lapic core?
 
 ## 22. Architectural Completion
 
