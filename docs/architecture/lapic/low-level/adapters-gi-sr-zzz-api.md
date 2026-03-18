@@ -85,8 +85,10 @@ The `request-model` surface MUST export:
 Every adapter request type MUST provide logical fields covering at least:
 
 - optimize target entity descriptor,
+- team layout descriptor when more than one slot participates,
 - game-specific formula context,
 - candidate domains by slot,
+- shared team context payload,
 - hard filters and exclusions,
 - objective definition,
 - top-N and ordering policy,
@@ -94,6 +96,17 @@ Every adapter request type MUST provide logical fields covering at least:
 - runtime preference hints that do not affect correctness.
 
 The normalized request MUST be deterministic under identical input payload.
+
+#### 5.1.2 Team-Level Request Fields
+
+If a request spans more than one optimization-participating slot, it MUST additionally provide typed fields for at least:
+
+- ordered slot descriptors,
+- slot participation modes,
+- team-wide exclusivity rules,
+- shared context payload,
+- frame-axis descriptor where applicable,
+- explicit team-level objective mode.
 
 ### 5.2 capabilities
 
@@ -141,7 +154,18 @@ The export result type MUST include typed fields for at least:
 
 The export result MUST NOT depend on lapic runtime or lapic storage objects.
 
-#### 5.3.2 Candidate Export Contract
+#### 5.3.2 Team-Level Canonical Export Fields
+
+If the canonical export represents a multi-entity problem, it MUST additionally include typed fields for at least:
+
+- `teamLayoutDescriptor`
+- `slotDescriptorList`
+- `sharedTeamContext`
+- `frameAxisDescriptor`
+- `teamCompatibilitySchemaVersion`
+- `teamObjectiveDescriptor`
+
+#### 5.3.3 Candidate Export Contract
 
 Every adapter package MUST export a candidate representation containing at least:
 
@@ -152,6 +176,13 @@ Every adapter package MUST export a candidate representation containing at least
 - `discreteCounters`
 - `categoricalSignature`
 - `provenancePayload`
+
+If a candidate belongs to a team-level export, its provenance payload MUST also identify:
+
+- owning slot,
+- logical actor identity,
+- exclusive resource claims,
+- any adapter-local team capability facts contributed by the candidate.
 
 ### 5.4 snapshot-model
 

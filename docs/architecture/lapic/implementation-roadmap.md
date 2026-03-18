@@ -89,9 +89,9 @@ Each workstream contains phases with entry and exit gates.
 
 ### 5.2 Open-Question Blockers
 
-The following unresolved architecture items block specific work.
+No remaining top-level open architecture question blocks the roadmap. Team-level semantics are now frozen in [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
-- Team-level optimization adapters block any general team-level production cutover beyond single-entity build optimization.
+Former open questions around scalar persistence, storage tuning, checkpoint optimizations, runtime tuning, and team-level semantics are now either frozen or explicitly narrowed out of current production-required scope. See [decision-log.md](./decision-log.md).
 
 ## 6. Phase Structure
 
@@ -196,14 +196,14 @@ These phases overlap, but their gate ordering is strict.
 
 ### 9.4 Blockers
 
-- final canonical scalar wire format is blocked until exact scalar representation is frozen.
+- no remaining top-level architecture blocker within this phase, provided implementation stays within the frozen exact-decimal wire format and current checkpoint scope.
 
 ### 9.5 Allowed Parallel Work
 
 - backend abstractions,
 - manifest model,
 - integrity tooling,
-- non-finalized codec implementation behind the final interface with an explicit unresolved scalar payload section.
+- final codec implementation against the frozen exact-decimal wire format.
 
 ### 9.6 Exit Gate
 
@@ -458,13 +458,13 @@ Package has passed correctness gates, performance qualification where relevant, 
 
 ## 18. Explicit Blocked Areas
 
-The following areas are currently blocked from final implementation closure.
+No area remains blocked by an unresolved top-level architecture question.
 
 ### 18.1 Team-Level Adapter Generalization
 
-Blocked until canonical multi-entity team-level adapter semantics are frozen. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
+Canonical multi-entity team-level adapter semantics are now frozen. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
-Affected areas:
+This unblocks:
 
 - generalized team-level production cutover beyond single-entity optimization,
 - final team-aware compatibility signatures in adapters,

@@ -69,8 +69,10 @@ Every game adapter must perform all of the following.
 Every adapter must accept a typed request with the following logical fields.
 
 - optimize target entity descriptor,
+- team layout descriptor when more than one slot participates,
 - game-specific formula context,
 - candidate domains by slot,
+- shared team context,
 - hard filters and exclusions,
 - objective definition,
 - top-N and ordering policy,
@@ -84,9 +86,11 @@ Every adapter must produce a canonical problem model containing:
 - canonical problem digest,
 - adapter kind and version,
 - source snapshot digests,
+- canonical team layout and slot descriptors when applicable,
 - canonical objective expression set,
 - canonical feasibility constraint set,
 - canonical candidate domains,
+- canonical frame axis when applicable,
 - partitioning hints if derivable,
 - declared unsupported features if any.
 
@@ -491,9 +495,9 @@ No game may cut over to the new optimizer as its primary path until:
 
 ### 19.1 Team-Level Optimization Adapters
 
-место требует дополнительного анализа
+Team-level and multi-entity semantics are now frozen in [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
-Single-entity build optimization is covered by this document. Full team-level adapters require additional canonical entity and compatibility design. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
+Single-entity, fixed-support, and full multi-slot optimization are different operating modes of the same canonical team model rather than separate architectural families.
 
 The low-level source snapshot packaging policy is now frozen in [low-level/source-snapshot-packaging.md](./low-level/source-snapshot-packaging.md).
 

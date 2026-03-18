@@ -413,7 +413,7 @@ The engine uses a cascade of admissible bounds. Each stage may terminate the cas
 3. McCormick relaxations for bilinear and multilinear kernels.
 4. Piecewise-linear envelopes for threshold, ratio, resistance, and min or max regions.
 5. LP relaxation over the active region.
-6. `место требует дополнительного анализа`: convex mixed-integer relaxation backend selection for future hard formula families.
+6. Reserved future extension point: convex mixed-integer relaxation may be added later for harder formula families, but it is outside the current production-required architecture scope. See [decision-log.md](./decision-log.md).
 
 The cascade is ordered by cost and expected tightness. Every layer must be correctness-preserving.
 
@@ -677,31 +677,15 @@ Currently unacceptable temporary elements:
 - alternate state keys that are known not to be final-safe,
 - runtime-only data formats that cannot carry final frontier metadata.
 
-## 20. Open Design Questions
+## 20. Scope Narrowing Decisions
 
-The following items are intentionally not frozen and require deeper analysis before implementation decisions are final.
+### 20.1 Convex Mixed-Integer Relaxation Backend
 
-### 20.1 Mixed-Integer Relaxation Backend
-
-`место требует дополнительного анализа`
-
-The architecture reserves a provider slot for a stronger mixed-integer relaxation backend. Final choice depends on:
-
-- browser deployability,
-- certificate quality,
-- deterministic replay support,
-- acceptable memory footprint.
+The architecture reserves a provider slot for a stronger convex mixed-integer layer, but that layer is outside the current production-required scope. LP plus exact verification remains the strongest required correctness-critical provider path. See [decision-log.md](./decision-log.md).
 
 ### 20.2 Global Partitioning Cost Model
 
-`место требует дополнительного анализа`
-
-Partition choice should be data-driven. The final cost model must estimate:
-
-- frontier explosion risk,
-- skyline density,
-- bound quality after partition,
-- expected join complexity.
+Partition choice remains implementation-tuned, but no longer blocks architectural closure. The architecture freezes deterministic inputs, benchmark qualification, and correctness-independence from partition heuristics rather than a single final cost formula. See [decision-log.md](./decision-log.md).
 
 ### 20.3 Exact Representation of Build Values in Persistent Certificates
 

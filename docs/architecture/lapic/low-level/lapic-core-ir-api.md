@@ -160,6 +160,24 @@ The S-IR surface MUST provide typed construction entrypoints that derive states 
 
 Construction entrypoints MUST NOT require direct access to storage, runtime workers, or certificate objects.
 
+#### 4.4.2 Compatibility Signature Contract
+
+The compatibility signature type MUST be expressive enough for team-level joins.
+
+It MUST expose typed fields covering at least:
+
+- occupied slot mask,
+- logical actor uniqueness claims,
+- exclusive resource claims,
+- categorical aggregate counts,
+- remaining categorical obligations,
+- provided capability facts,
+- remaining required capability facts,
+- frame-axis identity,
+- adapter semantic mode.
+
+The exact signature group key type MUST be derivable from a compatibility signature plus other state-local exact discrete data without consulting adapter-private code.
+
 ### 4.5 identity
 
 The `identity` surface MUST export:

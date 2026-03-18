@@ -565,19 +565,15 @@ The storage layer must support deterministic text export for:
 
 These inspection formats are not canonical persistence formats and must never be used as the sole source for correctness-critical resume.
 
-## 20. Open Design Questions
+## 20. Deferred Tuning and Storage Enhancements
 
 ### 20.1 Columnar Layout Details for Large Sparse Feature Vectors
 
-место требует дополнительного анализа
-
-The high-level requirement is fixed, but the final sparse column encoding strategy depends on measured frontier distributions.
+The high-level requirement is fixed, but the exact sparse column encoding strategy is an implementation-tuned storage choice. It must remain deterministic and benchmark-qualified, but it is not a top-level architecture blocker. See [decision-log.md](./decision-log.md).
 
 ### 20.2 Cross-Checkpoint Deduplicated Artifact Packs
 
-место требует дополнительного анализа
-
-The architecture should likely support deduplicated checkpoint packs, but the exact packaging contract is not yet frozen.
+Deduplicated checkpoint packs are a deferred storage optimization rather than a required part of the current resumable checkpoint contract. The current production-required scope is satisfied by canonical paused-state checkpoint closure export and import. See [decision-log.md](./decision-log.md).
 
 ## 21. Accepted Decisions
 

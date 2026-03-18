@@ -536,25 +536,19 @@ Resume and imported checkpoints are allowed only when:
 
 If migration cannot preserve full proof and replay guarantees, the checkpoint is not resumable and must be marked diagnostic-only.
 
-## 20. Open Design Questions
+## 20. Deferred Enhancements and Tuning Policies
 
 ### 20.1 Incremental Online Checkpointing Without Full Pause
 
-место требует дополнительного анализа
-
-The architecture currently requires paused-state checkpointing for normal operation. Incremental fully online checkpointing remains open until a crash-consistent correctness model is specified.
+The current production-required runtime requires paused-state checkpointing only. Incremental fully online checkpointing is deferred until a separate crash-consistent correctness model is explicitly frozen. See [decision-log.md](./decision-log.md).
 
 ### 20.2 Optimal Worker Granularity for Large Join Blocks
 
-место требует дополнительного анализа
-
-The high-level protocol is fixed, but final work-unit sizing heuristics depend on empirical frontier shapes and spill behavior.
+The high-level protocol is fixed, and work-unit sizing is now treated as deterministic performance tuning rather than unresolved architecture. Final heuristics may evolve under benchmark governance as long as legality and final result sets remain unchanged. See [decision-log.md](./decision-log.md).
 
 ### 20.3 Deterministic Heartbeat and Progress Sampling Policy
 
-место требует дополнительного анализа
-
-Observability timing should not affect replay and must be frozen carefully.
+Heartbeat and progress sampling are diagnostic-only. They must remain outside canonical state and replay legality, but exact sampling cadence is an observability policy choice rather than an architecture blocker. See [decision-log.md](./decision-log.md).
 
 ## 21. Compliance Checklist
 

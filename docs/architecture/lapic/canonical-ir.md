@@ -413,6 +413,12 @@ Fields must use deterministic binary encodings. Floating-point byte layout MUST 
 
 The compatibilitySignature MUST summarize all future completion constraints relevant to joins, including:
 
+- occupied slot mask and required remaining slot classes,
+- logical actor uniqueness claims,
+- exclusive resource claims,
+- categorical aggregate counts and still-unmet lower-bound obligations,
+- provided and still-required capability facts,
+- frame-axis identity and frame-sensitive shared-state summary,
 - set-count obligations,
 - slot-local exclusions,
 - categorical mutual exclusions,
@@ -461,7 +467,7 @@ The architecture requires support for:
 - McCormickRelax
 - PiecewiseLinearRelax
 - LinearProgramRelax
-- место требует дополнительного анализа: ConvexMixedIntegerRelax
+- reserved future extension point: ConvexMixedIntegerRelax, outside the current production-required scope
 
 ### 10.4 Variable Basis Contract
 
@@ -652,15 +658,11 @@ Adding an operator requires all of the following before use in correctness-criti
 - validation rules,
 - replay evaluator.
 
-## 16. Open Specification Gaps
-
-The following items are not frozen.
+## 16. Reserved Extension Points
 
 ### 16.1 Convex Mixed-Integer Relaxation Artifact Format
 
-место требует дополнительного анализа
-
-The architecture reserves the extension point, but the final artifact schema depends on the chosen backend and certificate quality.
+The architecture reserves this extension point, but no current implementation or compliance gate may require it. If the layer is introduced later, its artifact schema must be frozen by a new architecture decision covering backend choice and certificate quality. See [decision-log.md](./decision-log.md).
 
 ## 17. Accepted Decisions
 

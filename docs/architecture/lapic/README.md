@@ -42,7 +42,7 @@ docs/architecture/
 - [runtime-and-checkpoints.md](./runtime-and-checkpoints.md): runtime protocol, scheduling, pause/resume, and checkpoints.
 - [validation-and-benchmarks.md](./validation-and-benchmarks.md): correctness validation, replay checks, and benchmark governance.
 - [adapters-gi-sr-zzz.md](./adapters-gi-sr-zzz.md): game adapter contracts for GI, SR, and ZZZ.
-- [team-level-adapter-boundary.md](./team-level-adapter-boundary.md): explicit deferred-scope boundary for multi-entity and team-level adapter semantics.
+- [team-level-adapter-boundary.md](./team-level-adapter-boundary.md): full multi-entity and team-level adapter architecture for lapic.
 - [implementation-roadmap.md](./implementation-roadmap.md): sequencing, gates, and cutover planning.
 - [low-level/README.md](./low-level/README.md): index for low-level freeze documents.
 
@@ -61,11 +61,12 @@ docs/architecture/
 
 ## 6. Draft Exit Conditions
 
-This document set is not ready to leave Draft status yet.
+No top-level unresolved architecture blocker remains under the current lapic scope.
 
-The remaining blockers are:
+Draft status now remains only for editorial and governance reasons, not because a major architectural question is still open.
 
-- the deferred team-level boundary is still explicitly open in [team-level-adapter-boundary.md](./team-level-adapter-boundary.md), so the architecture is only frozen for single-entity optimization,
-- the mixed-integer relaxation backend choice is still marked as `место требует дополнительного анализа` in [overview.md](./overview.md),
-- the global partitioning cost model is still marked as `место требует дополнительного анализа` in [overview.md](./overview.md),
-- Draft can only be removed after all repository path examples use lapic naming consistently and the remaining unresolved sections are either resolved or explicitly narrowed out of the claimed production scope.
+The following topics are no longer considered top-level architecture blockers:
+
+- convex mixed-integer relaxations are a reserved future extension point outside current production-required scope, see [decision-log.md](./decision-log.md),
+- partition heuristics, worker granularity, sparse frontier tuning, and heartbeat sampling are implementation-tuned policies with frozen invariants rather than unresolved architecture, see [decision-log.md](./decision-log.md),
+- online checkpointing and cross-checkpoint deduplicated packs are deferred enhancements rather than required correctness scope, see [decision-log.md](./decision-log.md).
