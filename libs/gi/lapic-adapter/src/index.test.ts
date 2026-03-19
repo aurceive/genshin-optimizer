@@ -7,12 +7,23 @@ import type {
 } from '@genshin-optimizer/lapic/core'
 import {
   buildGiLapicCanonicalExportFromRequest,
+  createGiLapicAdapterRequest,
+  getGiLapicAdapterCapabilities,
   createGiLapicAdapterMetadata,
   createGiLapicAuxiliaryOutputs,
+  createGiLapicCanonicalIdentity,
   createGiLapicCandidateDomains,
   createGiLapicCanonicalProblem,
   createGiLapicProblemNormalizationInput,
   normalizeGiLapicAdapterRequest,
+  validateGiLapicAdapterCapabilities,
+  validateGiLapicAdapterContext,
+  validateGiLapicAdapterRequest,
+  validateGiLapicCanonicalExport,
+  validateGiLapicCanonicalIdentity,
+  validateGiLapicInventorySnapshot,
+  validateGiLapicOptimizationRequest,
+  validateGiLapicSourceSnapshotDescriptor,
 } from './index'
 
 function createArtifact(
@@ -170,6 +181,25 @@ describe('gi lapic adapter', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('validates GI adapter request/context/helper shapes', () => {
+    const request = createGiRequest()
+
+    expect(
+      validateGiLapicSourceSnapshotDescriptor(request.giContext.sourceSnapshots).ok
+    ).toBe(true)
+    expect(
+      validateGiLapicInventorySnapshot(request.giContext.inventorySnapshot).ok
+    ).toBe(true)
+    expect(
+      validateGiLapicOptimizationRequest(request.giContext.optimizationRequest).ok
+    ).toBe(true)
+    expect(validateGiLapicAdapterContext(request.giContext).ok).toBe(true)
+    expect(validateGiLapicAdapterRequest(request).ok).toBe(true)
+    expect(
+      createGiLapicAdapterRequest(request).requestedPotentialSolveModes
+    ).toEqual(['current-only'])
+  })
+
   it('rejects unsupported potential solve modes', () => {
     const result = normalizeGiLapicAdapterRequest({
       ...createGiRequest(),
@@ -228,6 +258,29 @@ describe('gi lapic adapter', () => {
       'formula-snapshot-digest',
     ])
     expect(metadata.supportedPotentialSolveModes).toEqual(['current-only'])
+    expect(metadata.declaredUnsupportedFeatures).toContain(
+      'gi-potential-aware-ranking'
+    )
+    expect(metadata.metadata.formulaCompilationMode).toBe(
+      'gi-legacy-compatibility'
+    )
+    expect(metadata.metadata.migrationState).toBe('legacyValidated')
+  })
+
+  it('reports richer GI adapter capabilities', () => {
+    const capabilities = getGiLapicAdapterCapabilities()
+
+    expect(validateGiLapicAdapterCapabilities(capabilities).ok).toBe(true)
+    expect(capabilities.supportedGraphOutputKinds).toEqual(['gi-plot-base'])
+    expect(capabilities.supportedFormulaCompilationModes).toEqual([
+      'gi-legacy-compatibility',
+    ])
+    expect(capabilities.supportedLegacyCompatibilityPaths).toEqual([
+      'waverider-opt-node',
+    ])
+    expect(capabilities.explicitlyUnsupportedSemantics).toContain(
+      'gi-upgrade-frontier-export'
+    )
   })
 
   it('creates candidate domains from filtered GI inventory', () => {
@@ -259,6 +312,11 @@ describe('gi lapic adapter', () => {
     expect(outputs).toHaveLength(1)
     expect(outputs[0]?.kind).toBe('gi-plot-base')
     expect(outputs[0]?.participatesInOrdering).toBe(false)
+    expect(outputs[0]).toMatchObject({
+      xAxisKind: 'gi-plot-x',
+      yAxisKind: 'gi-plot-y',
+      graphExactness: 'exact',
+    })
   })
 
   it('creates enriched normalization input from GI request context', () => {
@@ -284,5 +342,68 @@ describe('gi lapic adapter', () => {
     const result = normalizeGiLapicAdapterRequest(request)
 
     expect(result.ok).toBe(false)
+  })
+
+  it('enriches canonical export metadata and graph capability fields', () => {
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.plotBase = plotBaseNode
+
+    const result = buildGiLapicCanonicalExportFromRequest({
+      request,
+      canonicalIdentity: {
+        problemId: 'problem-id',
+        problemDigest: 'problem-digest',
+        engineVersion: 'engine-version',
+        arithmeticPolicyId: 'arithmetic-policy',
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value.canonicalProblemDigest).toBe('problem-digest')
+    expect(result.value.adapterVersion).toBe('0.1.0-draft')
+    expect(result.value.supportedGraphOutputModes).toEqual(['gi-plot-base'])
+    expect(result.value.formulaCompilationMode).toBe('gi-legacy-compatibility')
+    expect(result.value.filterTransformationLog).toContain(
+      'plot-base-exported-as-auxiliary-output'
+    )
+    expect(result.value.replayReconstructionHints).toContain(
+      'reconstruct-from-gi-source-snapshots'
+    )
+    expect(result.value.unsupportedFeatureList).toContain(
+      'gi-canonical-pando-export'
+    )
+    expect(validateGiLapicCanonicalExport(result.value).ok).toBe(true)
+  })
+
+  it('creates and validates canonical identity helper output', () => {
+    const identity = createGiLapicCanonicalIdentity({
+      problemId: 'problem-id',
+      problemDigest: 'problem-digest',
+      engineVersion: 'engine-version',
+      arithmeticPolicyId: 'arithmetic-policy',
+    })
+
+    expect(validateGiLapicCanonicalIdentity(identity).ok).toBe(true)
+  })
+
+  it('rejects invalid inventory and optimization request shapes', () => {
+    const request = createGiRequest()
+    const invalidInventory = {
+      ...request.giContext.inventorySnapshot,
+      excludedArtifactIds: ['valid-id', ''],
+    }
+    const invalidOptimizationRequest = {
+      ...request.giContext.optimizationRequest,
+      topN: 0,
+    }
+
+    expect(validateGiLapicInventorySnapshot(invalidInventory as never).ok).toBe(
+      false
+    )
+    expect(
+      validateGiLapicOptimizationRequest(invalidOptimizationRequest as never).ok
+    ).toBe(false)
   })
 })

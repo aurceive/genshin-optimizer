@@ -18,11 +18,20 @@ import type {
   LapicDiagnostic,
   LapicDigest,
   LapicEngineVersion,
+  LapicGraphAuxiliaryOutputDescriptor,
   LapicPotentialSolveMode,
   LapicProblemDigest,
   LapicProblemId,
   LapicProblemNormalizationInput,
+  LapicPotentialParticipationMode,
+  LapicUpgradeFrontierDescriptor,
   LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
+import {
+  createLapicFailureResult,
+  createLapicSuccessResult,
+  validateLapicCanonicalProblem,
+  validateLapicProblemNormalizationInput,
 } from '@genshin-optimizer/lapic/core'
 
 export const giLapicAdapterPackageName = 'gi-lapic-adapter'
@@ -91,12 +100,29 @@ export interface GiLapicAdapterCapabilities {
   readonly adapterKind: 'gi'
   readonly supportedPotentialSolveModes: readonly LapicPotentialSolveMode[]
   readonly supportedGraphOutputKinds: readonly string[]
+  readonly supportedFormulaCompilationModes: readonly string[]
+  readonly supportedCandidateDomainClasses: readonly string[]
+  readonly supportedLegacyCompatibilityPaths: readonly string[]
+  readonly explicitlyUnsupportedSemantics: readonly string[]
 }
 
 export interface GiLapicCanonicalExport {
   readonly adapterKind: 'gi'
   readonly problem: LapicCanonicalProblem
+  readonly canonicalProblemDigest: LapicProblemDigest
+  readonly adapterVersion: GiLapicAdapterSchemaVersion
   readonly sourceSnapshotDigest: LapicDigest
+  readonly sourceSnapshotDigestSet: readonly LapicDigest[]
+  readonly formulaCompilationMode: string
+  readonly featureSchemaVersion: GiLapicAdapterSchemaVersion
+  readonly filterTransformationLog: readonly string[]
+  readonly unsupportedFeatureList: readonly string[]
+  readonly replayReconstructionHints: readonly string[]
+  readonly supportedGraphOutputModes: readonly string[]
+  readonly potentialSolveMode?: LapicPotentialSolveMode
+  readonly potentialParticipationMode?: LapicPotentialParticipationMode
+  readonly upgradeFrontierDescriptorSet?: readonly LapicUpgradeFrontierDescriptor[]
+  readonly potentialSummarySchemaVersion?: GiLapicAdapterSchemaVersion
 }
 
 export interface GiLapicCanonicalExportInput {
@@ -128,11 +154,98 @@ export const giLapicAdapterSkeleton: GiLapicAdapterSkeletonMarker = {
 }
 
 const giSupportedPotentialSolveModes = ['current-only'] as const satisfies readonly LapicPotentialSolveMode[]
+const giSupportedGraphOutputKinds = ['gi-plot-base'] as const
+const giSupportedFormulaCompilationModes = ['gi-legacy-compatibility'] as const
+const giSupportedCandidateDomainClasses = ['artifact-inventory'] as const
+const giSupportedLegacyCompatibilityPaths = ['waverider-opt-node'] as const
+const giExplicitlyUnsupportedSemantics = [
+  'gi-canonical-pando-export',
+  'gi-upgrade-frontier-export',
+  'gi-potential-aware-ranking',
+  'gi-tc-subproblem-export',
+] as const
 
 export const giLapicAdapterCapabilities: GiLapicAdapterCapabilities = {
   adapterKind: 'gi',
   supportedPotentialSolveModes: giSupportedPotentialSolveModes,
-  supportedGraphOutputKinds: [],
+  supportedGraphOutputKinds: giSupportedGraphOutputKinds,
+  supportedFormulaCompilationModes: giSupportedFormulaCompilationModes,
+  supportedCandidateDomainClasses: giSupportedCandidateDomainClasses,
+  supportedLegacyCompatibilityPaths: giSupportedLegacyCompatibilityPaths,
+  explicitlyUnsupportedSemantics: giExplicitlyUnsupportedSemantics,
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  return [...new Set(values)]
+}
+
+function isRecord(
+  value: unknown
+): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0
+}
+
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean'
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && value > 0
+}
+
+function createGiFilterTransformationLog(
+  request: GiLapicAdapterRequest
+): readonly string[] {
+  if (!request.giContext) return ['normalization-input-pass-through']
+
+  const transformations = ['inventory-to-candidate-domain']
+  const optimizationRequest = request.giContext.optimizationRequest
+
+  if (!optimizationRequest.useExcludedArts)
+    transformations.push('excluded-artifacts-pruned')
+  if (!optimizationRequest.useTeammateBuild)
+    transformations.push('excluded-locations-pruned')
+  if (optimizationRequest.plotBase)
+    transformations.push('plot-base-exported-as-auxiliary-output')
+
+  return transformations
+}
+
+function createGiReplayReconstructionHints(
+  request: GiLapicAdapterRequest
+): readonly string[] {
+  const hints = [
+    'reconstruct-from-gi-source-snapshots',
+    'replay-uses-legacy-waverider-compatibility-path',
+  ]
+
+  if (request.giContext)
+    hints.push('replay-requires-artifact-character-weapon-formula-snapshots')
+
+  return hints
+}
+
+function createGiDeclaredUnsupportedFeatures(
+  request: GiLapicAdapterRequest
+): readonly string[] {
+  const declaredUnsupportedFeatures = [
+    ...request.normalizationInput.adapterMetadata.declaredUnsupportedFeatures,
+    ...giLapicAdapterCapabilities.explicitlyUnsupportedSemantics,
+  ]
+
+  if (
+    request.normalizationInput.potentialConfiguration &&
+    request.normalizationInput.potentialConfiguration.solveMode !== 'current-only'
+  )
+    declaredUnsupportedFeatures.push(
+      `requested-potential-solve-mode:${request.normalizationInput.potentialConfiguration.solveMode}`
+    )
+
+  return uniqueStrings(declaredUnsupportedFeatures)
 }
 
 function createGiOptNodeDigest(node: OptNode): LapicDigest {
@@ -237,6 +350,30 @@ export function getGiLapicAdapterCapabilities(): GiLapicAdapterCapabilities {
   return giLapicAdapterCapabilities
 }
 
+export function createGiLapicCanonicalIdentity(
+  input: GiLapicCanonicalIdentity
+): GiLapicCanonicalIdentity {
+  return {
+    problemId: input.problemId,
+    problemDigest: input.problemDigest,
+    engineVersion: input.engineVersion,
+    arithmeticPolicyId: input.arithmeticPolicyId,
+  }
+}
+
+export function createGiLapicAdapterRequest(
+  input: GiLapicAdapterRequest
+): GiLapicAdapterRequest {
+  return {
+    adapterKind: input.adapterKind,
+    normalizationInput: input.normalizationInput,
+    giContext: input.giContext,
+    requestedPotentialSolveModes: input.requestedPotentialSolveModes
+      ? [...input.requestedPotentialSolveModes]
+      : undefined,
+  }
+}
+
 export function createGiLapicSourceSnapshotDigests(
   sourceSnapshots: GiLapicSourceSnapshotDescriptor
 ): readonly LapicDigest[] {
@@ -249,6 +386,260 @@ export function createGiLapicSourceSnapshotDigests(
       ? [sourceSnapshots.optConfigSnapshotDigest]
       : []),
   ]
+}
+
+export function validateGiLapicSourceSnapshotDescriptor(
+  sourceSnapshots: GiLapicSourceSnapshotDescriptor
+): LapicValidationResult<GiLapicSourceSnapshotDescriptor> {
+  if (!isRecord(sourceSnapshots))
+    return giAdapterFailure(
+      'GI source snapshot descriptor must be a record.',
+      ['sourceSnapshots']
+    )
+
+  if (
+    !isNonEmptyString(sourceSnapshots.artifactSnapshotDigest) ||
+    !isNonEmptyString(sourceSnapshots.characterSnapshotDigest) ||
+    !isNonEmptyString(sourceSnapshots.weaponSnapshotDigest) ||
+    !isNonEmptyString(sourceSnapshots.formulaSnapshotDigest)
+  )
+    return giAdapterFailure(
+      'GI source snapshot descriptor requires non-empty artifact, character, weapon, and formula digests.',
+      ['sourceSnapshots']
+    )
+
+  if (
+    sourceSnapshots.optConfigSnapshotDigest !== undefined &&
+    !isNonEmptyString(sourceSnapshots.optConfigSnapshotDigest)
+  )
+    return giAdapterFailure(
+      'GI optConfig snapshot digest must be a non-empty string when present.',
+      ['sourceSnapshots', 'optConfigSnapshotDigest']
+    )
+
+  return createLapicSuccessResult(sourceSnapshots)
+}
+
+export function validateGiLapicInventorySnapshot(
+  inventorySnapshot: GiLapicInventorySnapshot
+): LapicValidationResult<GiLapicInventorySnapshot> {
+  if (!isRecord(inventorySnapshot))
+    return giAdapterFailure(
+      'GI inventory snapshot must be a record.',
+      ['inventorySnapshot']
+    )
+
+  if (!Array.isArray(inventorySnapshot.artifacts))
+    return giAdapterFailure(
+      'GI inventory snapshot artifacts must be an array.',
+      ['inventorySnapshot', 'artifacts']
+    )
+
+  if (
+    !Array.isArray(inventorySnapshot.excludedArtifactIds) ||
+    !inventorySnapshot.excludedArtifactIds.every(isNonEmptyString)
+  )
+    return giAdapterFailure(
+      'Excluded artifact ids must contain non-empty strings.',
+      ['inventorySnapshot', 'excludedArtifactIds']
+    )
+
+  if (
+    !Array.isArray(inventorySnapshot.excludedLocations) ||
+    !inventorySnapshot.excludedLocations.every(isNonEmptyString)
+  )
+    return giAdapterFailure(
+      'Excluded locations must contain non-empty strings.',
+      ['inventorySnapshot', 'excludedLocations']
+    )
+
+  return createLapicSuccessResult(inventorySnapshot)
+}
+
+export function validateGiLapicOptimizationRequest(
+  optimizationRequest: GiLapicOptimizationRequest
+): LapicValidationResult<GiLapicOptimizationRequest> {
+  if (!isRecord(optimizationRequest))
+    return giAdapterFailure(
+      'GI optimization request must be a record.',
+      ['optimizationRequest']
+    )
+
+  if (!isPositiveInteger(optimizationRequest.topN))
+    return giAdapterFailure(
+      'GI optimization request topN must be a positive integer.',
+      ['optimizationRequest', 'topN']
+    )
+
+  if (
+    optimizationRequest.levelLow > optimizationRequest.levelHigh ||
+    optimizationRequest.upOptLevelLow > optimizationRequest.upOptLevelHigh
+  )
+    return giAdapterFailure(
+      'GI optimization request level ranges must be ordered low <= high.',
+      ['optimizationRequest']
+    )
+
+  if (
+    !isBoolean(optimizationRequest.allowPartial) ||
+    !isBoolean(optimizationRequest.useExcludedArts) ||
+    !isBoolean(optimizationRequest.useTeammateBuild)
+  )
+    return giAdapterFailure(
+      'GI optimization request boolean flags must be boolean values.',
+      ['optimizationRequest']
+    )
+
+  return createLapicSuccessResult(optimizationRequest)
+}
+
+export function validateGiLapicAdapterContext(
+  context: GiLapicAdapterContext
+): LapicValidationResult<GiLapicAdapterContext> {
+  if (!isRecord(context))
+    return giAdapterFailure(
+      'GI adapter context must be a record.',
+      ['giContext']
+    )
+
+  const sourceSnapshotValidation = validateGiLapicSourceSnapshotDescriptor(
+    context.sourceSnapshots
+  )
+  if (!sourceSnapshotValidation.ok) return sourceSnapshotValidation
+
+  const inventoryValidation = validateGiLapicInventorySnapshot(
+    context.inventorySnapshot
+  )
+  if (!inventoryValidation.ok) return inventoryValidation
+
+  const optimizationValidation = validateGiLapicOptimizationRequest(
+    context.optimizationRequest
+  )
+  if (!optimizationValidation.ok) return optimizationValidation
+
+  return createLapicSuccessResult(context)
+}
+
+export function validateGiLapicAdapterCapabilities(
+  capabilities: GiLapicAdapterCapabilities
+): LapicValidationResult<GiLapicAdapterCapabilities> {
+  if (!isRecord(capabilities))
+    return giAdapterFailure(
+      'GI adapter capabilities must be a record.',
+      ['capabilities']
+    )
+
+  if (capabilities.adapterKind !== 'gi')
+    return giAdapterFailure(
+      'GI adapter capabilities adapterKind must be `gi`.',
+      ['capabilities', 'adapterKind']
+    )
+
+  if (
+    !Array.isArray(capabilities.supportedPotentialSolveModes) ||
+    !Array.isArray(capabilities.supportedGraphOutputKinds) ||
+    !Array.isArray(capabilities.supportedFormulaCompilationModes) ||
+    !Array.isArray(capabilities.supportedCandidateDomainClasses) ||
+    !Array.isArray(capabilities.supportedLegacyCompatibilityPaths) ||
+    !Array.isArray(capabilities.explicitlyUnsupportedSemantics)
+  )
+    return giAdapterFailure(
+      'GI adapter capabilities lists must all be arrays.',
+      ['capabilities']
+    )
+
+  return createLapicSuccessResult(capabilities)
+}
+
+export function validateGiLapicCanonicalIdentity(
+  canonicalIdentity: GiLapicCanonicalIdentity
+): LapicValidationResult<GiLapicCanonicalIdentity> {
+  if (!isRecord(canonicalIdentity))
+    return giAdapterFailure(
+      'GI canonical identity must be a record.',
+      ['canonicalIdentity']
+    )
+
+  if (
+    !isNonEmptyString(canonicalIdentity.problemId) ||
+    !isNonEmptyString(canonicalIdentity.problemDigest) ||
+    !isNonEmptyString(canonicalIdentity.engineVersion) ||
+    !isNonEmptyString(canonicalIdentity.arithmeticPolicyId)
+  )
+    return giAdapterFailure(
+      'GI canonical identity fields must be non-empty strings.',
+      ['canonicalIdentity']
+    )
+
+  return createLapicSuccessResult(canonicalIdentity)
+}
+
+export function validateGiLapicAdapterRequest(
+  request: GiLapicAdapterRequest
+): LapicValidationResult<GiLapicAdapterRequest> {
+  if (!isRecord(request))
+    return giAdapterFailure(
+      'GI adapter request must be a record.',
+      ['request']
+    )
+
+  const normalizationValidation = validateLapicProblemNormalizationInput(
+    request.normalizationInput
+  )
+  if (!normalizationValidation.ok)
+    return createLapicFailureResult(normalizationValidation.diagnostics)
+
+  if (request.giContext) {
+    const contextValidation = validateGiLapicAdapterContext(request.giContext)
+    if (!contextValidation.ok) return contextValidation
+  }
+
+  return normalizeGiLapicAdapterRequest(request)
+}
+
+export function validateGiLapicCanonicalExport(
+  canonicalExport: GiLapicCanonicalExport
+): LapicValidationResult<GiLapicCanonicalExport> {
+  if (!isRecord(canonicalExport))
+    return giAdapterFailure(
+      'GI canonical export must be a record.',
+      ['canonicalExport']
+    )
+
+  const problemValidation = validateLapicCanonicalProblem(canonicalExport.problem)
+  if (!problemValidation.ok)
+    return createLapicFailureResult(problemValidation.diagnostics)
+
+  if (
+    canonicalExport.adapterKind !== 'gi' ||
+    !isNonEmptyString(canonicalExport.canonicalProblemDigest) ||
+    !isNonEmptyString(canonicalExport.sourceSnapshotDigest) ||
+    !isNonEmptyString(canonicalExport.formulaCompilationMode) ||
+    !isNonEmptyString(canonicalExport.featureSchemaVersion)
+  )
+    return giAdapterFailure(
+      'GI canonical export requires valid adapter kind, digest, and metadata fields.',
+      ['canonicalExport']
+    )
+
+  if (
+    !Array.isArray(canonicalExport.sourceSnapshotDigestSet) ||
+    !canonicalExport.sourceSnapshotDigestSet.every(isNonEmptyString) ||
+    !Array.isArray(canonicalExport.filterTransformationLog) ||
+    !canonicalExport.filterTransformationLog.every(isNonEmptyString) ||
+    !Array.isArray(canonicalExport.unsupportedFeatureList) ||
+    !canonicalExport.unsupportedFeatureList.every(isNonEmptyString) ||
+    !Array.isArray(canonicalExport.replayReconstructionHints) ||
+    !canonicalExport.replayReconstructionHints.every(isNonEmptyString) ||
+    !Array.isArray(canonicalExport.supportedGraphOutputModes) ||
+    !canonicalExport.supportedGraphOutputModes.every(isNonEmptyString)
+  )
+    return giAdapterFailure(
+      'GI canonical export list fields must contain non-empty strings.',
+      ['canonicalExport']
+    )
+
+  return createLapicSuccessResult(canonicalExport)
 }
 
 export function createGiLapicAdapterMetadata(
@@ -264,6 +655,23 @@ export function createGiLapicAdapterMetadata(
     sourceSnapshotDigests,
     supportedPotentialSolveModes:
       giLapicAdapterCapabilities.supportedPotentialSolveModes,
+    declaredUnsupportedFeatures: createGiDeclaredUnsupportedFeatures(request),
+    metadata: {
+      ...request.normalizationInput.adapterMetadata.metadata,
+      formulaCompilationMode: giLapicAdapterCapabilities.supportedFormulaCompilationModes[0],
+      featureSchemaVersion: giLapicAdapterSchemaVersion,
+      migrationState: 'legacyValidated',
+      supportedGraphOutputKinds:
+        giLapicAdapterCapabilities.supportedGraphOutputKinds.join(','),
+      supportedCandidateDomainClasses:
+        giLapicAdapterCapabilities.supportedCandidateDomainClasses.join(','),
+      legacyCompatibilityPath:
+        giLapicAdapterCapabilities.supportedLegacyCompatibilityPaths[0],
+      replayReconstructionHints: createGiReplayReconstructionHints(request).join(
+        ','
+      ),
+      filterTransformationLog: createGiFilterTransformationLog(request).join(','),
+    },
   }
 }
 
@@ -275,13 +683,18 @@ export function createGiLapicAuxiliaryOutputs(
 
   if (!plotBase) return baseOutputs
 
+  const plotOutput: LapicGraphAuxiliaryOutputDescriptor = {
+    kind: 'gi-plot-base',
+    payloadDigest: createGiOptNodeDigest(plotBase),
+    participatesInOrdering: false,
+    xAxisKind: 'gi-plot-x',
+    yAxisKind: 'gi-plot-y',
+    graphExactness: 'exact',
+  }
+
   return [
     ...baseOutputs,
-    {
-      kind: 'gi-plot-base',
-      payloadDigest: createGiOptNodeDigest(plotBase),
-      participatesInOrdering: false,
-    },
+    plotOutput,
   ]
 }
 
@@ -481,7 +894,41 @@ export function buildGiLapicCanonicalExport(
     value: {
       adapterKind: 'gi',
       problem: input.problem,
+      canonicalProblemDigest: input.problem.problemDigest,
+      adapterVersion: giLapicAdapterSchemaVersion,
       sourceSnapshotDigest: input.sourceSnapshotDigest,
+      sourceSnapshotDigestSet: input.problem.adapterMetadata.sourceSnapshotDigests,
+      formulaCompilationMode:
+        input.problem.adapterMetadata.metadata.formulaCompilationMode ??
+        giLapicAdapterCapabilities.supportedFormulaCompilationModes[0],
+      featureSchemaVersion: giLapicAdapterSchemaVersion,
+      filterTransformationLog: uniqueStrings(
+        (
+          input.problem.adapterMetadata.metadata.filterTransformationLog ?? ''
+        )
+          .split(',')
+          .filter(Boolean)
+      ),
+      unsupportedFeatureList: uniqueStrings(
+        input.problem.adapterMetadata.declaredUnsupportedFeatures
+      ),
+      replayReconstructionHints: uniqueStrings(
+        (
+          input.problem.adapterMetadata.metadata.replayReconstructionHints ?? ''
+        )
+          .split(',')
+          .filter(Boolean)
+      ),
+      supportedGraphOutputModes:
+        giLapicAdapterCapabilities.supportedGraphOutputKinds,
+      potentialSolveMode: input.problem.potentialConfiguration?.solveMode,
+      potentialParticipationMode:
+        input.problem.potentialConfiguration?.participationMode,
+      upgradeFrontierDescriptorSet:
+        input.problem.potentialConfiguration?.upgradeFrontiers,
+      potentialSummarySchemaVersion: input.problem.potentialConfiguration
+        ? giLapicAdapterSchemaVersion
+        : undefined,
     },
     diagnostics: [],
   }
