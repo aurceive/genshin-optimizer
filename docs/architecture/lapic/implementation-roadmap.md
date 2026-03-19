@@ -95,17 +95,22 @@ Former open questions around scalar persistence, storage tuning, checkpoint opti
 
 ## 6. Phase Structure
 
-The roadmap is split into seven implementation phases.
+The roadmap is split into eight implementation phases.
 
 1. Foundations
 2. Correctness kernel
 3. Persistence kernel
 4. Runtime kernel
 5. Adapter realization
-6. Application integration
-7. Production cutover
+6. Validation and benchmark infrastructure
+7. Application integration
+8. Production cutover
 
 These phases overlap, but their gate ordering is strict.
+
+Current repository execution is no longer limited to phase 1 scaffolding.
+
+Phase 1 foundations have already been materially established for the active lapic package set, and the current implementation stream is exercising phase 5 GI adapter realization under the full-fidelity-interface rule while phases 2 through 4 and 6 remain incomplete.
 
 ## 7. Phase 1: Foundations
 
@@ -511,8 +516,8 @@ The roadmap is considered successfully executed only if:
 
 Given the current document set, the immediate next implementation-planning tasks are:
 
-1. Create package skeletons for lapic core, lapic cert, lapic storage, lapic runtime, and lapic debug.
-2. Choose whether to scaffold the benchmark repository layout immediately or defer physical directory creation until package skeleton creation.
-3. Decide whether the first scaffolding batch should include lapic debug or keep it in a second wave after runtime and storage.
-4. Prepare the first package-by-package scaffolding order and dependency cut list.
-5. Stage the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.
+1. Continue GI adapter realization by replacing placeholder normalization wiring with explicit canonical source-snapshot, candidate-domain, objective, and auxiliary-output mapping.
+2. Raise lapic core and cert implementation from public type surfaces into actual correctness-kernel builders and validators required by phase 2.
+3. Introduce the first validation harness slice for GI adapter normalization and canonical export behavior.
+4. Define the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.
+5. Defer any renewed SR or ZZZ adapter scaffolding until product scope explicitly resumes those paths.

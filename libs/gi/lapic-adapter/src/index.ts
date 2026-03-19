@@ -8,7 +8,12 @@ import type {
 } from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 import type {
+  LapicAdapterMetadata,
+  LapicAggregateCountFact,
   LapicArithmeticPolicyId,
+  LapicAuxiliaryOutputDescriptor,
+  LapicCandidateDescriptor,
+  LapicCandidateDomain,
   LapicCanonicalProblem,
   LapicDiagnostic,
   LapicDigest,
@@ -130,6 +135,70 @@ export const giLapicAdapterCapabilities: GiLapicAdapterCapabilities = {
   supportedGraphOutputKinds: [],
 }
 
+function createGiOptNodeDigest(node: OptNode): LapicDigest {
+  const operands = 'operands' in node ? node.operands : []
+  const operandDigest = operands
+    .map((operand) => createGiOptNodeDigest(operand as OptNode))
+    .join(',')
+
+  if ('operation' in node)
+    return `gi-opt-node:${node.operation}:${operands.length}:${operandDigest}`
+
+  return `gi-opt-node:unknown:${operands.length}:${operandDigest}`
+}
+
+function createGiArtifactFeatureDigest(artifact: ICachedArtifact): LapicDigest {
+  return [
+    artifact.id,
+    artifact.slotKey,
+    artifact.setKey,
+    artifact.mainStatKey,
+    String(artifact.level),
+    String(artifact.rarity),
+  ].join('|')
+}
+
+function createGiArtifactCategoricalSignatureDigest(
+  artifact: ICachedArtifact
+): LapicDigest {
+  return [artifact.slotKey, artifact.setKey, artifact.mainStatKey].join('|')
+}
+
+function createGiArtifactCounterFacts(
+  artifact: ICachedArtifact
+): readonly LapicAggregateCountFact[] {
+  return [
+    {
+      counterId: `gi:artifact-level:${artifact.slotKey}`,
+      value: artifact.level,
+    },
+    {
+      counterId: `gi:artifact-rarity:${artifact.slotKey}`,
+      value: artifact.rarity,
+    },
+  ]
+}
+
+function shouldIncludeGiArtifact(
+  artifact: ICachedArtifact,
+  context: GiLapicAdapterContext
+): boolean {
+  if (
+    !context.optimizationRequest.useExcludedArts &&
+    context.inventorySnapshot.excludedArtifactIds.includes(artifact.id)
+  )
+    return false
+
+  if (
+    !context.optimizationRequest.useTeammateBuild &&
+    artifact.location &&
+    context.inventorySnapshot.excludedLocations.includes(artifact.location)
+  )
+    return false
+
+  return true
+}
+
 function hasAnyArtifacts(artifacts: readonly ICachedArtifact[]): boolean {
   return artifacts.length > 0
 }
@@ -166,6 +235,99 @@ function giAdapterFailure(
 
 export function getGiLapicAdapterCapabilities(): GiLapicAdapterCapabilities {
   return giLapicAdapterCapabilities
+}
+
+export function createGiLapicSourceSnapshotDigests(
+  sourceSnapshots: GiLapicSourceSnapshotDescriptor
+): readonly LapicDigest[] {
+  return [
+    sourceSnapshots.artifactSnapshotDigest,
+    sourceSnapshots.characterSnapshotDigest,
+    sourceSnapshots.weaponSnapshotDigest,
+    sourceSnapshots.formulaSnapshotDigest,
+    ...(sourceSnapshots.optConfigSnapshotDigest
+      ? [sourceSnapshots.optConfigSnapshotDigest]
+      : []),
+  ]
+}
+
+export function createGiLapicAdapterMetadata(
+  request: GiLapicAdapterRequest
+): LapicAdapterMetadata {
+  const sourceSnapshotDigests = request.giContext
+    ? createGiLapicSourceSnapshotDigests(request.giContext.sourceSnapshots)
+    : request.normalizationInput.adapterMetadata.sourceSnapshotDigests
+
+  return {
+    ...request.normalizationInput.adapterMetadata,
+    adapterKind: request.normalizationInput.adapterMetadata.adapterKind,
+    sourceSnapshotDigests,
+    supportedPotentialSolveModes:
+      giLapicAdapterCapabilities.supportedPotentialSolveModes,
+  }
+}
+
+export function createGiLapicAuxiliaryOutputs(
+  request: GiLapicAdapterRequest
+): readonly LapicAuxiliaryOutputDescriptor[] {
+  const baseOutputs = request.normalizationInput.auxiliaryOutputs ?? []
+  const plotBase = request.giContext?.optimizationRequest.plotBase
+
+  if (!plotBase) return baseOutputs
+
+  return [
+    ...baseOutputs,
+    {
+      kind: 'gi-plot-base',
+      payloadDigest: createGiOptNodeDigest(plotBase),
+      participatesInOrdering: false,
+    },
+  ]
+}
+
+export function createGiLapicCandidateDescriptor(
+  artifact: ICachedArtifact
+): LapicCandidateDescriptor {
+  return {
+    candidateId: artifact.id,
+    sourceRecordDigest: artifact.id,
+    domainId: `gi:${artifact.slotKey}`,
+    slotId: artifact.slotKey,
+    additiveFeatureDigest: createGiArtifactFeatureDigest(artifact),
+    discreteCounters: createGiArtifactCounterFacts(artifact),
+    categoricalSignatureDigest: createGiArtifactCategoricalSignatureDigest(
+      artifact
+    ),
+    provenance: {
+      slotId: artifact.slotKey,
+      sourceEntityId: artifact.location || 'inventory',
+      sourceRecordDigests: [artifact.id],
+      exclusiveResourceClaims: [],
+      concreteInventoryBacked: true,
+      featureExtractionDigest: createGiArtifactFeatureDigest(artifact),
+    },
+  }
+}
+
+export function createGiLapicCandidateDomains(
+  context: GiLapicAdapterContext
+): readonly LapicCandidateDomain[] {
+  const domainMap = new Map<string, LapicCandidateDescriptor[]>()
+
+  context.inventorySnapshot.artifacts
+    .filter((artifact) => shouldIncludeGiArtifact(artifact, context))
+    .forEach((artifact) => {
+      const domainId = `gi:${artifact.slotKey}`
+      const candidates = domainMap.get(domainId) ?? []
+      candidates.push(createGiLapicCandidateDescriptor(artifact))
+      domainMap.set(domainId, candidates)
+    })
+
+  return Array.from(domainMap.entries()).map(([domainId, candidates]) => ({
+    domainId,
+    slotId: domainId.replace('gi:', ''),
+    candidates,
+  }))
 }
 
 export function isGiLapicPotentialSolveModeSupported(
@@ -209,6 +371,16 @@ export function normalizeGiLapicAdapterRequest(
         'GI lapic adapter requires topN to be at least 1.',
         ['giContext', 'optimizationRequest', 'topN'],
         { topN: request.giContext.optimizationRequest.topN }
+      )
+
+    if (request.giContext.optimizationRequest.topN !== request.normalizationInput.topN)
+      return giAdapterFailure(
+        'GI lapic adapter requires normalizationInput.topN to match giContext.optimizationRequest.topN.',
+        ['normalizationInput', 'topN'],
+        {
+          normalizationTopN: request.normalizationInput.topN,
+          requestTopN: request.giContext.optimizationRequest.topN,
+        }
       )
 
     if (
@@ -258,6 +430,33 @@ export function normalizeGiLapicAdapterRequest(
     ok: true,
     value: request,
     diagnostics: [],
+  }
+}
+
+export function createGiLapicProblemNormalizationInput(
+  request: GiLapicAdapterRequest
+): LapicValidationResult<LapicProblemNormalizationInput> {
+  const normalizedRequest = normalizeGiLapicAdapterRequest(request)
+  if (!normalizedRequest.ok) return normalizedRequest
+
+  if (!normalizedRequest.value.giContext)
+    return {
+      ok: true,
+      value: normalizedRequest.value.normalizationInput,
+      diagnostics: normalizedRequest.diagnostics,
+    }
+
+  const itemDomains = createGiLapicCandidateDomains(normalizedRequest.value.giContext)
+
+  return {
+    ok: true,
+    value: {
+      ...normalizedRequest.value.normalizationInput,
+      itemDomains,
+      auxiliaryOutputs: createGiLapicAuxiliaryOutputs(normalizedRequest.value),
+      adapterMetadata: createGiLapicAdapterMetadata(normalizedRequest.value),
+    },
+    diagnostics: normalizedRequest.diagnostics,
   }
 }
 
@@ -317,12 +516,12 @@ export function createGiLapicCanonicalProblem(
 export function buildGiLapicCanonicalExportFromRequest(
   input: GiLapicCanonicalExportFromRequestInput
 ): LapicValidationResult<GiLapicCanonicalExport> {
-  const normalizedRequest = normalizeGiLapicAdapterRequest(input.request)
-  if (!normalizedRequest.ok) return normalizedRequest
+  const normalizedInput = createGiLapicProblemNormalizationInput(input.request)
+  if (!normalizedInput.ok) return normalizedInput
 
   const sourceSnapshotDigest =
     input.sourceSnapshotDigest ??
-    normalizedRequest.value.giContext?.sourceSnapshots.artifactSnapshotDigest
+    input.request.giContext?.sourceSnapshots.artifactSnapshotDigest
 
   if (!sourceSnapshotDigest)
     return giAdapterFailure(
@@ -338,7 +537,7 @@ export function buildGiLapicCanonicalExportFromRequest(
 
   return buildGiLapicCanonicalExport({
     problem: createGiLapicCanonicalProblem(
-      normalizedRequest.value.normalizationInput,
+      normalizedInput.value,
       input.canonicalIdentity
     ),
     sourceSnapshotDigest,

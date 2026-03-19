@@ -7,9 +7,32 @@ import type {
 } from '@genshin-optimizer/lapic/core'
 import {
   buildGiLapicCanonicalExportFromRequest,
+  createGiLapicAdapterMetadata,
+  createGiLapicAuxiliaryOutputs,
+  createGiLapicCandidateDomains,
   createGiLapicCanonicalProblem,
+  createGiLapicProblemNormalizationInput,
   normalizeGiLapicAdapterRequest,
 } from './index'
+
+function createArtifact(
+  overrides: Partial<ICachedArtifact> = {}
+): ICachedArtifact {
+  return {
+    id: 'artifact-id',
+    setKey: 'GladiatorsFinale',
+    rarity: 5,
+    level: 20,
+    slotKey: 'flower',
+    mainStatKey: 'hp',
+    mainStatVal: 4780,
+    substats: [],
+    unactivatedSubstats: undefined,
+    location: '',
+    lock: false,
+    ...overrides,
+  } as ICachedArtifact
+}
 
 function createNormalizationInput(): LapicProblemNormalizationInput {
   const provenance: LapicTeamProvenance = {
@@ -107,7 +130,7 @@ function createGiRequest() {
         formulaSnapshotDigest: 'formula-snapshot-digest',
       },
       inventorySnapshot: {
-        artifacts: [{} as ICachedArtifact],
+        artifacts: [createArtifact()],
         excludedArtifactIds: [],
         excludedLocations: [],
       },
@@ -131,6 +154,13 @@ function createGiRequest() {
     },
     requestedPotentialSolveModes: ['current-only'] as const,
   }
+}
+
+const plotBaseNode: OptNode = {
+  operation: 'const',
+  operands: [],
+  value: 1,
+  type: 'number',
 }
 
 describe('gi lapic adapter', () => {
@@ -184,6 +214,74 @@ describe('gi lapic adapter', () => {
     const result = buildGiLapicCanonicalExportFromRequest({
       request: createGiRequest(),
     })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('creates GI adapter metadata from snapshot context', () => {
+    const metadata = createGiLapicAdapterMetadata(createGiRequest())
+
+    expect(metadata.sourceSnapshotDigests).toEqual([
+      'artifact-snapshot-digest',
+      'character-snapshot-digest',
+      'weapon-snapshot-digest',
+      'formula-snapshot-digest',
+    ])
+    expect(metadata.supportedPotentialSolveModes).toEqual(['current-only'])
+  })
+
+  it('creates candidate domains from filtered GI inventory', () => {
+    const request = createGiRequest()
+    request.giContext.inventorySnapshot.artifacts = [
+      createArtifact({ id: 'flower-1', slotKey: 'flower' }),
+      createArtifact({ id: 'plume-1', slotKey: 'plume', mainStatKey: 'atk' }),
+      createArtifact({
+        id: 'flower-excluded',
+        slotKey: 'flower',
+        location: 'CharA',
+      }),
+    ]
+    request.giContext.inventorySnapshot.excludedLocations = ['CharA']
+
+    const domains = createGiLapicCandidateDomains(request.giContext)
+
+    expect(domains).toHaveLength(2)
+    expect(domains.find((domain) => domain.slotId === 'flower')?.candidates).toHaveLength(1)
+    expect(domains.find((domain) => domain.slotId === 'plume')?.candidates).toHaveLength(1)
+  })
+
+  it('maps plotBase into auxiliary outputs without changing ordering participation', () => {
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.plotBase = plotBaseNode
+
+    const outputs = createGiLapicAuxiliaryOutputs(request)
+
+    expect(outputs).toHaveLength(1)
+    expect(outputs[0]?.kind).toBe('gi-plot-base')
+    expect(outputs[0]?.participatesInOrdering).toBe(false)
+  })
+
+  it('creates enriched normalization input from GI request context', () => {
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.plotBase = plotBaseNode
+
+    const result = createGiLapicProblemNormalizationInput(request)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value.itemDomains).toHaveLength(1)
+    expect(result.value.adapterMetadata.sourceSnapshotDigests).toContain(
+      'artifact-snapshot-digest'
+    )
+    expect(result.value.auxiliaryOutputs).toHaveLength(1)
+  })
+
+  it('rejects mismatched topN between normalization input and GI request context', () => {
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.topN = 3
+
+    const result = normalizeGiLapicAdapterRequest(request)
 
     expect(result.ok).toBe(false)
   })
