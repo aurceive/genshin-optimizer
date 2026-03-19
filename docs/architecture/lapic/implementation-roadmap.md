@@ -262,6 +262,12 @@ These phases overlap, but their gate ordering is strict.
 - libs/sr/lapic-adapter
 - libs/zzz/lapic-adapter
 
+Current implementation priority is GI.
+
+SR and ZZZ adapter realization remain architecturally specified, but they are deferred for an indefinite period unless product scope changes.
+
+This is a planning and ownership decision, not a new architecture blocker.
+
 ### 11.3 GI Work Items
 
 - implement legacy Waverider compatibility adapter,

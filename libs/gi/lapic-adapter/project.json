@@ -4,5 +4,13 @@
   "sourceRoot": "libs/gi/lapic-adapter/src",
   "projectType": "library",
   "tags": [],
-  "targets": {}
+  "targets": {
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/gi/lapic-adapter"
+      }
+    }
+  }
 }
