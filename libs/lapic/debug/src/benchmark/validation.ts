@@ -8,6 +8,7 @@ import type {
   LapicHarnessReportManifest,
   LapicPublicationReadyReportManifest,
   LapicRegressionClassificationSummary,
+  LapicSolveSliceHarnessReport,
 } from '../types'
 import {
   createDebugFailure,
@@ -148,4 +149,35 @@ export function validateLapicPublicationReadyReportManifest(
   if (!regressionValidation.ok) return regressionValidation
 
   return createLapicSuccessResult(manifest)
+}
+
+export function validateLapicSolveSliceHarnessReport(
+  report: LapicSolveSliceHarnessReport
+): LapicValidationResult<LapicSolveSliceHarnessReport> {
+  if (!isRecord(report))
+    return createDebugFailure(
+      'Solve slice harness report must be a record.',
+      ['solveSliceHarnessReport']
+    )
+
+  const harnessManifestValidation = validateLapicHarnessReportManifest(
+    report.harnessManifest
+  )
+  if (!harnessManifestValidation.ok) return harnessManifestValidation
+
+  const publicationManifestValidation = validateLapicPublicationReadyReportManifest(
+    report.publicationManifest
+  )
+  if (!publicationManifestValidation.ok) return publicationManifestValidation
+
+  if (!Array.isArray(report.phaseSummaries))
+    return createDebugFailure('phaseSummaries must be an array.', ['phaseSummaries'])
+
+  if (!Array.isArray(report.thresholdLineage))
+    return createDebugFailure(
+      'thresholdLineage must be an array.',
+      ['thresholdLineage']
+    )
+
+  return createLapicSuccessResult(report)
 }

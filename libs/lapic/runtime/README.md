@@ -1,5 +1,5 @@
 # lapic-runtime
 
-Nx library skeleton for the lapic runtime package.
+Runtime session control and bounded solve execution for lapic.
 
-This package is the planned home for solve sessions, solve handles, work units, worker protocol, checkpoints, failures, and diagnostics.
+This package currently owns solve sessions, progress and trace publication, checkpoint flow, completion handling, recovery helpers, and the first bounded in-process exact solve executor for the GI current-only slice.

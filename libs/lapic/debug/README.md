@@ -1,5 +1,5 @@
 # lapic-debug
 
-Nx library skeleton for the lapic debug and audit package.
+Audit, inspection, and benchmark support for lapic runtime artifacts.
 
-This package is the planned home for inspection views, trace views, audit reports, replay-oriented tools, and validation and benchmark helpers.
+This package currently owns inspection views, audit reports, replay-oriented helpers, validation utilities, and the live solve-slice harness reporting path built on emitted runtime artifacts and certificates.

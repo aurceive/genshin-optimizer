@@ -161,6 +161,14 @@ export interface LapicPublicationReadyReportManifest {
   readonly finalOptimality?: LapicFinalOptimalitySummary
 }
 
+export interface LapicSolveSliceHarnessReport {
+  readonly auditReport: LapicAuditReport
+  readonly phaseSummaries: readonly LapicPhaseSummary[]
+  readonly thresholdLineage: readonly LapicThresholdLineageView[]
+  readonly publicationManifest: LapicPublicationReadyReportManifest
+  readonly harnessManifest: LapicHarnessReportManifest
+}
+
 export interface LapicPotentialAuditSummary {
   readonly rankingRelevantCertificateCount: number
   readonly auxiliaryOnlyOutputCount: number

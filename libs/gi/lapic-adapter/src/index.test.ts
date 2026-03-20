@@ -6,6 +6,14 @@ import type {
   LapicTeamProvenance,
 } from '@genshin-optimizer/lapic/core'
 import {
+  createLapicInMemorySessionController,
+  createLapicSessionIdentity,
+  createLapicSolveRequest,
+} from '@genshin-optimizer/lapic/runtime'
+import {
+  createLapicMemoryArtifactStore,
+} from '@genshin-optimizer/lapic/storage'
+import {
   buildGiLapicCanonicalExportFromRequest,
   createGiLapicAdapterMetadata,
   createGiLapicAdapterRequest,
@@ -14,6 +22,7 @@ import {
   createGiLapicCanonicalIdentity,
   createGiLapicCanonicalProblem,
   createGiLapicProblemNormalizationInput,
+  executeGiLapicBoundedCurrentOnlySolve,
   getGiLapicAdapterCapabilities,
   normalizeGiLapicAdapterRequest,
   validateGiLapicAdapterCapabilities,
@@ -165,6 +174,24 @@ function createGiRequest() {
     },
     requestedPotentialSolveModes: ['current-only'] as const,
   }
+}
+
+function createSolveController() {
+  const artifactStore = createLapicMemoryArtifactStore()
+  const controller = createLapicInMemorySessionController({
+    identity: createLapicSessionIdentity({
+      sessionId: 'session-id',
+      problemDigest: 'problem-digest',
+      engineVersion: 'engine-version',
+      arithmeticPolicyId: 'arithmetic-policy',
+      runtimeProtocolVersion: '0.1.0-draft',
+      createdAtLogicalTimestamp: 'ts-1',
+    }),
+    solveRequest: createLapicSolveRequest('problem-digest'),
+    artifactStore,
+  })
+
+  return { artifactStore, controller }
 }
 
 const plotBaseNode: OptNode = {
@@ -402,6 +429,53 @@ describe('gi lapic adapter', () => {
     })
 
     expect(validateGiLapicCanonicalIdentity(identity).ok).toBe(true)
+  })
+
+  it('executes a GI current-only bounded solve through the adapter bridge', async () => {
+    const { artifactStore, controller } = createSolveController()
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.topN = 1
+    request.normalizationInput.topN = 1
+
+    const result = await executeGiLapicBoundedCurrentOnlySolve({
+      request,
+      canonicalIdentity: createGiLapicCanonicalIdentity({
+        problemId: 'problem-id',
+        problemDigest: 'problem-digest',
+        engineVersion: 'engine-version',
+        arithmeticPolicyId: 'arithmetic-policy',
+      }),
+      controller,
+      artifactStore,
+      evaluateCombination({ candidates }) {
+        const score = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
+
+        return {
+          ok: true,
+          value: {
+            objectiveValue: score,
+            evidenceDigest: `evidence:${score}`,
+            orderingKey: [score],
+          },
+          diagnostics: [],
+        }
+      },
+      maxCombinationCount: 8,
+    })
+
+    expect(result.canonicalExport.problem.problemDigest).toBe('problem-digest')
+    expect(result.completion.summary.solveState).toBe('completed')
+    expect(result.completion.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:artifact-id'
+    )
+    expect(artifactStore.snapshot()).toHaveLength(3)
+    expect(artifactStore.snapshot().map((entry) => entry.artifactRef.artifactKind)).toEqual([
+      'canonical-problem',
+      'frontier-block',
+      'certificate',
+    ])
   })
 
   it('rejects invalid inventory and optimization request shapes', () => {

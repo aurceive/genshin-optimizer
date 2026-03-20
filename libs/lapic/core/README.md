@@ -1,5 +1,5 @@
 # lapic-core
 
-Nx library skeleton for the lapic optimizer core package.
+Core contracts and validation surface for the lapic optimizer.
 
-This package is the planned home for canonical problem types, IR builders, validators, identities, and state-model contracts.
+This package currently owns canonical problem types, validation helpers, signatures, S-IR-facing contracts, identities, and state-model primitives used by the bounded GI current-only solve slice and related audit tooling.

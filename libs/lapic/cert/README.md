@@ -1,5 +1,5 @@
 # lapic-cert
 
-Nx library skeleton for the lapic certificate and replay package.
+Certificate, replay, and summary surface for lapic proof artifacts.
 
-This package is the planned home for certificate models, evidence references, replay requests and results, and audit helpers.
+This package currently owns certificate payload models, replay contracts, evidence references, validation, and final-optimality summary helpers used by the live bounded solve path.

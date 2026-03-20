@@ -1,5 +1,5 @@
 # gi-lapic-adapter
 
-Nx library skeleton for the Genshin Impact lapic adapter package.
+Genshin Impact adapter surface for lapic normalization and bounded runtime bridging.
 
-This package is the planned home for GI request normalization, canonical problem export, capability reporting, and migration-safe lapic integration contracts.
+This package currently owns GI request normalization, candidate-domain projection, metadata and capability reporting, canonical problem export, and the bounded current-only bridge into lapic runtime while the wider migration remains legacyValidated-scoped.

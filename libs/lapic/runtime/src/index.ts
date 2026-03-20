@@ -4,6 +4,7 @@ export * from './validation'
 export * from './session'
 export * from './checkpoint'
 export * from './recovery'
+export * from './solve'
 
 export {
   createLapicArtifactRef,
