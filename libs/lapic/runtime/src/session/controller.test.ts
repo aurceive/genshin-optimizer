@@ -1,21 +1,53 @@
-import { createLapicArtifactWriteRequest, createLapicMemoryArtifactStore, createLapicStorageEnvelope } from '@genshin-optimizer/lapic/storage'
 import {
-  createLapicFailureRecord,
-  createLapicInMemorySessionController,
-  createLapicRuntimeRecoveryEligibility,
+  createLapicArtifactWriteRequest,
+  createLapicMemoryArtifactStore,
+  createLapicStorageEnvelope,
+} from '@genshin-optimizer/lapic/storage'
+import {
   createLapicSessionIdentity,
-  createLapicSessionSummary,
   createLapicSolveRequest,
-  createLapicSubscriptionToken,
-  validateLapicInMemorySessionControllerOptions,
-  validateLapicObservationalCounterSummary,
-  validateLapicProgressEvent,
-  validateLapicSessionIdentity,
-  validateLapicSubscriptionToken,
-  validateLapicWorkerRequest,
+} from '../builders'
+import {
+  createLapicInMemorySessionController,
 } from './index'
 
-function createSessionIdentity() {
+function createCertificate() {
+  return {
+    certId: 'cert-id',
+    certKind: 'FinalOptimalityCert' as const,
+    schemaVersion: '0.1.0-draft' as const,
+    problemId: 'problem-digest',
+    arithmeticPolicyId: 'arith-policy',
+    decisionClass: 'optimality-proof' as const,
+    referencedStateIds: ['state-id'],
+    referencedBlockIds: [],
+    referencedRegionIds: [],
+    referencedRelaxIds: [],
+    evidenceDigest: 'evidence-digest',
+    replayRecipe: {
+      requiredIrObjects: ['objective-digest'],
+      requiredRegionPredicates: [],
+      arithmeticMode: 'exact',
+      replayPathKind: 'full-replay',
+      exactComparisonRule: 'stable-ordering',
+      expectedVerdict: 'matched' as const,
+    },
+    emittedAtStep: 1,
+    validationStatus: 'validated' as const,
+    payload: {
+      winningStateId: 'state-id',
+      optimalityGap: '0',
+      finalThresholdDigest: 'threshold-digest',
+      finalIncumbentSetDigest: 'incumbent-set-digest',
+      queueExhaustionSummaryDigest: 'queue-exhaustion-digest',
+      thresholdPruneSummaryDigest: 'threshold-prune-summary-digest',
+      escalatedReplaySummaryDigest: 'escalated-replay-summary-digest',
+      stableOrderCompletenessDigest: 'stable-order-digest',
+    },
+  }
+}
+
+function createSessionIdentityFixture() {
   return createLapicSessionIdentity({
     sessionId: 'session-id',
     problemDigest: 'problem-digest',
@@ -50,76 +82,12 @@ function createArtifactStore() {
   return { store, writeRequest }
 }
 
-describe('lapic runtime', () => {
-  it('validates a well-formed session identity', () => {
-    const result = validateLapicSessionIdentity(createSessionIdentity())
-
-    expect(result.ok).toBe(true)
-  })
-
-  it('rejects a progress event whose total units are below completed units', () => {
-    const result = validateLapicProgressEvent({
-      sessionId: 'session-id',
-      phase: 'analyze',
-      completedUnits: 5,
-      totalUnits: 4,
-    })
-
-    expect(result.ok).toBe(false)
-  })
-
-  it('validates a worker request with a supported work unit', () => {
-    const result = validateLapicWorkerRequest({
-      tag: 'StartWork',
-      sessionId: 'session-id',
-      workUnit: {
-        workUnitId: 'work-id',
-        kind: 'AnalyzeRegion',
-        determinismClass: 'pure-deterministic',
-        priority: {
-          upperBoundOrderingDigest: 'upper-bound',
-          uncertaintyGapDigest: 'uncertainty-gap',
-          residualCostDigest: 'residual-cost',
-          deterministicTieBreakDigest: 'tie-break',
-          costModelVersion: 'cost-model-v1',
-        },
-        retryPolicy: {
-          maxAttempts: 1,
-          replaySafe: true,
-        },
-      },
-    })
-
-    expect(result.ok).toBe(true)
-  })
-
-  it('validates runtime helper surface shapes', () => {
-    expect(
-      validateLapicSubscriptionToken(
-        createLapicSubscriptionToken('subscription-id', () => {})
-      ).ok
-    ).toBe(true)
-    expect(
-      validateLapicObservationalCounterSummary({
-        counterId: 'observed-progress-events',
-        value: 3,
-      }).ok
-    ).toBe(true)
-    expect(
-      validateLapicInMemorySessionControllerOptions({
-        identity: createSessionIdentity(),
-        solveRequest: createLapicSolveRequest('problem-digest'),
-        initialArtifacts: [],
-        initialCertificates: [],
-      }).ok
-    ).toBe(true)
-  })
-
+describe('lapic runtime session controller', () => {
   it('tracks progress, artifacts, checkpoints, and completion through the in-memory session controller', async () => {
     const { store, writeRequest } = createArtifactStore()
     const commit = await store.write(writeRequest)
     const controller = createLapicInMemorySessionController({
-      identity: createSessionIdentity(),
+      identity: createSessionIdentityFixture(),
       solveRequest: createLapicSolveRequest('problem-digest'),
       artifactStore: store,
       initialArtifacts: [commit.artifactRef],
@@ -157,7 +125,7 @@ describe('lapic runtime', () => {
 
   it('supports cancellation and exposes cancelled completion state', async () => {
     const controller = createLapicInMemorySessionController({
-      identity: createSessionIdentity(),
+      identity: createSessionIdentityFixture(),
       solveRequest: createLapicSolveRequest('problem-digest'),
     })
 
@@ -169,9 +137,23 @@ describe('lapic runtime', () => {
     expect(completion.summary.solveState).toBe('cancelled')
   })
 
+  it('rejects invalid emitted certificates', async () => {
+    const controller = createLapicInMemorySessionController({
+      identity: createSessionIdentityFixture(),
+      solveRequest: createLapicSolveRequest('problem-digest'),
+    })
+
+    const invalidCertificate = createCertificate()
+    invalidCertificate.payload.stableOrderCompletenessDigest = ''
+
+    expect(() => controller.emitCertificate(invalidCertificate)).toThrow(
+      'stableOrderCompletenessDigest must not be empty.'
+    )
+  })
+
   it('rejects awaitCompletion with a failed session summary when the controller fails', async () => {
     const controller = createLapicInMemorySessionController({
-      identity: createSessionIdentity(),
+      identity: createSessionIdentityFixture(),
       solveRequest: createLapicSolveRequest('problem-digest'),
     })
 
@@ -191,27 +173,5 @@ describe('lapic runtime', () => {
     })
     expect(diagnostics).toContain('workerFailure')
     expect(diagnostics).toContain('ReportFailure')
-  })
-
-  it('classifies worker failure as recoverable and storage failure as non-recoverable', () => {
-    const workerRecovery = createLapicRuntimeRecoveryEligibility({
-      summary: createLapicSessionSummary(createSessionIdentity(), 'failed'),
-      failure: createLapicFailureRecord(
-        'session-id',
-        'workerFailure',
-        'worker failed'
-      ),
-    })
-    const storageRecovery = createLapicRuntimeRecoveryEligibility({
-      summary: createLapicSessionSummary(createSessionIdentity(), 'failed'),
-      failure: createLapicFailureRecord(
-        'session-id',
-        'storageIntegrityFailure',
-        'store corrupted'
-      ),
-    })
-
-    expect(workerRecovery.eligible).toBe(true)
-    expect(storageRecovery.eligible).toBe(false)
   })
 })

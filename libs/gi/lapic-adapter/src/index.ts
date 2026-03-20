@@ -19,11 +19,11 @@ import type {
   LapicDigest,
   LapicEngineVersion,
   LapicGraphAuxiliaryOutputDescriptor,
+  LapicPotentialParticipationMode,
   LapicPotentialSolveMode,
   LapicProblemDigest,
   LapicProblemId,
   LapicProblemNormalizationInput,
-  LapicPotentialParticipationMode,
   LapicUpgradeFrontierDescriptor,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
@@ -254,10 +254,25 @@ function createGiOptNodeDigest(node: OptNode): LapicDigest {
     .map((operand) => createGiOptNodeDigest(operand as OptNode))
     .join(',')
 
-  if ('operation' in node)
-    return `gi-opt-node:${node.operation}:${operands.length}:${operandDigest}`
+  const localPayloadEntries = Object.entries(node as unknown as Record<string, unknown>)
+    .filter(([key]) => key !== 'operands')
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+        return `${key}=${String(value)}`
 
-  return `gi-opt-node:unknown:${operands.length}:${operandDigest}`
+      if (value === null) return `${key}=null`
+      if (value === undefined) return `${key}=undefined`
+      if (Array.isArray(value)) return `${key}=[${value.map((entry) => String(entry)).join(',')}]`
+
+      return `${key}=[object]`
+    })
+    .join(';')
+
+  if ('operation' in node)
+    return `gi-opt-node:${node.operation}:${localPayloadEntries}:${operands.length}:${operandDigest}`
+
+  return `gi-opt-node:unknown:${localPayloadEntries}:${operands.length}:${operandDigest}`
 }
 
 function createGiArtifactFeatureDigest(artifact: ICachedArtifact): LapicDigest {

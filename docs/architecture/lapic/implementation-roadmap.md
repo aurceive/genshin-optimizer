@@ -45,6 +45,31 @@ If a task depends on an unresolved architectural choice marked as место т�
 
 No package, workstream, or migration step is considered ready until its gate criteria are met explicitly.
 
+### 2.5 Thin Entrypoints, Non-Monolithic Internals
+
+Repository package boundaries do not justify monolithic internal entry files.
+
+Within each lapic package, domain code should be split into focused internal modules by responsibility, with thin package-level entrypoints that primarily re-export public surfaces.
+
+The intended internal direction is closer to libs/pando/engine than to a single growing index.ts per package.
+
+This is not only a style preference. It exists to preserve readability, local reasoning, reviewability, and solver-slice iteration speed as core, cert, runtime, and debug gain more executable logic.
+
+### 2.6 Structural Checklist for lapic Libraries
+
+Every new lapic package or materially expanded lapic package should satisfy the following checklist.
+
+- The package-level src/index.ts is a thin facade that re-exports the public surface and performs only minimal facade assembly.
+- Core implementation logic, validators, schedulers, replay logic, state machines, and persistence workflows live in named files or domain folders, not in src/index.ts.
+- Internal structure is organized by responsibility, closer to libs/pando/engine than to a flat collection of unrelated helpers.
+- If a domain folder has its own index.ts, that file is also a thin facade over sibling implementation files.
+- Internal modules prefer direct imports from implementation files when that avoids sibling barrel cycles or undefined runtime exports.
+- Public exports are intentional and stable; internal helpers are not routed through package barrels unless they are part of the supported surface.
+- Tests are colocated with the behavior they validate when practical, so structural ownership remains obvious during refactors.
+- Adding a new subsystem should normally create or extend a focused file or domain folder, rather than growing an existing facade file.
+- Game-specific semantics stay in adapter packages; lapic core packages keep canonical, game-agnostic contracts.
+- Before merging a new package structure, verify that the resulting layout still preserves local reasoning: a reviewer should be able to find one responsibility in one obvious place.
+
 ## 3. Intended Repository Module Set
 
 The roadmap assumes the following module family will be introduced.
@@ -110,7 +135,21 @@ These phases overlap, but their gate ordering is strict.
 
 Current repository execution is no longer limited to phase 1 scaffolding.
 
-Phase 1 foundations have already been materially established for the active lapic package set, and the current implementation stream is exercising phase 5 GI adapter realization under the full-fidelity-interface rule while phases 2 through 4 and 6 remain incomplete.
+Phase 1 foundations have already been materially established for the active lapic package set.
+
+lapic storage, runtime, and debug now also have materially executable validation and session-control surfaces rather than type-only placeholders, and the active implementation stream has already closed several determinism and optional-shape correctness gaps in those packages.
+
+The largest remaining gap between the current repository state and a first engine path that can actually solve an optimization problem is no longer package scaffolding. It is the absence of the first production-shaped exact search path that connects:
+
+- canonical GI export,
+- correctness-kernel IR and certificate machinery,
+- admissible bound construction,
+- runtime work planning and scheduling,
+- and final optimality closure.
+
+Accordingly, phases 2 through 4 and 6 remain incomplete, but the next highest-value milestone is not more isolated infrastructure polish. It is the first executable solve slice through those phases for GI current-only optimization.
+
+As a prerequisite hygiene step for that solve slice, the active lapic packages should stop accumulating additional behavior into index.ts monoliths. Internal module decomposition should happen before the first search-path implementation materially increases those files again.
 
 ## 7. Phase 1: Foundations
 
@@ -516,8 +555,10 @@ The roadmap is considered successfully executed only if:
 
 Given the current document set, the immediate next implementation-planning tasks are:
 
-1. Continue GI adapter realization by replacing placeholder normalization wiring with explicit canonical source-snapshot, candidate-domain, objective, and auxiliary-output mapping.
-2. Raise lapic core and cert implementation from public type surfaces into actual correctness-kernel builders and validators required by phase 2.
-3. Introduce the first validation harness slice for GI adapter normalization and canonical export behavior.
-4. Define the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.
-5. Defer any renewed SR or ZZZ adapter scaffolding until product scope explicitly resumes those paths.
+1. Implement the first executable solve slice for GI current-only optimization: frontier build, exact-signature grouping, threshold tracking, block join expansion, residual exact resolution, and final-optimality closure through lapic runtime.
+2. Raise lapic core and cert from schema-and-validator surfaces into the minimum production-shaped correctness kernel required by that solve slice: F-IR/A-IR/S-IR realization, first admissible bounds, and certificate emission for exact symbolic and threshold-driven decisions.
+3. Continue GI adapter realization only insofar as needed to feed that solve slice with authoritative canonical source snapshots, candidate domains, objective mapping, and auxiliary outputs.
+4. Decompose the current lapic package internals so package entrypoints remain thin: split core, cert, runtime, and debug into focused internal modules before the solve slice adds another layer of search logic.
+5. Introduce the first validation harness slice for GI adapter normalization and canonical export behavior.
+6. Define the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.
+7. Defer any renewed SR or ZZZ adapter scaffolding until product scope explicitly resumes those paths.

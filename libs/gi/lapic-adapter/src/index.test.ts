@@ -7,14 +7,14 @@ import type {
 } from '@genshin-optimizer/lapic/core'
 import {
   buildGiLapicCanonicalExportFromRequest,
-  createGiLapicAdapterRequest,
-  getGiLapicAdapterCapabilities,
   createGiLapicAdapterMetadata,
+  createGiLapicAdapterRequest,
   createGiLapicAuxiliaryOutputs,
-  createGiLapicCanonicalIdentity,
   createGiLapicCandidateDomains,
+  createGiLapicCanonicalIdentity,
   createGiLapicCanonicalProblem,
   createGiLapicProblemNormalizationInput,
+  getGiLapicAdapterCapabilities,
   normalizeGiLapicAdapterRequest,
   validateGiLapicAdapterCapabilities,
   validateGiLapicAdapterContext,
@@ -317,6 +317,22 @@ describe('gi lapic adapter', () => {
       yAxisKind: 'gi-plot-y',
       graphExactness: 'exact',
     })
+  })
+
+  it('distinguishes plotBase digests for const nodes with different local payloads', () => {
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.plotBase = plotBaseNode
+
+    const otherRequest = createGiRequest()
+    otherRequest.giContext.optimizationRequest.plotBase = {
+      ...plotBaseNode,
+      value: 2,
+    }
+
+    const firstOutputs = createGiLapicAuxiliaryOutputs(request)
+    const secondOutputs = createGiLapicAuxiliaryOutputs(otherRequest)
+
+    expect(firstOutputs[0]?.payloadDigest).not.toBe(secondOutputs[0]?.payloadDigest)
   })
 
   it('creates enriched normalization input from GI request context', () => {

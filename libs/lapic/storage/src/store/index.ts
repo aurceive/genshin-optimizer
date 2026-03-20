@@ -1,0 +1,1 @@
+export { createLapicMemoryArtifactStore } from './memory'

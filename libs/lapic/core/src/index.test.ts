@@ -254,6 +254,23 @@ describe('lapic core builders and validators', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('canonicalizes exact signature group key collections in the public builder', () => {
+    const key = createLapicExactSignatureGroupKey({
+      occupiedSlotMask: 1,
+      actorIds: ['char:yae', 'char:nahida'],
+      exclusiveResourceKeys: ['weapon:widsth', 'artifact:flower'],
+      frameAxisIdentityDigest: 'frame-axis-digest',
+      adapterSemanticMode: 'gi-team',
+      discreteTeamModeKey: 'spread',
+    })
+
+    expect(key.actorIds).toEqual(['char:nahida', 'char:yae'])
+    expect(key.exclusiveResourceKeys).toEqual([
+      'artifact:flower',
+      'weapon:widsth',
+    ])
+  })
+
   it('rejects an exact signature group key with an empty frame axis digest', () => {
     const key = createExactSignatureGroupKey()
     key.frameAxisIdentityDigest = ''
@@ -309,6 +326,32 @@ describe('lapic core builders and validators', () => {
     if (!result.ok) return
 
     expect(result.value).toBe(1)
+  })
+
+  it('treats exact signature group keys with equivalent sets as equal', () => {
+    const left = createLapicExactSignatureGroupKey({
+      occupiedSlotMask: 1,
+      actorIds: ['char:nahida', 'char:yae'],
+      exclusiveResourceKeys: ['artifact:flower', 'weapon:widsth'],
+      frameAxisIdentityDigest: 'frame-axis-digest',
+      adapterSemanticMode: 'gi-team',
+      discreteTeamModeKey: 'spread',
+    })
+    const right = createLapicExactSignatureGroupKey({
+      occupiedSlotMask: 1,
+      actorIds: ['char:yae', 'char:nahida'],
+      exclusiveResourceKeys: ['weapon:widsth', 'artifact:flower'],
+      frameAxisIdentityDigest: 'frame-axis-digest',
+      adapterSemanticMode: 'gi-team',
+      discreteTeamModeKey: 'spread',
+    })
+
+    const result = compareLapicExactSignatureGroupKeys(left, right)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value).toBe(0)
   })
 
   it('creates and validates an s-ir state', () => {
