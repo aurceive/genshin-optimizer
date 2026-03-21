@@ -49,6 +49,191 @@ async function failSolve(
   return options.controller.fail('workerFailure', message, diagnostics)
 }
 
+// ---------------------------------------------------------------------------
+// Frontier construction
+// ---------------------------------------------------------------------------
+
+interface FrontierSetupResult {
+  readonly frontierBlocks: LapicFrontierBlock[]
+  readonly frontierBlockIds: string[]
+  readonly frontierIndex: ReturnType<typeof createFrontierIndexForSolve>
+}
+
+async function buildFrontierFromScratch(
+  options: LapicBoundedExactSolveOptions,
+  orderedDomains: ReturnType<typeof sortDomains>
+): Promise<FrontierSetupResult> {
+  const frontierBlocks: LapicFrontierBlock[] = []
+  const frontierBlockIds: string[] = []
+
+  options.controller.activate('frontier-build')
+  for (const [domainIndex, domain] of orderedDomains.entries()) {
+    const block = createFrontierBlockForDomain(options.problem, domain)
+    frontierBlocks.push(block)
+    frontierBlockIds.push(block.blockId)
+    await persistArtifact(
+      options,
+      'frontier-block',
+      block.blockId,
+      `payload:${block.blockId}`,
+      block,
+      [options.problem.problemDigest]
+    )
+    options.controller.publishProgress({
+      phase: 'frontier-build',
+      completedUnits: domainIndex + 1,
+      totalUnits: orderedDomains.length,
+    })
+  }
+
+  const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
+  await persistArtifact(
+    options,
+    'frontier-index',
+    frontierIndex.indexId,
+    `payload:${frontierIndex.indexId}`,
+    frontierIndex,
+    [options.problem.problemDigest, ...frontierBlockIds]
+  )
+
+  return { frontierBlocks, frontierBlockIds, frontierIndex }
+}
+
+async function rebuildFrontierForResume(
+  options: LapicBoundedExactSolveOptions,
+  orderedDomains: ReturnType<typeof sortDomains>,
+  totalCombinationCount: number
+): Promise<FrontierSetupResult> {
+  const ckpt = options.resumeCheckpointState!
+  if (ckpt.problemDigest !== options.problem.problemDigest)
+    return failSolve(options, 'Checkpoint problemDigest does not match current problem.', [
+      createLapicDiagnostic('error', 'SchemaViolation',
+        'Checkpoint problemDigest does not match current problem.',
+        ['resumeCheckpointState', 'problemDigest']),
+    ])
+  if (ckpt.totalCombinationCount !== totalCombinationCount)
+    return failSolve(options, 'Checkpoint totalCombinationCount diverged.', [
+      createLapicDiagnostic('error', 'SchemaViolation',
+        'Checkpoint totalCombinationCount diverged.',
+        ['resumeCheckpointState', 'totalCombinationCount']),
+    ])
+
+  const frontierBlocks: LapicFrontierBlock[] = []
+  const frontierBlockIds: string[] = []
+  for (const domain of orderedDomains) {
+    const block = createFrontierBlockForDomain(options.problem, domain)
+    frontierBlocks.push(block)
+    frontierBlockIds.push(block.blockId)
+  }
+
+  const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
+  return { frontierBlocks, frontierBlockIds, frontierIndex }
+}
+
+// ---------------------------------------------------------------------------
+// Tracker setup
+// ---------------------------------------------------------------------------
+
+interface TrackerSetup {
+  readonly tracker: ReturnType<typeof createResumableTopNTracker>
+  readonly resumeFlatIndex: number
+  readonly processedCombinationCount: number
+  readonly pruningStats: ReturnType<typeof createPruningStatistics>
+}
+
+function setupTracker(
+  options: LapicBoundedExactSolveOptions,
+  orderedDomains: ReturnType<typeof sortDomains>
+): TrackerSetup {
+  const isResuming = options.resumeCheckpointState !== undefined
+  const candidateIndex = buildCandidateIndex(orderedDomains)
+
+  const tracker = isResuming
+    ? restoreResumableTopNTracker(
+        options.resumeCheckpointState!.trackerSnapshot,
+        candidateIndex,
+        options.compareEvaluations
+      )
+    : createResumableTopNTracker(options.problem.topN, options.compareEvaluations)
+
+  const resumeFlatIndex = isResuming
+    ? options.resumeCheckpointState!.cursorPosition.flatIndex
+    : 0
+  const processedCombinationCount = isResuming
+    ? options.resumeCheckpointState!.visitedCombinationCount
+    : 0
+
+  const pruningStats = isResuming && options.resumeCheckpointState!.pruningStatistics
+    ? restorePruningStatistics(options.resumeCheckpointState!.pruningStatistics)
+    : createPruningStatistics()
+
+  return { tracker, resumeFlatIndex, processedCombinationCount, pruningStats }
+}
+
+// ---------------------------------------------------------------------------
+// Completion
+// ---------------------------------------------------------------------------
+
+async function completeSolve(
+  options: LapicBoundedExactSolveOptions,
+  tracker: ReturnType<typeof createResumableTopNTracker>,
+  frontierBlockIds: readonly string[]
+): Promise<LapicSolveCompletionResult> {
+  options.controller.activate('resolve-residual')
+  options.controller.publishProgress({
+    phase: 'resolve-residual',
+    completedUnits: 1,
+    totalUnits: 1,
+  })
+
+  if (tracker.isEmpty()) {
+    const infeasibilityCertificate = createInfeasibilityCertificate(
+      options,
+      frontierBlockIds
+    )
+    await persistArtifact(
+      options,
+      'certificate',
+      infeasibilityCertificate.certId,
+      infeasibilityCertificate.evidenceDigest,
+      infeasibilityCertificate,
+      frontierBlockIds
+    )
+    options.controller.emitCertificate(infeasibilityCertificate)
+    return options.controller.complete()
+  }
+
+  const winners = tracker.results()
+  const finalCertificate = createFinalOptimalityCertificate(
+    options,
+    winners,
+    frontierBlockIds
+  )
+  const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
+  if (!finalOptimality.ok)
+    return failSolve(
+      options,
+      finalOptimality.diagnostics[0]?.message ??
+        'Failed to summarize final optimality certificate.',
+      finalOptimality.diagnostics
+    )
+
+  await persistArtifact(
+    options,
+    'certificate',
+    finalCertificate.certId,
+    finalCertificate.evidenceDigest,
+    finalCertificate,
+    frontierBlockIds
+  )
+  options.controller.emitCertificate(finalCertificate)
+  return options.controller.complete(finalOptimality.value)
+}
+
+// ---------------------------------------------------------------------------
+// Main solver
+// ---------------------------------------------------------------------------
+
 export async function executeLapicBoundedExactSolve(
   options: LapicBoundedExactSolveOptions
 ): Promise<LapicBoundedExactSolveOutcome> {
@@ -65,67 +250,13 @@ export async function executeLapicBoundedExactSolve(
 
     const totalCombinationCount = validation.value
     const isResuming = options.resumeCheckpointState !== undefined
-    const frontierBlockIds: string[] = []
-    const frontierBlocks: LapicFrontierBlock[] = []
 
     options.controller.publishTrace('InitSession', `solve:${options.problem.problemDigest}`)
 
-    if (isResuming) {
-      // On resume we skip frontier-build: blocks were already built.
-      // Validate checkpoint consistency.
-      const ckpt = options.resumeCheckpointState!
-      if (ckpt.problemDigest !== options.problem.problemDigest)
-        return failSolve(options, 'Checkpoint problemDigest does not match current problem.', [
-          createLapicDiagnostic('error', 'SchemaViolation',
-            'Checkpoint problemDigest does not match current problem.',
-            ['resumeCheckpointState', 'problemDigest']),
-        ])
-      if (ckpt.totalCombinationCount !== totalCombinationCount)
-        return failSolve(options, 'Checkpoint totalCombinationCount diverged.', [
-          createLapicDiagnostic('error', 'SchemaViolation',
-            'Checkpoint totalCombinationCount diverged.',
-            ['resumeCheckpointState', 'totalCombinationCount']),
-        ])
-
-      // Rebuild frontier blocks locally (they were already persisted in the original run).
-      for (const domain of orderedDomains) {
-        const block = createFrontierBlockForDomain(options.problem, domain)
-        frontierBlocks.push(block)
-        frontierBlockIds.push(block.blockId)
-      }
-    } else {
-      options.controller.activate('frontier-build')
-      for (const [domainIndex, domain] of orderedDomains.entries()) {
-        const block = createFrontierBlockForDomain(options.problem, domain)
-        frontierBlocks.push(block)
-        frontierBlockIds.push(block.blockId)
-        await persistArtifact(
-          options,
-          'frontier-block',
-          block.blockId,
-          `payload:${block.blockId}`,
-          block,
-          [options.problem.problemDigest]
-        )
-        options.controller.publishProgress({
-          phase: 'frontier-build',
-          completedUnits: domainIndex + 1,
-          totalUnits: orderedDomains.length,
-        })
-      }
-    }
-
-    const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
-    if (!isResuming) {
-      await persistArtifact(
-        options,
-        'frontier-index',
-        frontierIndex.indexId,
-        `payload:${frontierIndex.indexId}`,
-        frontierIndex,
-        [options.problem.problemDigest, ...frontierBlockIds]
-      )
-    }
+    // --- Frontier setup ---
+    const { frontierBlocks, frontierBlockIds, frontierIndex } = isResuming
+      ? await rebuildFrontierForResume(options, orderedDomains, totalCombinationCount)
+      : await buildFrontierFromScratch(options, orderedDomains)
 
     const joinPlan = createFrontierJoinPlan(
       options.problem,
@@ -157,29 +288,15 @@ export async function executeLapicBoundedExactSolve(
 
     options.controller.activate('join')
 
-    // Restore or create the tracker.
-    const candidateIndex = buildCandidateIndex(orderedDomains)
-    const tracker = isResuming
-      ? restoreResumableTopNTracker(
-          options.resumeCheckpointState!.trackerSnapshot,
-          candidateIndex,
-          options.compareEvaluations
-        )
-      : createResumableTopNTracker(options.problem.topN, options.compareEvaluations)
+    // --- Tracker setup ---
+    const {
+      tracker,
+      resumeFlatIndex,
+      processedCombinationCount: initialProcessed,
+      pruningStats,
+    } = setupTracker(options, orderedDomains)
 
-    const resumeFlatIndex = isResuming
-      ? options.resumeCheckpointState!.cursorPosition.flatIndex
-      : 0
-    let processedCombinationCount = isResuming
-      ? options.resumeCheckpointState!.visitedCombinationCount
-      : 0
-
-    // Restore or create pruning statistics.
-    const pruningStats = isResuming && options.resumeCheckpointState!.pruningStatistics
-      ? restorePruningStatistics(options.resumeCheckpointState!.pruningStatistics)
-      : createPruningStatistics()
-
-    // Flat enumeration counter used to skip already-visited combinations on resume.
+    let processedCombinationCount = initialProcessed
     let currentFlatIndex = 0
     let pauseDetected = false
 
@@ -199,8 +316,6 @@ export async function executeLapicBoundedExactSolve(
         evidenceDigest: 'threshold-check',
         orderingKey: [thresholdValue],
       }
-      // The tracker orders descending (best first).
-      // A bound is below the threshold if it compares strictly less.
       const relation = compareEvaluations(
         boundEval, 'bound',
         thresholdEval, 'threshold',
@@ -337,56 +452,7 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    options.controller.activate('resolve-residual')
-    options.controller.publishProgress({
-      phase: 'resolve-residual',
-      completedUnits: 1,
-      totalUnits: 1,
-    })
-
-    if (tracker.isEmpty()) {
-      const infeasibilityCertificate = createInfeasibilityCertificate(
-        options,
-        frontierBlockIds
-      )
-      await persistArtifact(
-        options,
-        'certificate',
-        infeasibilityCertificate.certId,
-        infeasibilityCertificate.evidenceDigest,
-        infeasibilityCertificate,
-        frontierBlockIds
-      )
-      options.controller.emitCertificate(infeasibilityCertificate)
-      return options.controller.complete()
-    }
-
-    const winners = tracker.results()
-
-    const finalCertificate = createFinalOptimalityCertificate(
-      options,
-      winners,
-      frontierBlockIds
-    )
-    const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
-    if (!finalOptimality.ok)
-      return failSolve(
-        options,
-        finalOptimality.diagnostics[0]?.message ??
-          'Failed to summarize final optimality certificate.',
-        finalOptimality.diagnostics
-      )
-
-    await persistArtifact(
-      options,
-      'certificate',
-      finalCertificate.certId,
-      finalCertificate.evidenceDigest,
-      finalCertificate,
-      frontierBlockIds
-    )
-    options.controller.emitCertificate(finalCertificate)
-    return options.controller.complete(finalOptimality.value)
+    return completeSolve(options, tracker, frontierBlockIds)
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
     const message = error instanceof Error ? error.message : 'Unknown bounded solve failure.'

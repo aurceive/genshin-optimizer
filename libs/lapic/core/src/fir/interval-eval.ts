@@ -9,7 +9,7 @@
  * bound cascade described in relaxation-and-certificates.md.
  */
 
-import type { LapicFirGraph, LapicFirNodeId, LapicFirVariableId } from './types'
+import type { LapicFirGraph, LapicFirNode, LapicFirNodeId, LapicFirVariableId } from './types'
 import { lapicFirNodeChildIds } from './types'
 import type { LapicInterval } from '../interval/types'
 import { LAPIC_INTERVAL_EMPTY, lapicIntervalPoint } from '../interval/types'
@@ -97,7 +97,7 @@ export function evaluateLapicFirIntervals(
 // ---------------------------------------------------------------------------
 
 function evaluateNode(
-  node: ReturnType<ReadonlyMap<LapicFirNodeId, import('./types').LapicFirNode>['get']> & {},
+  node: LapicFirNode,
   bounds: ReadonlyMap<LapicFirNodeId, LapicInterval>,
   env: LapicFirIntervalEnv
 ): LapicInterval {
@@ -163,6 +163,11 @@ function evaluateNode(
 
     case 'saturatingKernel':
       return lapicIntervalSaturate(childBound(bounds, node.childId), node.cap)
+
+    default: {
+      const _exhaustive: never = node
+      throw new Error(`Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`)
+    }
   }
 }
 

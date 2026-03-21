@@ -84,20 +84,19 @@ export async function createLapicSolveSliceHarnessReport(
       'Live solve-slice harness completed without benchmark-qualified regression.'
     ),
     auditReport.session.solveState === 'completed' && certificates.some((cert) => cert.certKind === 'FinalOptimalityCert')
-      ? {
-          winnerStateId:
-            certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!.payload.winningStateId,
-          winnerDigest:
-            certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!.evidenceDigest,
-          certId: certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!.certId,
-          decisionMetadata: {
-            thresholdDigest:
-              certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!.payload.finalThresholdDigest,
-            exactReplayRequired:
-              certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!.replayRecipe.arithmeticMode === 'exact',
-            dangerZoneDetected: false,
-          },
-        }
+      ? (() => {
+          const finalCert = certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!
+          return {
+            winnerStateId: finalCert.payload.winningStateId,
+            winnerDigest: finalCert.evidenceDigest,
+            certId: finalCert.certId,
+            decisionMetadata: {
+              thresholdDigest: finalCert.payload.finalThresholdDigest,
+              exactReplayRequired: finalCert.replayRecipe.arithmeticMode === 'exact',
+              dangerZoneDetected: false,
+            },
+          }
+        })()
       : undefined
   )
   const harnessManifest = createLapicHarnessReportManifest(

@@ -8,7 +8,7 @@
  * threshold with expression threshold) produce compilation errors.
  */
 
-import type { OptNode } from '@genshin-optimizer/gi/wr'
+import type { ConstantNode, OptNode, ReadNode } from '@genshin-optimizer/gi/wr'
 import type {
   LapicFirGraph,
   LapicFirNodeId,
@@ -100,7 +100,7 @@ class OptNodeFirCompiler {
     switch (node.operation) {
       case 'const':
         return this.builder.constant(
-          (node as unknown as { value: number }).value
+          (node as ConstantNode<number>).value
         )
 
       case 'read':
@@ -146,7 +146,7 @@ class OptNodeFirCompiler {
   }
 
   private compileRead(node: OptNode): LapicFirNodeId {
-    const path = (node as unknown as { path: readonly string[] }).path
+    const path = (node as ReadNode<number>).path
     const variableId = path.join(':')
     this.variableMapping.set(variableId, variableId)
     return this.builder.read(variableId)
@@ -175,7 +175,7 @@ class OptNodeFirCompiler {
       return this.builder.constant(0)
     }
 
-    const thresholdValue = (threshNode as unknown as { value: number }).value
+    const thresholdValue = (threshNode as ConstantNode<number>).value
 
     return this.builder.thresholdSelect(
       this.compile(guardNode),

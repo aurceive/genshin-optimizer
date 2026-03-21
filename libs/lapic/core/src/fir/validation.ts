@@ -35,11 +35,20 @@ export function validateLapicFirGraph(
     return createLapicFailureResult(diagnostics)
   }
 
-  // Referential integrity: every child ID must exist
+  // Referential integrity: every child ID must exist, no self-references
   for (const [nodeId, node] of graph.nodes) {
     const children = lapicFirNodeChildIds(node)
     for (const childId of children) {
-      if (!graph.nodes.has(childId)) {
+      if (childId === nodeId) {
+        diagnostics.push(
+          createLapicDiagnostic(
+            'error',
+            'InvariantViolation',
+            `Node ${nodeId} references itself as a child`,
+            ['nodes', nodeId]
+          )
+        )
+      } else if (!graph.nodes.has(childId)) {
         diagnostics.push(
           createLapicDiagnostic(
             'error',

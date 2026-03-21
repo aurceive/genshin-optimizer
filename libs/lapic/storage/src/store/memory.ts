@@ -29,8 +29,8 @@ export function createLapicMemoryArtifactStore(
   const writeValidatedEntry = (request: LapicArtifactWriteRequest) => {
     const validation = validateLapicArtifactWriteRequest(request)
     if (!validation.ok) {
-      const detail = validation.diagnostics[0]?.message ?? 'unknown validation failure'
-      throw new Error(`Invalid memory store write request: ${detail}`)
+      const details = validation.diagnostics.map((d) => d.message).join('; ')
+      throw new Error(`Invalid memory store write request: ${details || 'unknown validation failure'}`)
     }
 
     const artifactRef = createLapicArtifactRefFromWriteRequest(request)
@@ -48,8 +48,8 @@ export function createLapicMemoryArtifactStore(
     async read(request) {
       const validation = validateLapicArtifactReadRequest(request)
       if (!validation.ok) {
-        const detail = validation.diagnostics[0]?.message ?? 'unknown validation failure'
-        throw new Error(`Invalid artifact read request: ${detail}`)
+        const details = validation.diagnostics.map((d) => d.message).join('; ')
+        throw new Error(`Invalid artifact read request: ${details || 'unknown validation failure'}`)
       }
 
       const entry = entries.get(request.artifactRef.artifactId)

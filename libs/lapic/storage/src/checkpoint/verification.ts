@@ -15,17 +15,15 @@ export async function verifyLapicCheckpointClosure(
     artifactRefs: request.artifactRefs,
   })
 
+  const affectedKeys = integrityScan.ok
+    ? new Set<string>()
+    : new Set(integrityScan.affectedArtifacts.map(createLapicArtifactRefKey))
   const inventory = materializeLapicCheckpointClosureInventory(
     request,
     integrityScan.ok
       ? request.artifactRefs
       : request.artifactRefs.filter(
-          (artifactRef) =>
-            !integrityScan.affectedArtifacts.some(
-              (affectedArtifact) =>
-                createLapicArtifactRefKey(affectedArtifact) ===
-                createLapicArtifactRefKey(artifactRef)
-            )
+          (artifactRef) => !affectedKeys.has(createLapicArtifactRefKey(artifactRef))
         )
   )
 

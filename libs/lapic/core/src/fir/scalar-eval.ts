@@ -7,7 +7,7 @@
  * Variables not in `env` evaluate to `NaN` (signals a missing binding).
  */
 
-import type { LapicFirGraph, LapicFirNodeId, LapicFirVariableId } from './types'
+import type { LapicFirGraph, LapicFirNode, LapicFirNodeId, LapicFirVariableId } from './types'
 import { lapicFirNodeChildIds } from './types'
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ export function evaluateLapicFirScalar(
 // ---------------------------------------------------------------------------
 
 function evaluateNodeScalar(
-  node: ReturnType<ReadonlyMap<LapicFirNodeId, import('./types').LapicFirNode>['get']> & {},
+  node: LapicFirNode,
   values: ReadonlyMap<LapicFirNodeId, number>,
   env: LapicFirScalarEnv
 ): number {
@@ -144,6 +144,11 @@ function evaluateNodeScalar(
 
     case 'saturatingKernel':
       return Math.min(childValue(values, node.childId), node.cap)
+
+    default: {
+      const _exhaustive: never = node
+      throw new Error(`Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`)
+    }
   }
 }
 
