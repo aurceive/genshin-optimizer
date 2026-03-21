@@ -479,6 +479,46 @@ describe('gi lapic adapter', () => {
     ])
   })
 
+  it('executes a GI current-only bounded solve with topN > 1 through the adapter bridge', async () => {
+    const { artifactStore, controller } = createSolveController()
+    const request = createGiRequest()
+    request.giContext.optimizationRequest.topN = 3
+    request.normalizationInput.topN = 3
+
+    const result = await executeGiLapicBoundedCurrentOnlySolve({
+      request,
+      canonicalIdentity: createGiLapicCanonicalIdentity({
+        problemId: 'problem-id',
+        problemDigest: 'problem-digest',
+        engineVersion: 'engine-version',
+        arithmeticPolicyId: 'arithmetic-policy',
+      }),
+      controller,
+      artifactStore,
+      evaluateCombination({ candidates }) {
+        const score = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
+
+        return {
+          ok: true,
+          value: {
+            objectiveValue: score,
+            evidenceDigest: `evidence:${score}`,
+            orderingKey: [score],
+          },
+          diagnostics: [],
+        }
+      },
+      maxCombinationCount: 8,
+    })
+
+    expect(result.completion.summary.solveState).toBe('completed')
+    expect(result.completion.emittedCertificates).toHaveLength(1)
+    expect(result.completion.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
+    expect(result.completion.emittedCertificates[0]?.referencedStateIds.length).toBeGreaterThanOrEqual(1)
+  })
+
   it('rejects invalid inventory and optimization request shapes', () => {
     const request = createGiRequest()
     const invalidInventory = {

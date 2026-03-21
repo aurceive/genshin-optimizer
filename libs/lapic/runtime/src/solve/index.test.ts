@@ -16,7 +16,7 @@ import {
 import { createLapicInMemorySessionController } from '../session'
 import { executeLapicBoundedExactSolve } from './index'
 
-function createProblem(): LapicCanonicalProblem {
+function createProblem(overrides?: { topN?: number }): LapicCanonicalProblem {
   return {
     problemId: 'problem-id',
     problemDigest: 'problem-digest',
@@ -153,7 +153,7 @@ function createProblem(): LapicCanonicalProblem {
       frameIds: [],
     },
     constraints: [],
-    topN: 1,
+    topN: overrides?.topN ?? 1,
     orderingPolicy: {
       tieBreakDimensions: ['value'],
       canonicalCandidateOrdering: ['value'],
@@ -327,5 +327,81 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.emittedCertificates).toHaveLength(1)
     expect(completion.emittedCertificates[0]?.certKind).toBe('InfeasibilityCert')
     expect(store.snapshot()).toHaveLength(5)
+  })
+
+  it('returns the top-3 results when topN = 3 with 4 combinations', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem({ topN: 3 }),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    expect(completion.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+    expect(completion.emittedCertificates).toHaveLength(1)
+    const cert = completion.emittedCertificates[0]!
+    expect(cert.certKind).toBe('FinalOptimalityCert')
+    expect(cert.referencedStateIds).toHaveLength(3)
+    expect(cert.referencedStateIds[0]).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+    expect(cert.referencedStateIds[1]).toBe(
+      'state:problem-digest:flower:flower-a|plume:plume-b'
+    )
+    expect(cert.referencedStateIds[2]).toBe(
+      'state:problem-digest:flower:flower-a|plume:plume-a'
+    )
+  })
+
+  it('returns all feasible results when topN exceeds total combinations', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem({ topN: 10 }),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    expect(completion.emittedCertificates).toHaveLength(1)
+    const cert = completion.emittedCertificates[0]!
+    expect(cert.referencedStateIds).toHaveLength(4)
+    expect(cert.referencedStateIds[0]).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
   })
 })

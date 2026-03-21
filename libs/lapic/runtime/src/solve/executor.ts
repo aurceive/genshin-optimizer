@@ -9,9 +9,8 @@ import { LapicSessionFailureError } from '../session/completion'
 import type { LapicSolveCompletionResult } from '../types'
 import { createFinalOptimalityCertificate, createInfeasibilityCertificate } from './certificate'
 import {
-  type LapicBoundedExactBestCandidate,
-  compareEvaluations,
   createCombinationStateId,
+  createTopNTracker,
   hasExclusiveResourceConflict,
   normalizeFeasibilityResult,
   sortDomains,
@@ -114,7 +113,7 @@ export async function executeLapicBoundedExactSolve(
     options.controller.activate('join')
 
     let processedCombinationCount = 0
-    let bestCandidate: LapicBoundedExactBestCandidate | undefined
+    const tracker = createTopNTracker(options.problem.topN, options.compareEvaluations)
 
     const visitCombination = async (
       domainIndex: number,
@@ -159,21 +158,11 @@ export async function executeLapicBoundedExactSolve(
           )
 
         const stateId = createCombinationStateId(options.problem, partialCandidates)
-        if (
-          !bestCandidate ||
-          compareEvaluations(
-            bestCandidate.evaluation,
-            bestCandidate.stateId,
-            evaluation.value,
-            stateId,
-            options.compareEvaluations
-          ) < 0
-        )
-          bestCandidate = {
-            stateId,
-            candidates: [...partialCandidates],
-            evaluation: evaluation.value,
-          }
+        tracker.insert({
+          stateId,
+          candidates: [...partialCandidates],
+          evaluation: evaluation.value,
+        })
 
         return
       }
@@ -195,7 +184,7 @@ export async function executeLapicBoundedExactSolve(
       totalUnits: 1,
     })
 
-    if (!bestCandidate) {
+    if (tracker.isEmpty()) {
       const infeasibilityCertificate = createInfeasibilityCertificate(
         options,
         frontierBlockIds
@@ -212,10 +201,12 @@ export async function executeLapicBoundedExactSolve(
       return options.controller.complete()
     }
 
+    const winners = tracker.results()
+    const bestCandidate = winners[0]!
+
     const finalCertificate = createFinalOptimalityCertificate(
       options,
-      bestCandidate.stateId,
-      bestCandidate.evaluation,
+      winners,
       frontierBlockIds
     )
     const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)

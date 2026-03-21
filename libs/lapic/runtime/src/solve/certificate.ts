@@ -2,14 +2,19 @@ import type {
   LapicCertificate,
   LapicFinalOptimalityPayload,
 } from '@genshin-optimizer/lapic/cert'
-import type { LapicBoundedExactCombinationEvaluation, LapicBoundedExactSolveOptions } from './types'
+import type { LapicBoundedExactBestCandidate } from './combination'
+import type { LapicBoundedExactSolveOptions } from './types'
 
 export function createFinalOptimalityCertificate(
   options: LapicBoundedExactSolveOptions,
-  winningStateId: string,
-  winningEvaluation: LapicBoundedExactCombinationEvaluation,
+  winners: readonly LapicBoundedExactBestCandidate[],
   frontierBlockIds: readonly string[]
 ): LapicCertificate<LapicFinalOptimalityPayload> {
+  const bestWinner = winners[0]!
+  const allStateIds = winners.map((winner) => winner.stateId)
+  const topN = winners.length
+  const incumbentSetDigest = allStateIds.join(',')
+
   return {
     certId: `cert:final:${options.problem.problemDigest}`,
     certKind: 'FinalOptimalityCert',
@@ -17,12 +22,12 @@ export function createFinalOptimalityCertificate(
     problemId: options.problem.problemId,
     arithmeticPolicyId: options.problem.arithmeticPolicyId,
     decisionClass: 'optimality-proof',
-    referencedStateIds: [winningStateId],
+    referencedStateIds: allStateIds,
     referencedBlockIds: [...frontierBlockIds],
     referencedRegionIds: [],
     referencedRelaxIds: [],
-    incumbentDigest: winningEvaluation.objectiveValue,
-    evidenceDigest: winningEvaluation.evidenceDigest,
+    incumbentDigest: bestWinner.evaluation.objectiveValue,
+    evidenceDigest: bestWinner.evaluation.evidenceDigest,
     replayRecipe: {
       requiredIrObjects: [options.problem.objective.expressionDigest],
       requiredRegionPredicates: [],
@@ -34,14 +39,14 @@ export function createFinalOptimalityCertificate(
     emittedAtStep: 1,
     validationStatus: 'validated',
     payload: {
-      winningStateId,
+      winningStateId: bestWinner.stateId,
       optimalityGap: '0',
-      finalThresholdDigest: `threshold:${options.problem.problemDigest}:top-1`,
-      finalIncumbentSetDigest: `incumbent:${winningStateId}`,
+      finalThresholdDigest: `threshold:${options.problem.problemDigest}:top-${topN}`,
+      finalIncumbentSetDigest: `incumbent:${incumbentSetDigest}`,
       queueExhaustionSummaryDigest: `queue-exhausted:${options.problem.problemDigest}`,
       thresholdPruneSummaryDigest: `threshold-prune:none:${options.problem.problemDigest}`,
       escalatedReplaySummaryDigest: `replay:none:${options.problem.problemDigest}`,
-      stableOrderCompletenessDigest: `stable-order:${winningStateId}`,
+      stableOrderCompletenessDigest: `stable-order:${incumbentSetDigest}`,
     },
   }
 }

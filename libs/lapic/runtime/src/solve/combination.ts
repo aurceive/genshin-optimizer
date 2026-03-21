@@ -18,6 +18,56 @@ export interface LapicBoundedExactBestCandidate {
   readonly evaluation: LapicBoundedExactCombinationEvaluation
 }
 
+export interface LapicBoundedExactTopNTracker {
+  insert(candidate: LapicBoundedExactBestCandidate): void
+  isEmpty(): boolean
+  isFull(): boolean
+  results(): readonly LapicBoundedExactBestCandidate[]
+}
+
+export function createTopNTracker(
+  topN: number,
+  explicitComparator?: LapicBoundedExactSolveOptions['compareEvaluations']
+): LapicBoundedExactTopNTracker {
+  const entries: LapicBoundedExactBestCandidate[] = []
+
+  function compare(
+    left: LapicBoundedExactBestCandidate,
+    right: LapicBoundedExactBestCandidate
+  ): LapicDeterministicOrderingRelation {
+    return compareEvaluations(
+      left.evaluation,
+      left.stateId,
+      right.evaluation,
+      right.stateId,
+      explicitComparator
+    )
+  }
+
+  return {
+    insert(candidate: LapicBoundedExactBestCandidate): void {
+      let insertionIndex = entries.length
+      for (let i = 0; i < entries.length; i += 1) {
+        if (compare(candidate, entries[i]!) > 0) {
+          insertionIndex = i
+          break
+        }
+      }
+      entries.splice(insertionIndex, 0, candidate)
+      if (entries.length > topN) entries.pop()
+    },
+    isEmpty(): boolean {
+      return entries.length === 0
+    },
+    isFull(): boolean {
+      return entries.length >= topN
+    },
+    results(): readonly LapicBoundedExactBestCandidate[] {
+      return entries
+    },
+  }
+}
+
 function compareStringArrays(
   left: readonly string[],
   right: readonly string[]
@@ -96,9 +146,9 @@ export function validateSolveOptions(
   options: LapicBoundedExactSolveOptions,
   orderedCandidates: readonly (readonly LapicCandidateDescriptor[])[]
 ): LapicValidationResult<number> {
-  if (options.problem.topN !== 1)
+  if (options.problem.topN < 1)
     return failure(
-      'The bounded in-process solve slice currently supports only topN = 1.',
+      'The bounded in-process solve slice requires topN >= 1.',
       ['problem', 'topN']
     )
 
