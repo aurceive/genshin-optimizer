@@ -8,6 +8,7 @@ import {
 } from '../builders'
 import type {
   LapicCancelRequestResult,
+  LapicFailedSessionSummary,
   LapicFailureClass,
   LapicSolveCompletionResult,
 } from '../types'
@@ -20,6 +21,17 @@ import {
   notifyFailure,
 } from './context'
 import { terminalInternalStates } from './internal'
+
+export class LapicSessionFailureError extends Error {
+  readonly summary: LapicFailedSessionSummary['summary']
+  readonly failure: LapicFailedSessionSummary['failure']
+  constructor(failedSummary: LapicFailedSessionSummary) {
+    super(failedSummary.failure.message)
+    this.name = 'LapicSessionFailureError'
+    this.summary = failedSummary.summary
+    this.failure = failedSummary.failure
+  }
+}
 
 export function awaitCompletion(
   context: LapicSessionControllerContext
@@ -100,5 +112,5 @@ export function failSession(
   emitTrace(context, 'ReportFailure')
   const failedSummary = createLapicFailedSessionSummary(currentSummary(context), nextFailure)
   rejectFailedCompletion(context, failedSummary)
-  throw failedSummary
+  throw new LapicSessionFailureError(failedSummary)
 }

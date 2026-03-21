@@ -44,6 +44,12 @@ export function validateLapicCheckpointExportDescriptor(
       ['checkpointExportDescriptor']
     )
 
+  if (!isRecord(descriptor.closure))
+    return createRuntimeFailure(
+      'Checkpoint export descriptor closure must be a record.',
+      ['closure']
+    )
+
   if (!isNonEmptyString(descriptor.closure.checkpointId))
     return createRuntimeFailure(
       'Closure checkpoint id must be a non-empty string.',
@@ -66,6 +72,12 @@ export function validateLapicCheckpointImportDescriptor(
     return createRuntimeFailure(
       'Checkpoint import descriptor must be a record.',
       ['checkpointImportDescriptor']
+    )
+
+  if (!isRecord(descriptor.closure))
+    return createRuntimeFailure(
+      'Checkpoint import descriptor closure must be a record.',
+      ['closure']
     )
 
   if (!isNonEmptyString(descriptor.closure.checkpointId))
@@ -96,6 +108,12 @@ export function validateLapicCheckpointCompletionResult(
     return createRuntimeFailure(
       'Checkpoint id must be a non-empty string.',
       ['checkpointId']
+    )
+
+  if (!isRecord(result.verification))
+    return createRuntimeFailure(
+      'Checkpoint verification must be a record.',
+      ['verification']
     )
 
   if (!isBoolean(result.verification.resumable))
