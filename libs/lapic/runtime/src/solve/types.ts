@@ -10,6 +10,7 @@ import type {
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
 } from '../types'
+import type { LapicSolveCheckpointState } from './checkpoint-state'
 
 export interface LapicBoundedExactCandidateCombination {
   readonly problem: LapicCanonicalProblem
@@ -43,8 +44,24 @@ export interface LapicBoundedExactSolveOptions {
   readonly compareEvaluations?: LapicBoundedExactEvaluationComparator
   readonly isCombinationFeasible?: LapicBoundedExactFeasibilityEvaluator
   readonly maxCombinationCount?: number
+  /** When provided, the executor resumes from the given checkpoint state
+   *  instead of starting a fresh solve. Frontier blocks are NOT rebuilt. */
+  readonly resumeCheckpointState?: LapicSolveCheckpointState
 }
+
+/**
+ * Result of a solve that was paused before completion.
+ * Contains the checkpoint state needed to resume later.
+ */
+export interface LapicBoundedExactSolvePauseResult {
+  readonly paused: true
+  readonly checkpointState: LapicSolveCheckpointState
+}
+
+export type LapicBoundedExactSolveOutcome =
+  | LapicSolveCompletionResult
+  | LapicBoundedExactSolvePauseResult
 
 export type LapicBoundedExactSolveExecutor = (
   options: LapicBoundedExactSolveOptions
-) => Promise<LapicSolveCompletionResult>
+) => Promise<LapicBoundedExactSolveOutcome>
