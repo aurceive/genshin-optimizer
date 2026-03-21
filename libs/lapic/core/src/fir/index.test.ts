@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { LapicFirGraphBuilder } from './builders'
 import { validateLapicFirGraph } from './validation'
 import { evaluateLapicFirIntervals } from './interval-eval'
+import { evaluateLapicFirScalar } from './scalar-eval'
+import { runLapicGoldenHarness } from './golden-harness'
 import { lapicInterval, lapicIntervalPoint } from '../interval/types'
 import { lapicFirNodeChildIds } from './types'
 import type { LapicFirNode } from './types'
@@ -544,5 +546,462 @@ describe('evaluateLapicFirIntervals', () => {
     // Upper: 2500 * 1.8 * 2.0 * 0.9 = 8100
     expect(result.rootBound.lo).toBeCloseTo(3780)
     expect(result.rootBound.hi).toBeCloseTo(8100)
+  })
+})
+
+// =========================================================================
+// Scalar Evaluator
+// =========================================================================
+
+describe('evaluateLapicFirScalar', () => {
+  it('evaluates a constant', () => {
+    const b = new LapicFirGraphBuilder()
+    const c = b.constant(42)
+    const g = b.build(c)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(42)
+  })
+
+  it('evaluates a variable read', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const g = b.build(x)
+
+    const result = evaluateLapicFirScalar(g, new Map([['x', 7]]))
+    expect(result.rootValue).toBe(7)
+  })
+
+  it('returns NaN for missing variable', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const g = b.build(x)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBeNaN()
+  })
+
+  it('evaluates addition', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.add(b.constant(3), b.constant(4))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(7)
+  })
+
+  it('evaluates multiplication', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.mul(b.constant(3), b.constant(5))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(15)
+  })
+
+  it('evaluates min', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.min(b.constant(3), b.constant(7), b.constant(1))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(1)
+  })
+
+  it('evaluates max', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.max(b.constant(3), b.constant(7), b.constant(1))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(7)
+  })
+
+  it('evaluates negation', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.neg(b.constant(5))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map())
+    expect(result.rootValue).toBe(-5)
+  })
+
+  it('evaluates affine form', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const y = b.read('y')
+    // 10 + 2*x + 3*y
+    const root = b.affineForm(10, [
+      { coeff: 2, childId: x },
+      { coeff: 3, childId: y },
+    ])
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['x', 4], ['y', 5]]))
+    // 10 + 2*4 + 3*5 = 10 + 8 + 15 = 33
+    expect(result.rootValue).toBe(33)
+  })
+
+  it('evaluates threshold select (above)', () => {
+    const b = new LapicFirGraphBuilder()
+    const guard = b.read('guard')
+    const then_ = b.constant(100)
+    const else_ = b.constant(0)
+    const root = b.thresholdSelect(guard, 0.5, then_, else_)
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['guard', 0.7]]))
+    expect(result.rootValue).toBe(100)
+  })
+
+  it('evaluates threshold select (below)', () => {
+    const b = new LapicFirGraphBuilder()
+    const guard = b.read('guard')
+    const then_ = b.constant(100)
+    const else_ = b.constant(0)
+    const root = b.thresholdSelect(guard, 0.5, then_, else_)
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['guard', 0.3]]))
+    expect(result.rootValue).toBe(0)
+  })
+
+  it('evaluates resistance transform (negative res)', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.resistanceTransform(b.read('res'))
+    const g = b.build(root)
+
+    // res = -0.2 → 1 - (-0.2)/2 = 1.1
+    const result = evaluateLapicFirScalar(g, new Map([['res', -0.2]]))
+    expect(result.rootValue).toBeCloseTo(1.1)
+  })
+
+  it('evaluates resistance transform (mid range)', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.resistanceTransform(b.read('res'))
+    const g = b.build(root)
+
+    // res = 0.1 → 1 - 0.1 = 0.9
+    const result = evaluateLapicFirScalar(g, new Map([['res', 0.1]]))
+    expect(result.rootValue).toBeCloseTo(0.9)
+  })
+
+  it('evaluates resistance transform (high res)', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.resistanceTransform(b.read('res'))
+    const g = b.build(root)
+
+    // res = 1.0 → 1/(4*1+1) = 0.2
+    const result = evaluateLapicFirScalar(g, new Map([['res', 1.0]]))
+    expect(result.rootValue).toBeCloseTo(0.2)
+  })
+
+  it('evaluates piecewise affine kernel', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.piecewiseAffineKernel(b.read('x'), [
+      { breakpoint: 0, slope: 1, intercept: 0 },     // y = x for x < 10
+      { breakpoint: 10, slope: 0.5, intercept: 10 },  // y = 0.5*(x-10) + 10 for x >= 10
+    ])
+    const g = b.build(root)
+
+    // x = 5 → first segment: 1*(5-0)+0 = 5
+    expect(evaluateLapicFirScalar(g, new Map([['x', 5]])).rootValue).toBe(5)
+    // x = 20 → second segment: 0.5*(20-10)+10 = 15
+    expect(evaluateLapicFirScalar(g, new Map([['x', 20]])).rootValue).toBe(15)
+  })
+
+  it('evaluates bilinear kernel', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.bilinearKernel(b.read('x'), b.read('y'))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['x', 3], ['y', 7]]))
+    expect(result.rootValue).toBe(21)
+  })
+
+  it('evaluates multilinear kernel', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.multilinearKernel(b.read('a'), b.read('b'), b.read('c'))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['a', 2], ['b', 3], ['c', 5]]))
+    expect(result.rootValue).toBe(30)
+  })
+
+  it('evaluates saturating kernel', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.saturatingKernel(b.read('x'), 10)
+    const g = b.build(root)
+
+    expect(evaluateLapicFirScalar(g, new Map([['x', 5]])).rootValue).toBe(5)
+    expect(evaluateLapicFirScalar(g, new Map([['x', 15]])).rootValue).toBe(10)
+  })
+
+  it('populates nodeValues for every node', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const y = b.read('y')
+    const root = b.add(x, y)
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(g, new Map([['x', 3], ['y', 4]]))
+    expect(result.nodeValues.size).toBe(3)
+    expect(result.nodeValues.get(x)).toBe(3)
+    expect(result.nodeValues.get(y)).toBe(4)
+    expect(result.nodeValues.get(root)).toBe(7)
+  })
+
+  it('evaluates a GI-like damage formula', () => {
+    const b = new LapicFirGraphBuilder()
+    const baseDmg = b.read('baseDmg')
+    const dmgBonus = b.read('dmgBonus')
+    const critMult = b.read('critMult')
+    const res = b.read('res')
+
+    // baseDmg * (1 + dmgBonus) * critMult * resMult
+    const dmgMul = b.add(b.constant(1), dmgBonus)
+    const resMul = b.resistanceTransform(res)
+    const root = b.mul(baseDmg, dmgMul, critMult, resMul)
+    const g = b.build(root)
+
+    const env = new Map<string, number>([
+      ['baseDmg', 2000],
+      ['dmgBonus', 0.466],
+      ['critMult', 1.5],
+      ['res', 0.1],
+    ])
+    const result = evaluateLapicFirScalar(g, env)
+    // 2000 * 1.466 * 1.5 * 0.9 = 3958.2
+    expect(result.rootValue).toBeCloseTo(3958.2, 0)
+  })
+})
+
+// =========================================================================
+// Golden Validation Harness
+// =========================================================================
+
+describe('runLapicGoldenHarness', () => {
+  it('passes with a simple sum formula', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.add(b.read('x'), b.read('y'))
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 1]]) },
+            { candidateId: 'a2', variables: new Map([['x', 3]]) },
+          ],
+        },
+        {
+          domainId: 'B',
+          candidates: [
+            { candidateId: 'b1', variables: new Map([['y', 10]]) },
+            { candidateId: 'b2', variables: new Map([['y', 20]]) },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.violations).toHaveLength(0)
+    expect(result.totalCombinations).toBe(4)
+    expect(result.scalarEvaluations).toBe(4)
+    expect(result.minScalarValue).toBe(11) // 1+10
+    expect(result.maxScalarValue).toBe(23) // 3+20
+  })
+
+  it('passes with product formula', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.mul(b.read('x'), b.read('y'))
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 2]]) },
+            { candidateId: 'a2', variables: new Map([['x', 4]]) },
+          ],
+        },
+        {
+          domainId: 'B',
+          candidates: [
+            { candidateId: 'b1', variables: new Map([['y', 3]]) },
+            { candidateId: 'b2', variables: new Map([['y', 5]]) },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.violations).toHaveLength(0)
+    expect(result.minScalarValue).toBe(6)  // 2*3
+    expect(result.maxScalarValue).toBe(20) // 4*5
+  })
+
+  it('passes with global constants', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.add(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 5]]) },
+            { candidateId: 'a2', variables: new Map([['x', 10]]) },
+          ],
+        },
+      ],
+      globalConstants: new Map([['c', 100]]),
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.minScalarValue).toBe(105)
+    expect(result.maxScalarValue).toBe(110)
+  })
+
+  it('passes with three domains', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.add(b.read('x'), b.read('y'), b.read('z'))
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 1]]) },
+            { candidateId: 'a2', variables: new Map([['x', 2]]) },
+          ],
+        },
+        {
+          domainId: 'B',
+          candidates: [
+            { candidateId: 'b1', variables: new Map([['y', 10]]) },
+            { candidateId: 'b2', variables: new Map([['y', 20]]) },
+          ],
+        },
+        {
+          domainId: 'C',
+          candidates: [
+            { candidateId: 'c1', variables: new Map([['z', 100]]) },
+            { candidateId: 'c2', variables: new Map([['z', 200]]) },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.totalCombinations).toBe(8)
+    expect(result.minScalarValue).toBe(111) // 1+10+100
+    expect(result.maxScalarValue).toBe(222) // 2+20+200
+  })
+
+  it('passes with GI-like damage formula', () => {
+    const b = new LapicFirGraphBuilder()
+    const baseDmg = b.read('baseDmg')
+    const atkFlat = b.read('atkFlat')
+    const critRate = b.read('critRate')
+    const critDmg = b.read('critDmg')
+    const res = b.read('res')
+
+    // (baseDmg + atkFlat) * (1 + critRate * critDmg) * resMult
+    const totalAtk = b.add(baseDmg, atkFlat)
+    const critMult = b.add(b.constant(1), b.mul(critRate, critDmg))
+    const resMult = b.resistanceTransform(res)
+    const root = b.mul(totalAtk, critMult, resMult)
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'flower',
+          candidates: [
+            { candidateId: 'f1', variables: new Map([['atkFlat', 100], ['critRate', 0.05]]) },
+            { candidateId: 'f2', variables: new Map([['atkFlat', 200], ['critRate', 0.10]]) },
+            { candidateId: 'f3', variables: new Map([['atkFlat', 150], ['critRate', 0.08]]) },
+          ],
+        },
+        {
+          domainId: 'circlet',
+          candidates: [
+            { candidateId: 'c1', variables: new Map([['critDmg', 0.5]]) },
+            { candidateId: 'c2', variables: new Map([['critDmg', 1.0]]) },
+          ],
+        },
+      ],
+      globalConstants: new Map([
+        ['baseDmg', 2000],
+        ['res', 0.1],
+      ]),
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.violations).toHaveLength(0)
+    expect(result.totalCombinations).toBe(6) // 3 × 2
+  })
+
+  it('passes with single-domain single-candidate trivial case', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.read('x')
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 42]]) },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.totalCombinations).toBe(1)
+    expect(result.minScalarValue).toBe(42)
+    expect(result.maxScalarValue).toBe(42)
+  })
+
+  it('performs interval evaluations for partial assignments', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.add(b.read('x'), b.read('y'))
+    const g = b.build(root)
+
+    const result = runLapicGoldenHarness({
+      graph: g,
+      domains: [
+        {
+          domainId: 'A',
+          candidates: [
+            { candidateId: 'a1', variables: new Map([['x', 1]]) },
+            { candidateId: 'a2', variables: new Map([['x', 3]]) },
+          ],
+        },
+        {
+          domainId: 'B',
+          candidates: [
+            { candidateId: 'b1', variables: new Map([['y', 10]]) },
+            { candidateId: 'b2', variables: new Map([['y', 20]]) },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    // Should have interval evaluations for partial assignments
+    expect(result.intervalEvaluations).toBeGreaterThan(result.scalarEvaluations)
   })
 })
