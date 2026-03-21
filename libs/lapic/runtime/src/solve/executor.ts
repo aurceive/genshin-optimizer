@@ -9,8 +9,11 @@ import { LapicSessionFailureError } from '../session/completion'
 import type { LapicSolveCompletionResult } from '../types'
 import { createFinalOptimalityCertificate, createInfeasibilityCertificate } from './certificate'
 import {
+  createLapicSolveCheckpointState,
+  createLapicSolveCursorPosition,
+} from './checkpoint-state'
+import {
   createCombinationStateId,
-  createTopNTracker,
   hasExclusiveResourceConflict,
   normalizeFeasibilityResult,
   sortDomains,
@@ -19,9 +22,15 @@ import {
 import { createFrontierBlockForDomain, createFrontierIndexForSolve } from './frontier'
 import { createFrontierJoinPlan } from './join-plan'
 import { persistArtifact } from './persistence'
+import {
+  buildCandidateIndex,
+  createResumableTopNTracker,
+  restoreResumableTopNTracker,
+} from './resumable-tracker'
 import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOptions,
+  LapicBoundedExactSolveOutcome,
 } from './types'
 
 async function failSolve(
@@ -34,7 +43,7 @@ async function failSolve(
 
 export async function executeLapicBoundedExactSolve(
   options: LapicBoundedExactSolveOptions
-): Promise<LapicSolveCompletionResult> {
+): Promise<LapicBoundedExactSolveOutcome> {
   try {
     const orderedDomains = sortDomains(options.problem)
     const orderedCandidates = orderedDomains.map((domain) => domain.candidates)
@@ -47,40 +56,68 @@ export async function executeLapicBoundedExactSolve(
       )
 
     const totalCombinationCount = validation.value
+    const isResuming = options.resumeCheckpointState !== undefined
     const frontierBlockIds: string[] = []
     const frontierBlocks: LapicFrontierBlock[] = []
 
     options.controller.publishTrace('InitSession', `solve:${options.problem.problemDigest}`)
-    options.controller.activate('frontier-build')
 
-    for (const [domainIndex, domain] of orderedDomains.entries()) {
-      const block = createFrontierBlockForDomain(options.problem, domain)
-      frontierBlocks.push(block)
-      frontierBlockIds.push(block.blockId)
-      await persistArtifact(
-        options,
-        'frontier-block',
-        block.blockId,
-        `payload:${block.blockId}`,
-        block,
-        [options.problem.problemDigest]
-      )
-      options.controller.publishProgress({
-        phase: 'frontier-build',
-        completedUnits: domainIndex + 1,
-        totalUnits: orderedDomains.length,
-      })
+    if (isResuming) {
+      // On resume we skip frontier-build: blocks were already built.
+      // Validate checkpoint consistency.
+      const ckpt = options.resumeCheckpointState!
+      if (ckpt.problemDigest !== options.problem.problemDigest)
+        return failSolve(options, 'Checkpoint problemDigest does not match current problem.', [
+          createLapicDiagnostic('error', 'SchemaViolation',
+            'Checkpoint problemDigest does not match current problem.',
+            ['resumeCheckpointState', 'problemDigest']),
+        ])
+      if (ckpt.totalCombinationCount !== totalCombinationCount)
+        return failSolve(options, 'Checkpoint totalCombinationCount diverged.', [
+          createLapicDiagnostic('error', 'SchemaViolation',
+            'Checkpoint totalCombinationCount diverged.',
+            ['resumeCheckpointState', 'totalCombinationCount']),
+        ])
+
+      // Rebuild frontier blocks locally (they were already persisted in the original run).
+      for (const domain of orderedDomains) {
+        const block = createFrontierBlockForDomain(options.problem, domain)
+        frontierBlocks.push(block)
+        frontierBlockIds.push(block.blockId)
+      }
+    } else {
+      options.controller.activate('frontier-build')
+      for (const [domainIndex, domain] of orderedDomains.entries()) {
+        const block = createFrontierBlockForDomain(options.problem, domain)
+        frontierBlocks.push(block)
+        frontierBlockIds.push(block.blockId)
+        await persistArtifact(
+          options,
+          'frontier-block',
+          block.blockId,
+          `payload:${block.blockId}`,
+          block,
+          [options.problem.problemDigest]
+        )
+        options.controller.publishProgress({
+          phase: 'frontier-build',
+          completedUnits: domainIndex + 1,
+          totalUnits: orderedDomains.length,
+        })
+      }
     }
 
     const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
-    await persistArtifact(
-      options,
-      'frontier-index',
-      frontierIndex.indexId,
-      `payload:${frontierIndex.indexId}`,
-      frontierIndex,
-      [options.problem.problemDigest, ...frontierBlockIds]
-    )
+    if (!isResuming) {
+      await persistArtifact(
+        options,
+        'frontier-index',
+        frontierIndex.indexId,
+        `payload:${frontierIndex.indexId}`,
+        frontierIndex,
+        [options.problem.problemDigest, ...frontierBlockIds]
+      )
+    }
 
     const joinPlan = createFrontierJoinPlan(
       options.problem,
@@ -112,14 +149,40 @@ export async function executeLapicBoundedExactSolve(
 
     options.controller.activate('join')
 
-    let processedCombinationCount = 0
-    const tracker = createTopNTracker(options.problem.topN, options.compareEvaluations)
+    // Restore or create the tracker.
+    const candidateIndex = buildCandidateIndex(orderedDomains)
+    const tracker = isResuming
+      ? restoreResumableTopNTracker(
+          options.resumeCheckpointState!.trackerSnapshot,
+          candidateIndex,
+          options.compareEvaluations
+        )
+      : createResumableTopNTracker(options.problem.topN, options.compareEvaluations)
+
+    const resumeFlatIndex = isResuming
+      ? options.resumeCheckpointState!.cursorPosition.flatIndex
+      : 0
+    let processedCombinationCount = isResuming
+      ? options.resumeCheckpointState!.visitedCombinationCount
+      : 0
+
+    // Flat enumeration counter used to skip already-visited combinations on resume.
+    let currentFlatIndex = 0
+    let pauseDetected = false
 
     const visitCombination = async (
       domainIndex: number,
       partialCandidates: readonly LapicCandidateDescriptor[]
     ): Promise<void> => {
+      if (pauseDetected) return
+
       if (domainIndex >= joinPlan.value.entries.length) {
+        const thisFlatIndex = currentFlatIndex
+        currentFlatIndex += 1
+
+        // On resume, skip combinations that were already processed.
+        if (thisFlatIndex < resumeFlatIndex) return
+
         processedCombinationCount += 1
         options.controller.publishProgress({
           phase: 'join',
@@ -164,10 +227,17 @@ export async function executeLapicBoundedExactSolve(
           evaluation: evaluation.value,
         })
 
+        // Check for pause request at each safe-point.
+        const sessionState = await options.controller.inspectSessionState()
+        if (sessionState.summary.solveState === 'pausing') {
+          pauseDetected = true
+        }
+
         return
       }
 
       for (const plannedRow of joinPlan.value.entries[domainIndex]!.rows) {
+        if (pauseDetected) return
         await visitCombination(domainIndex + 1, [
           ...partialCandidates,
           plannedRow.candidate,
@@ -176,6 +246,20 @@ export async function executeLapicBoundedExactSolve(
     }
 
     await visitCombination(0, [])
+
+    // If a pause was requested during the join phase, emit checkpoint and return.
+    if (pauseDetected) {
+      options.controller.reachPauseSafePoint()
+      const checkpointState = createLapicSolveCheckpointState(
+        options.problem.problemDigest,
+        processedCombinationCount,
+        totalCombinationCount,
+        tracker.snapshot(),
+        createLapicSolveCursorPosition(currentFlatIndex),
+        frontierBlockIds
+      )
+      return { paused: true, checkpointState }
+    }
 
     options.controller.activate('resolve-residual')
     options.controller.publishProgress({
@@ -202,7 +286,6 @@ export async function executeLapicBoundedExactSolve(
     }
 
     const winners = tracker.results()
-    const bestCandidate = winners[0]!
 
     const finalCertificate = createFinalOptimalityCertificate(
       options,

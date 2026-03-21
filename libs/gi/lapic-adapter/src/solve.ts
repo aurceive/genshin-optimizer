@@ -69,7 +69,7 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
     options.controller
   )
 
-  const completion = await executeLapicBoundedExactSolve({
+  const outcome = await executeLapicBoundedExactSolve({
     problem: canonicalExport.value.problem,
     controller: options.controller,
     artifactStore: options.artifactStore,
@@ -84,8 +84,13 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
     maxCombinationCount: options.maxCombinationCount,
   })
 
+  if ('paused' in outcome)
+    throw new Error(
+      'Unexpected pause during GI bounded current-only solve (pause not requested).'
+    )
+
   return {
     canonicalExport: canonicalExport.value,
-    completion,
+    completion: outcome,
   }
 }

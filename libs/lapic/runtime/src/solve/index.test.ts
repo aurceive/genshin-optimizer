@@ -404,4 +404,112 @@ describe('lapic bounded exact solve executor', () => {
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
   })
+
+  it('pauses during join phase when a pause is requested and emits checkpoint state', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    let combinationsSeen = 0
+
+    // Request a pause after the second combination
+    const solvePromise = executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        combinationsSeen += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        // After processing 2 combinations, request pause
+        if (combinationsSeen === 2) {
+          controller.requestPause()
+        }
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    const outcome = await solvePromise
+
+    expect('paused' in outcome).toBe(true)
+    if (!('paused' in outcome)) return
+    expect(outcome.paused).toBe(true)
+    expect(outcome.checkpointState.checkpointKind).toBe('solve-position')
+    expect(outcome.checkpointState.problemDigest).toBe('problem-digest')
+    expect(outcome.checkpointState.visitedCombinationCount).toBeGreaterThanOrEqual(2)
+    expect(outcome.checkpointState.totalCombinationCount).toBe(4)
+    expect(outcome.checkpointState.phase).toBe('join')
+    expect(outcome.checkpointState.trackerSnapshot.topN).toBe(1)
+    expect(outcome.checkpointState.trackerSnapshot.entries.length).toBeGreaterThanOrEqual(1)
+    expect(outcome.checkpointState.frontierBlockIds).toHaveLength(2)
+  })
+
+  it('resumes from a checkpoint state and produces correct final result', async () => {
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    // First run: pause after 2 combinations
+    const firstRun = createController()
+    let firstRunCount = 0
+
+    const firstOutcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller: firstRun.controller,
+      artifactStore: firstRun.store,
+      evaluateCombination({ candidates }) {
+        firstRunCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        if (firstRunCount === 2) firstRun.controller.requestPause()
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect('paused' in firstOutcome).toBe(true)
+    if (!('paused' in firstOutcome)) return
+
+    // Second run: resume from checkpoint
+    const secondRun = createController()
+
+    const finalOutcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller: secondRun.controller,
+      artifactStore: secondRun.store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+      resumeCheckpointState: firstOutcome.checkpointState,
+    })
+
+    expect('paused' in finalOutcome).toBe(false)
+    if ('paused' in finalOutcome) return
+    expect(finalOutcome.summary.solveState).toBe('completed')
+    expect(finalOutcome.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+    expect(finalOutcome.emittedCertificates).toHaveLength(1)
+    expect(finalOutcome.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
+  })
 })
