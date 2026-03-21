@@ -1,14 +1,84 @@
 import type {
+  LapicBoundPrunePayload,
   LapicCertificate,
   LapicFinalOptimalityPayload,
 } from '@genshin-optimizer/lapic/cert'
 import type { LapicBoundedExactBestCandidate } from './combination'
 import type { LapicBoundedExactSolveOptions } from './types'
 
+// ---------------------------------------------------------------------------
+// Bound-prune certificate
+// ---------------------------------------------------------------------------
+
+/** Context for creating a bound-prune certificate. */
+export interface LapicBoundPruneCertificateContext {
+  /** The computed admissible upper bound value. */
+  readonly boundValue: string
+  /** Evidence digest from the bound provider. */
+  readonly boundEvidenceDigest: string
+  /** Current incumbent threshold value. */
+  readonly thresholdValue: string
+  /** Which domain level the prune occurred at. */
+  readonly domainIndex: number
+  /** Sequential step counter for ordering certificates. */
+  readonly stepIndex: number
+  /** Frontier block IDs referenced by this prune decision. */
+  readonly frontierBlockIds: readonly string[]
+}
+
+export function createBoundPruneCertificate(
+  options: LapicBoundedExactSolveOptions,
+  context: LapicBoundPruneCertificateContext
+): LapicCertificate<LapicBoundPrunePayload> {
+  const regionId = `region:domain-${context.domainIndex}:${options.problem.problemDigest}`
+  const thresholdDigest = `threshold:${options.problem.problemDigest}:${context.thresholdValue}`
+
+  return {
+    certId: `cert:bound-prune:${options.problem.problemDigest}:step-${context.stepIndex}`,
+    certKind: 'BoundPruneCert',
+    schemaVersion: '0.1.0-draft',
+    problemId: options.problem.problemId,
+    arithmeticPolicyId: options.problem.arithmeticPolicyId,
+    decisionClass: 'relaxation-prune',
+    referencedStateIds: [],
+    referencedBlockIds: [...context.frontierBlockIds],
+    referencedRegionIds: [regionId],
+    referencedRelaxIds: [],
+    incumbentDigest: context.thresholdValue,
+    evidenceDigest: context.boundEvidenceDigest,
+    replayRecipe: {
+      requiredIrObjects: [options.problem.objective.expressionDigest],
+      requiredRegionPredicates: [regionId],
+      arithmeticMode: 'interval',
+      replayPathKind: 'single-certificate',
+      exactComparisonRule: 'stable-ordering',
+      expectedVerdict: 'matched',
+    },
+    emittedAtStep: context.stepIndex,
+    validationStatus: 'validated',
+    payload: {
+      thresholdDigest,
+      boundSourceClass: 'relaxationDerived',
+      boundValue: context.boundValue,
+      validityRegionId: regionId,
+      numericDiagnosticsDigest: `numeric:${context.boundEvidenceDigest}`,
+      dangerZoneRecord: {
+        triggered: false,
+        verificationReplayInvoked: false,
+      },
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Final optimality certificate
+// ---------------------------------------------------------------------------
+
 export function createFinalOptimalityCertificate(
   options: LapicBoundedExactSolveOptions,
   winners: readonly LapicBoundedExactBestCandidate[],
-  frontierBlockIds: readonly string[]
+  frontierBlockIds: readonly string[],
+  pruneCertificateIds: readonly string[] = []
 ): LapicCertificate<LapicFinalOptimalityPayload> {
   const bestWinner = winners[0]!
   const allStateIds = winners.map((winner) => winner.stateId)
@@ -44,7 +114,10 @@ export function createFinalOptimalityCertificate(
       finalThresholdDigest: `threshold:${options.problem.problemDigest}:top-${topN}`,
       finalIncumbentSetDigest: `incumbent:${incumbentSetDigest}`,
       queueExhaustionSummaryDigest: `queue-exhausted:${options.problem.problemDigest}`,
-      thresholdPruneSummaryDigest: `threshold-prune:none:${options.problem.problemDigest}`,
+      thresholdPruneSummaryDigest:
+        pruneCertificateIds.length > 0
+          ? `threshold-prune:${pruneCertificateIds.length}:${options.problem.problemDigest}`
+          : `threshold-prune:none:${options.problem.problemDigest}`,
       escalatedReplaySummaryDigest: `replay:none:${options.problem.problemDigest}`,
       stableOrderCompletenessDigest: `stable-order:${incumbentSetDigest}`,
     },

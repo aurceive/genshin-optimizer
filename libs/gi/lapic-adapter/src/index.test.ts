@@ -15,6 +15,7 @@ import {
 } from '@genshin-optimizer/lapic/storage'
 import {
   buildGiLapicCanonicalExportFromRequest,
+  buildGiLapicDomainVariableMaps,
   createGiLapicAdapterMetadata,
   createGiLapicAdapterRequest,
   createGiLapicAuxiliaryOutputs,
@@ -536,5 +537,45 @@ describe('gi lapic adapter', () => {
     expect(
       validateGiLapicOptimizationRequest(invalidOptimizationRequest as never).ok
     ).toBe(false)
+  })
+
+  describe('buildGiLapicDomainVariableMaps', () => {
+    it('builds domain variable maps from item domains and a variable extractor', () => {
+      const domains = [
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: [
+            { candidateId: 'flower-a', domainId: 'gi:flower' },
+            { candidateId: 'flower-b', domainId: 'gi:flower' },
+          ],
+        },
+        {
+          domainId: 'gi:plume',
+          slotId: 'plume',
+          candidates: [
+            { candidateId: 'plume-a', domainId: 'gi:plume' },
+          ],
+        },
+      ]
+
+      const variableValues: Record<string, Record<string, number>> = {
+        'flower-a': { 'total:hp': 4780, 'total:atk': 100 },
+        'flower-b': { 'total:hp': 3571, 'total:atk': 200 },
+        'plume-a': { 'total:atk': 311 },
+      }
+
+      const maps = buildGiLapicDomainVariableMaps(
+        domains,
+        (candidateId: string) => new Map(Object.entries(variableValues[candidateId] ?? {}))
+      )
+
+      expect(maps).toHaveLength(2)
+      expect(maps[0].domainId).toBe('gi:flower')
+      expect(maps[0].candidateVariables.size).toBe(2)
+      expect(maps[0].candidateVariables.get('flower-a')?.get('total:hp')).toBe(4780)
+      expect(maps[1].domainId).toBe('gi:plume')
+      expect(maps[1].candidateVariables.get('plume-a')?.get('total:atk')).toBe(311)
+    })
   })
 })

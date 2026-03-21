@@ -23,6 +23,7 @@ import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactCombinationEvaluation,
   LapicBoundedExactEvaluationComparator,
+  LapicBoundedExactUpperBoundEvaluator,
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
 } from '@genshin-optimizer/lapic/runtime'
@@ -149,6 +150,7 @@ export interface GiLapicBoundedCurrentOnlySolveOptions {
   readonly compareEvaluations?: LapicBoundedExactEvaluationComparator
   readonly isCombinationFeasible?: GiLapicBoundedCurrentOnlyFeasibilityEvaluator
   readonly maxCombinationCount?: number
+  readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
 }
 
 export interface GiLapicBoundedCurrentOnlySolveResult {

@@ -837,4 +837,64 @@ describe('lapic bounded exact solve executor', () => {
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
   })
+
+  it('emits BoundPruneCert when subtrees are pruned', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound({ assignedCandidates }) {
+        const flowerId = assignedCandidates[0]?.candidateId
+        if (flowerId === 'flower-b') {
+          return { upperBoundValue: '0001', evidenceDigest: 'bound:low' }
+        }
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    // Should have BoundPruneCert(s) + FinalOptimalityCert
+    const pruneCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BoundPruneCert'
+    )
+    const finalCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'FinalOptimalityCert'
+    )
+    expect(pruneCerts.length).toBeGreaterThanOrEqual(1)
+    expect(finalCerts).toHaveLength(1)
+
+    // Verify BoundPruneCert structure
+    const pruneCert = pruneCerts[0]!
+    expect(pruneCert.decisionClass).toBe('relaxation-prune')
+    expect(pruneCert.validationStatus).toBe('validated')
+    expect(pruneCert.payload).toHaveProperty('boundValue')
+    expect(pruneCert.payload).toHaveProperty('thresholdDigest')
+    expect(pruneCert.payload).toHaveProperty('boundSourceClass', 'relaxationDerived')
+    expect(pruneCert.payload).toHaveProperty('dangerZoneRecord')
+
+    // FinalOptimalityCert should reference pruning
+    const finalCert = finalCerts[0]!
+    expect(finalCert.payload).toHaveProperty('thresholdPruneSummaryDigest')
+    expect(
+      (finalCert.payload as Record<string, unknown>).thresholdPruneSummaryDigest
+    ).not.toContain('none')
+  })
 })

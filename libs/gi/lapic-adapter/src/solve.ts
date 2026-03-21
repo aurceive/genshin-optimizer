@@ -82,6 +82,7 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
           options.isCombinationFeasible!(combination, canonicalExport.value)
       : undefined,
     maxCombinationCount: options.maxCombinationCount,
+    computeUpperBound: options.computeUpperBound,
   })
 
   if ('paused' in outcome)

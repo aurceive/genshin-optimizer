@@ -7,7 +7,11 @@ import {
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
 import { LapicSessionFailureError } from '../session/completion'
 import type { LapicSolveCompletionResult } from '../types'
-import { createFinalOptimalityCertificate, createInfeasibilityCertificate } from './certificate'
+import {
+  createBoundPruneCertificate,
+  createFinalOptimalityCertificate,
+  createInfeasibilityCertificate,
+} from './certificate'
 import {
   createLapicSolveCheckpointState,
   createLapicSolveCursorPosition,
@@ -177,7 +181,8 @@ function setupTracker(
 async function completeSolve(
   options: LapicBoundedExactSolveOptions,
   tracker: ReturnType<typeof createResumableTopNTracker>,
-  frontierBlockIds: readonly string[]
+  frontierBlockIds: readonly string[],
+  pruneCertificateIds: readonly string[] = []
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -207,7 +212,8 @@ async function completeSolve(
   const finalCertificate = createFinalOptimalityCertificate(
     options,
     winners,
-    frontierBlockIds
+    frontierBlockIds,
+    pruneCertificateIds
   )
   const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
   if (!finalOptimality.ok)
@@ -299,6 +305,8 @@ export async function executeLapicBoundedExactSolve(
     let processedCombinationCount = initialProcessed
     let currentFlatIndex = 0
     let pauseDetected = false
+    let pruneCertStepCounter = 0
+    const pruneCertificateIds: string[] = []
 
     // Build a comparator for bound-vs-threshold checks.
     const explicitComparator = options.compareEvaluations
@@ -411,6 +419,27 @@ export async function executeLapicBoundedExactSolve(
             currentFlatIndex += subtreeSize
             pruningStats.prunedCombinationCount += subtreeSize
             pruningStats.prunedSubtreeCount += 1
+
+            // Emit a BoundPruneCert for this pruning decision.
+            pruneCertStepCounter += 1
+            const pruneCert = createBoundPruneCertificate(options, {
+              boundValue: bound.upperBoundValue,
+              boundEvidenceDigest: bound.evidenceDigest,
+              thresholdValue: threshold,
+              domainIndex,
+              stepIndex: pruneCertStepCounter,
+              frontierBlockIds,
+            })
+            await persistArtifact(
+              options,
+              'certificate',
+              pruneCert.certId,
+              pruneCert.evidenceDigest,
+              pruneCert,
+              frontierBlockIds
+            )
+            options.controller.emitCertificate(pruneCert)
+            pruneCertificateIds.push(pruneCert.certId)
             return
           }
         }
@@ -452,7 +481,7 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    return completeSolve(options, tracker, frontierBlockIds)
+    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds)
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
     const message = error instanceof Error ? error.message : 'Unknown bounded solve failure.'
