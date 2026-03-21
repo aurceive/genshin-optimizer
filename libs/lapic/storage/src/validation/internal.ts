@@ -26,6 +26,7 @@ const lapicArtifactKinds = [
   'frontier-index',
   'certificate',
   'checkpoint-manifest',
+  'solve-checkpoint',
   'debug-export',
 ] as const satisfies readonly LapicArtifactKind[]
 

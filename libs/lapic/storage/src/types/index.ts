@@ -20,6 +20,7 @@ export type LapicArtifactKind =
   | 'frontier-index'
   | 'certificate'
   | 'checkpoint-manifest'
+  | 'solve-checkpoint'
   | 'debug-export'
 export type LapicPayloadEncoding = 'json' | 'cbor' | 'msgpack' | 'raw-bytes'
 export type LapicCompressionCodec = 'none' | 'gzip' | 'brotli'

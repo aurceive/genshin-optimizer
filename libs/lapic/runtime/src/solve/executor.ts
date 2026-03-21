@@ -247,7 +247,7 @@ export async function executeLapicBoundedExactSolve(
 
     await visitCombination(0, [])
 
-    // If a pause was requested during the join phase, emit checkpoint and return.
+    // If a pause was requested during the join phase, persist checkpoint and return.
     if (pauseDetected) {
       options.controller.reachPauseSafePoint()
       const checkpointState = createLapicSolveCheckpointState(
@@ -257,6 +257,16 @@ export async function executeLapicBoundedExactSolve(
         tracker.snapshot(),
         createLapicSolveCursorPosition(currentFlatIndex),
         frontierBlockIds
+      )
+      const checkpointContentHash =
+        `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
+      await persistArtifact(
+        options,
+        'solve-checkpoint',
+        checkpointContentHash,
+        `payload:${checkpointContentHash}`,
+        checkpointState,
+        [options.problem.problemDigest, ...frontierBlockIds]
       )
       return { paused: true, checkpointState }
     }

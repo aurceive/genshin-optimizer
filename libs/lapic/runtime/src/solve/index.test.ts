@@ -450,6 +450,15 @@ describe('lapic bounded exact solve executor', () => {
     expect(outcome.checkpointState.trackerSnapshot.topN).toBe(1)
     expect(outcome.checkpointState.trackerSnapshot.entries.length).toBeGreaterThanOrEqual(1)
     expect(outcome.checkpointState.frontierBlockIds).toHaveLength(2)
+
+    // Verify checkpoint state was persisted to artifact store
+    const solveCheckpointArtifacts = store
+      .snapshot()
+      .filter((entry) => entry.artifactRef.artifactKind === 'solve-checkpoint')
+    expect(solveCheckpointArtifacts).toHaveLength(1)
+    expect(solveCheckpointArtifacts[0]!.artifactRef.contentHash).toContain(
+      'solve-checkpoint:problem-digest:'
+    )
   })
 
   it('resumes from a checkpoint state and produces correct final result', async () => {
@@ -511,5 +520,47 @@ describe('lapic bounded exact solve executor', () => {
     )
     expect(finalOutcome.emittedCertificates).toHaveLength(1)
     expect(finalOutcome.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
+  })
+
+  it('persists solve-checkpoint artifact that is included in session checkpoint closure', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    let combinationsSeen = 0
+
+    const outcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        combinationsSeen += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        if (combinationsSeen === 2) controller.requestPause()
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect('paused' in outcome).toBe(true)
+    if (!('paused' in outcome)) return
+
+    // Session controller should have all published artifacts (frontier blocks + index + solve-checkpoint)
+    const exported = await controller.exportCheckpoint()
+    const requiredArtifactKinds = exported.inventory.requiredArtifacts.map(
+      (ref) => ref.artifactKind
+    )
+    expect(requiredArtifactKinds).toContain('frontier-block')
+    expect(requiredArtifactKinds).toContain('frontier-index')
+    expect(requiredArtifactKinds).toContain('solve-checkpoint')
+    expect(exported.inventory.missingArtifacts).toHaveLength(0)
   })
 })
