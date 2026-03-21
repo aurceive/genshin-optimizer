@@ -304,6 +304,6 @@ describe('lapic debug benchmark', () => {
     expect(harnessReport.publicationManifest.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-a|plume:plume-a'
     )
-    expect(harnessReport.harnessManifest.relatedArtifacts).toHaveLength(3)
+    expect(harnessReport.harnessManifest.relatedArtifacts).toHaveLength(4)
   })
 })

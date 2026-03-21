@@ -470,10 +470,11 @@ describe('gi lapic adapter', () => {
     expect(result.completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:artifact-id'
     )
-    expect(artifactStore.snapshot()).toHaveLength(3)
+    expect(artifactStore.snapshot()).toHaveLength(4)
     expect(artifactStore.snapshot().map((entry) => entry.artifactRef.artifactKind)).toEqual([
       'canonical-problem',
       'frontier-block',
+      'frontier-index',
       'certificate',
     ])
   })

@@ -1,8 +1,11 @@
 import type {
   LapicArithmeticPolicyId,
+  LapicCandidateId,
   LapicContentHash,
   LapicDigest,
+  LapicExactSignatureGroupKey,
   LapicSchemaVersion,
+  LapicSlotId,
   LapicStateLayoutDescriptor,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
@@ -46,17 +49,41 @@ export interface LapicArtifactRef {
   readonly contentHash: LapicContentHash
 }
 
+export interface LapicFrontierStateRow {
+  readonly stateId: string
+  readonly slotId: LapicSlotId
+  readonly candidateId: LapicCandidateId
+  readonly candidateDigest: LapicDigest
+  readonly compatibilityDigest: LapicDigest
+  readonly exactSignatureGroupKey: LapicExactSignatureGroupKey
+  readonly rowDigest: LapicDigest
+}
+
 export interface LapicFrontierBlock {
   readonly blockId: string
   readonly layout: LapicStateLayoutDescriptor
   readonly stateIds: readonly string[]
+  readonly rows: readonly LapicFrontierStateRow[]
   readonly rowCount: number
+}
+
+export interface LapicFrontierGroupSummary {
+  readonly groupDigest: LapicDigest
+  readonly blockIds: readonly string[]
+  readonly slotIds: readonly LapicSlotId[]
+  readonly rowDigests: readonly LapicDigest[]
+  readonly rowCount: number
+  readonly occupiedSlotMask: number
+  readonly adapterSemanticMode: string
+  readonly frameAxisIdentityDigest: LapicDigest
+  readonly discreteTeamModeKey?: string
 }
 
 export interface LapicFrontierIndex {
   readonly indexId: string
   readonly blockIds: readonly string[]
   readonly compatibilityDigest: LapicDigest
+  readonly exactSignatureGroups: readonly LapicFrontierGroupSummary[]
 }
 
 export interface LapicBlockLayoutDescriptor {

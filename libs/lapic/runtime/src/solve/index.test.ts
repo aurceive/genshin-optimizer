@@ -269,7 +269,30 @@ describe('lapic bounded exact solve executor', () => {
     )
     expect(completion.emittedCertificates).toHaveLength(1)
     expect(completion.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
-    expect(store.snapshot()).toHaveLength(4)
+    expect(store.snapshot()).toHaveLength(5)
+    expect(
+      store
+        .snapshot()
+        .filter((entry) => entry.artifactRef.artifactKind === 'frontier-block')
+        .map((entry) => entry.payloadDigest)
+    ).toEqual([
+      'payload:frontier:problem-digest:flower',
+      'payload:frontier:problem-digest:plume',
+    ])
+    expect(
+      store.snapshot().find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
+        ?.payloadDigest
+    ).toBe('payload:frontier-index:problem-digest')
+    expect(
+      store.snapshot().find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
+        ?.envelope.contentHash
+    ).toBe('frontier-index:problem-digest')
+    expect(
+      store
+        .snapshot()
+        .filter((entry) => entry.artifactRef.artifactKind === 'frontier-block')
+        .every((entry) => entry.envelope.contentHash.startsWith('frontier:problem-digest:'))
+    ).toBe(true)
     expect(progressEvents).toContain('frontier-build:1/2')
     expect(progressEvents).toContain('frontier-build:2/2')
     expect(progressEvents).toContain('join:4/4')
@@ -303,6 +326,6 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality).toBeUndefined()
     expect(completion.emittedCertificates).toHaveLength(1)
     expect(completion.emittedCertificates[0]?.certKind).toBe('InfeasibilityCert')
-    expect(store.snapshot()).toHaveLength(4)
+    expect(store.snapshot()).toHaveLength(5)
   })
 })

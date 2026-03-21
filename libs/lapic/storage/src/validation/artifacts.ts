@@ -2,6 +2,7 @@ import {
   createLapicDiagnostic,
   createLapicFailureResult,
   createLapicSuccessResult,
+  validateLapicExactSignatureGroupKey,
   validateLapicStateLayoutDescriptor,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicDiagnostic, LapicValidationResult } from '@genshin-optimizer/lapic/core'
@@ -116,11 +117,82 @@ export function validateLapicFrontierBlock(
       ['stateIds']
     )
 
+  if (!Array.isArray(block.rows))
+    return createStorageFailure('Frontier rows must be an array.', ['rows'])
+
+  const rowStateIds = new Set<string>()
+  for (const [index, row] of block.rows.entries()) {
+    if (!isRecord(row))
+      return createStorageFailure('Frontier rows must be records.', ['rows', String(index)])
+
+    if (!isNonEmptyString(row.stateId))
+      return createStorageFailure(
+        'Frontier row stateId must be a non-empty string.',
+        ['rows', String(index), 'stateId']
+      )
+
+    if (!isNonEmptyString(row.slotId))
+      return createStorageFailure(
+        'Frontier row slotId must be a non-empty string.',
+        ['rows', String(index), 'slotId']
+      )
+
+    if (!isNonEmptyString(row.candidateId))
+      return createStorageFailure(
+        'Frontier row candidateId must be a non-empty string.',
+        ['rows', String(index), 'candidateId']
+      )
+
+    if (!isNonEmptyString(row.candidateDigest))
+      return createStorageFailure(
+        'Frontier row candidateDigest must be a non-empty string.',
+        ['rows', String(index), 'candidateDigest']
+      )
+
+    if (!isNonEmptyString(row.compatibilityDigest))
+      return createStorageFailure(
+        'Frontier row compatibilityDigest must be a non-empty string.',
+        ['rows', String(index), 'compatibilityDigest']
+      )
+
+    if (!isNonEmptyString(row.rowDigest))
+      return createStorageFailure(
+        'Frontier row rowDigest must be a non-empty string.',
+        ['rows', String(index), 'rowDigest']
+      )
+
+    const keyValidation = validateLapicExactSignatureGroupKey(row.exactSignatureGroupKey)
+    if (!keyValidation.ok)
+      return createLapicFailureResult(
+        keyValidation.diagnostics.map((diagnostic) => ({
+          ...diagnostic,
+          path: ['rows', String(index), 'exactSignatureGroupKey', ...(diagnostic.path ?? [])],
+        }))
+      )
+
+    if (!block.stateIds.includes(row.stateId))
+      return createStorageFailure(
+        'Every frontier row stateId must be present in stateIds.',
+        ['rows', String(index), 'stateId']
+      )
+
+    if (rowStateIds.has(row.stateId))
+      return createStorageFailure(
+        'Frontier row stateIds must be unique.',
+        ['rows', String(index), 'stateId']
+      )
+
+    rowStateIds.add(row.stateId)
+  }
+
   if (!isNonNegativeInteger(block.rowCount))
     return createStorageFailure('Row count must be a non-negative integer.', ['rowCount'])
 
   if (block.rowCount !== block.stateIds.length)
     return createStorageFailure('Row count must match the number of state ids.', ['rowCount'])
+
+  if (block.rowCount !== block.rows.length)
+    return createStorageFailure('Row count must match the number of frontier rows.', ['rowCount'])
 
   return createLapicSuccessResult(block)
 }
@@ -146,6 +218,103 @@ export function validateLapicFrontierIndex(
       'Compatibility digest must be a non-empty string.',
       ['compatibilityDigest']
     )
+
+  if (!Array.isArray(index.exactSignatureGroups))
+    return createStorageFailure(
+      'Exact-signature groups must be an array.',
+      ['exactSignatureGroups']
+    )
+
+  const seenGroupDigests = new Set<string>()
+  for (const [indexPosition, group] of index.exactSignatureGroups.entries()) {
+    if (!isRecord(group))
+      return createStorageFailure(
+        'Exact-signature groups must be records.',
+        ['exactSignatureGroups', String(indexPosition)]
+      )
+
+    if (!isNonEmptyString(group.groupDigest))
+      return createStorageFailure(
+        'Group digest must be a non-empty string.',
+        ['exactSignatureGroups', String(indexPosition), 'groupDigest']
+      )
+
+    if (seenGroupDigests.has(group.groupDigest))
+      return createStorageFailure(
+        'Exact-signature group digests must be unique.',
+        ['exactSignatureGroups', String(indexPosition), 'groupDigest']
+      )
+    seenGroupDigests.add(group.groupDigest)
+
+    if (
+      !Array.isArray(group.blockIds) ||
+      !group.blockIds.every(isNonEmptyString) ||
+      !hasUniqueValues(group.blockIds)
+    )
+      return createStorageFailure(
+        'Exact-signature group blockIds must contain unique non-empty strings.',
+        ['exactSignatureGroups', String(indexPosition), 'blockIds']
+      )
+
+    if (
+      !Array.isArray(group.slotIds) ||
+      !group.slotIds.every(isNonEmptyString) ||
+      !hasUniqueValues(group.slotIds)
+    )
+      return createStorageFailure(
+        'Exact-signature group slotIds must contain unique non-empty strings.',
+        ['exactSignatureGroups', String(indexPosition), 'slotIds']
+      )
+
+    if (
+      !Array.isArray(group.rowDigests) ||
+      !group.rowDigests.every(isNonEmptyString) ||
+      !hasUniqueValues(group.rowDigests)
+    )
+      return createStorageFailure(
+        'Exact-signature group rowDigests must contain unique non-empty strings.',
+        ['exactSignatureGroups', String(indexPosition), 'rowDigests']
+      )
+
+    if (!isNonNegativeInteger(group.rowCount))
+      return createStorageFailure(
+        'Exact-signature group rowCount must be a non-negative integer.',
+        ['exactSignatureGroups', String(indexPosition), 'rowCount']
+      )
+
+    if (!isNonNegativeInteger(group.occupiedSlotMask))
+      return createStorageFailure(
+        'Exact-signature group occupiedSlotMask must be a non-negative integer.',
+        ['exactSignatureGroups', String(indexPosition), 'occupiedSlotMask']
+      )
+
+    if (!isNonEmptyString(group.adapterSemanticMode))
+      return createStorageFailure(
+        'Exact-signature group adapterSemanticMode must be a non-empty string.',
+        ['exactSignatureGroups', String(indexPosition), 'adapterSemanticMode']
+      )
+
+    if (!isNonEmptyString(group.frameAxisIdentityDigest))
+      return createStorageFailure(
+        'Exact-signature group frameAxisIdentityDigest must be a non-empty string.',
+        ['exactSignatureGroups', String(indexPosition), 'frameAxisIdentityDigest']
+      )
+
+    if (
+      group.discreteTeamModeKey !== undefined &&
+      !isNonEmptyString(group.discreteTeamModeKey)
+    )
+      return createStorageFailure(
+        'Exact-signature group discreteTeamModeKey must be a non-empty string when present.',
+        ['exactSignatureGroups', String(indexPosition), 'discreteTeamModeKey']
+      )
+
+    if (group.rowCount !== group.rowDigests.length)
+      return createStorageFailure(
+        'Exact-signature group rowCount must match rowDigests length.',
+        ['exactSignatureGroups', String(indexPosition), 'rowCount']
+      )
+  }
 
   return createLapicSuccessResult(index)
 }

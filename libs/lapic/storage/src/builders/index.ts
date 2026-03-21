@@ -53,6 +53,24 @@ export function createLapicFrontierBlock(
     blockId: input.blockId,
     layout: input.layout,
     stateIds: [...input.stateIds],
+    rows: input.rows.map((row) => ({
+      stateId: row.stateId,
+      slotId: row.slotId,
+      candidateId: row.candidateId,
+      candidateDigest: row.candidateDigest,
+      compatibilityDigest: row.compatibilityDigest,
+      exactSignatureGroupKey: {
+        occupiedSlotMask: row.exactSignatureGroupKey.occupiedSlotMask,
+        actorIds: [...row.exactSignatureGroupKey.actorIds],
+        exclusiveResourceKeys: [...row.exactSignatureGroupKey.exclusiveResourceKeys],
+        frameAxisIdentityDigest: row.exactSignatureGroupKey.frameAxisIdentityDigest,
+        adapterSemanticMode: row.exactSignatureGroupKey.adapterSemanticMode,
+        ...(row.exactSignatureGroupKey.discreteTeamModeKey
+          ? { discreteTeamModeKey: row.exactSignatureGroupKey.discreteTeamModeKey }
+          : {}),
+      },
+      rowDigest: row.rowDigest,
+    })),
     rowCount: input.rowCount,
   }
 }
@@ -64,6 +82,17 @@ export function createLapicFrontierIndex(
     indexId: input.indexId,
     blockIds: [...input.blockIds],
     compatibilityDigest: input.compatibilityDigest,
+    exactSignatureGroups: input.exactSignatureGroups.map((group) => ({
+      groupDigest: group.groupDigest,
+      blockIds: [...group.blockIds],
+      slotIds: [...group.slotIds],
+      rowDigests: [...group.rowDigests],
+      rowCount: group.rowCount,
+      occupiedSlotMask: group.occupiedSlotMask,
+      adapterSemanticMode: group.adapterSemanticMode,
+      frameAxisIdentityDigest: group.frameAxisIdentityDigest,
+      discreteTeamModeKey: group.discreteTeamModeKey,
+    })),
   }
 }
 
