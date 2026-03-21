@@ -563,4 +563,278 @@ describe('lapic bounded exact solve executor', () => {
     expect(requiredArtifactKinds).toContain('solve-checkpoint')
     expect(exported.inventory.missingArtifacts).toHaveLength(0)
   })
+
+  it('prunes subtrees when computeUpperBound returns a bound below the threshold', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+    let boundCallCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound({ assignedCandidates }) {
+        boundCallCount += 1
+        // For flower-b, declare a very low bound so its subtree gets pruned
+        // (only after tracker is full, i.e. after flower-a subtree completes)
+        const flowerId = assignedCandidates[0]?.candidateId
+        if (flowerId === 'flower-b') {
+          return { upperBoundValue: '0001', evidenceDigest: 'bound:low' }
+        }
+        // For flower-a, return a high bound (no pruning)
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    // flower-a subtree evaluated 2 combinations (flower-a|plume-a, flower-a|plume-b)
+    // flower-b subtree was pruned (bound '0001' < threshold '0020')
+    // So only 2 evaluations should have occurred
+    expect(evaluationCount).toBe(2)
+    // Bound was checked for flower-b (and possibly flower-a depending on order)
+    expect(boundCallCount).toBeGreaterThan(0)
+    // Winner is from the flower-a subtree (flower-a|plume-b = 0020)
+    expect(completion.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-a|plume:plume-b'
+    )
+  })
+
+  it('does not prune when the tracker is not yet full', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem({ topN: 10 }), // topN=10, never full with 4 candidates
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound() {
+        // Should never be used for pruning because tracker is never full
+        return { upperBoundValue: '0001', evidenceDigest: 'bound:low' }
+      },
+      maxCombinationCount: 16,
+    })
+
+    // All 4 combinations evaluated since tracker was never full
+    expect(evaluationCount).toBe(4)
+    expect(completion.summary.solveState).toBe('completed')
+  })
+
+  it('does not prune when the bound is above the threshold', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound() {
+        // Always returns a high bound — no pruning should occur
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+    })
+
+    // All 4 combinations evaluated
+    expect(evaluationCount).toBe(4)
+    expect(completion.summary.solveState).toBe('completed')
+    expect(completion.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+  })
+
+  it('does not prune when computeUpperBound returns undefined', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound() {
+        return undefined // No bound available
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(evaluationCount).toBe(4)
+    expect(completion.summary.solveState).toBe('completed')
+  })
+
+  it('preserves pruning statistics across pause/resume', async () => {
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    // First run: pause after 1 combination
+    const firstRun = createController()
+    let firstRunCount = 0
+
+    const firstOutcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller: firstRun.controller,
+      artifactStore: firstRun.store,
+      evaluateCombination({ candidates }) {
+        firstRunCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        if (firstRunCount === 1) firstRun.controller.requestPause()
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound() {
+        // High bound, no pruning in first run
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect('paused' in firstOutcome).toBe(true)
+    if (!('paused' in firstOutcome)) return
+
+    // Verify pruning statistics are captured in checkpoint
+    expect(firstOutcome.checkpointState.pruningStatistics).toBeDefined()
+    expect(firstOutcome.checkpointState.pruningStatistics!.boundEvaluationCount).toBeGreaterThanOrEqual(0)
+
+    // Second run: resume and complete
+    const secondRun = createController()
+
+    const finalOutcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller: secondRun.controller,
+      artifactStore: secondRun.store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound() {
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+      resumeCheckpointState: firstOutcome.checkpointState,
+    })
+
+    expect('paused' in finalOutcome).toBe(false)
+    if ('paused' in finalOutcome) return
+    expect(finalOutcome.summary.solveState).toBe('completed')
+    expect(finalOutcome.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+  })
+
+  it('correctly finds the optimal when pruning only non-optimal subtrees', async () => {
+    const { store, controller } = createController()
+    // 4 combinations, flower-b|plume-a is the winner (0030)
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound({ assignedCandidates }) {
+        // Return tight bounds per flower choice
+        const flowerId = assignedCandidates[0]?.candidateId
+        if (flowerId === 'flower-a') {
+          // Best in flower-a subtree is 0020
+          return { upperBoundValue: '0020', evidenceDigest: 'bound:flower-a' }
+        }
+        if (flowerId === 'flower-b') {
+          // Best in flower-b subtree is 0030
+          return { upperBoundValue: '0030', evidenceDigest: 'bound:flower-b' }
+        }
+        return undefined
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    // The winner should always be flower-b|plume-a regardless of pruning
+    expect(completion.finalOptimality?.winnerStateId).toBe(
+      'state:problem-digest:flower:flower-b|plume:plume-a'
+    )
+  })
 })

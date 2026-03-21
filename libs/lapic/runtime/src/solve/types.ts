@@ -36,6 +36,36 @@ export type LapicBoundedExactEvaluationComparator = (
   right: LapicBoundedExactCombinationEvaluation
 ) => LapicDeterministicOrderingRelation
 
+/**
+ * Describes a partial candidate assignment at an intermediate
+ * recursion depth during the join search.
+ */
+export interface LapicBoundedExactPartialCombination {
+  readonly problem: LapicCanonicalProblem
+  readonly assignedCandidates: readonly LapicCandidateDescriptor[]
+  readonly assignedDomainCount: number
+  readonly totalDomainCount: number
+}
+
+/**
+ * Admissible upper bound for a partial assignment.
+ * The `upperBoundValue` must be an admissible (over-)estimate:
+ * no feasible completion of the partial assignment can exceed it.
+ */
+export interface LapicBoundedExactPartialBound {
+  readonly upperBoundValue: string
+  readonly evidenceDigest: LapicDigest
+}
+
+/**
+ * Callback that computes an admissible upper bound for a
+ * partial candidate assignment.  Returns `undefined` when
+ * no useful bound can be established (the subtree is not pruned).
+ */
+export type LapicBoundedExactUpperBoundEvaluator = (
+  partial: LapicBoundedExactPartialCombination
+) => LapicBoundedExactPartialBound | undefined
+
 export interface LapicBoundedExactSolveOptions {
   readonly problem: LapicCanonicalProblem
   readonly controller: LapicInMemorySessionController
@@ -43,6 +73,7 @@ export interface LapicBoundedExactSolveOptions {
   readonly evaluateCombination: LapicBoundedExactCombinationEvaluator
   readonly compareEvaluations?: LapicBoundedExactEvaluationComparator
   readonly isCombinationFeasible?: LapicBoundedExactFeasibilityEvaluator
+  readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
   readonly maxCombinationCount?: number
   /** When provided, the executor resumes from the given checkpoint state
    *  instead of starting a fresh solve. Frontier blocks are NOT rebuilt. */

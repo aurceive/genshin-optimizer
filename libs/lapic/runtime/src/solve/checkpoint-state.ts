@@ -1,4 +1,5 @@
 import type { LapicBoundedExactCombinationEvaluation } from './types'
+import type { LapicPruningStatisticsSnapshot } from './pruning'
 
 /**
  * Entry in a serialized TopN tracker snapshot.
@@ -39,6 +40,7 @@ export interface LapicSolveCheckpointState {
   readonly cursorPosition: LapicSolveCursorPosition
   readonly frontierBlockIds: readonly string[]
   readonly phase: 'join'
+  readonly pruningStatistics?: LapicPruningStatisticsSnapshot
 }
 
 export function createLapicSolveCheckpointState(
@@ -47,7 +49,8 @@ export function createLapicSolveCheckpointState(
   totalCombinationCount: number,
   trackerSnapshot: LapicTopNTrackerSnapshot,
   cursorPosition: LapicSolveCursorPosition,
-  frontierBlockIds: readonly string[]
+  frontierBlockIds: readonly string[],
+  pruningStatistics?: LapicPruningStatisticsSnapshot
 ): LapicSolveCheckpointState {
   return {
     checkpointKind: 'solve-position',
@@ -58,6 +61,7 @@ export function createLapicSolveCheckpointState(
     cursorPosition,
     frontierBlockIds: [...frontierBlockIds],
     phase: 'join',
+    pruningStatistics,
   }
 }
 

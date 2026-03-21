@@ -13,6 +13,7 @@ import {
   createLapicSolveCursorPosition,
 } from './checkpoint-state'
 import {
+  compareEvaluations,
   createCombinationStateId,
   hasExclusiveResourceConflict,
   normalizeFeasibilityResult,
@@ -23,12 +24,19 @@ import { createFrontierBlockForDomain, createFrontierIndexForSolve } from './fro
 import { createFrontierJoinPlan } from './join-plan'
 import { persistArtifact } from './persistence'
 import {
+  computeSubtreeSize,
+  createPruningStatistics,
+  restorePruningStatistics,
+  snapshotPruningStatistics,
+} from './pruning'
+import {
   buildCandidateIndex,
   createResumableTopNTracker,
   restoreResumableTopNTracker,
 } from './resumable-tracker'
 import type {
   LapicBoundedExactCandidateCombination,
+  LapicBoundedExactCombinationEvaluation,
   LapicBoundedExactSolveOptions,
   LapicBoundedExactSolveOutcome,
 } from './types'
@@ -166,9 +174,40 @@ export async function executeLapicBoundedExactSolve(
       ? options.resumeCheckpointState!.visitedCombinationCount
       : 0
 
+    // Restore or create pruning statistics.
+    const pruningStats = isResuming && options.resumeCheckpointState!.pruningStatistics
+      ? restorePruningStatistics(options.resumeCheckpointState!.pruningStatistics)
+      : createPruningStatistics()
+
     // Flat enumeration counter used to skip already-visited combinations on resume.
     let currentFlatIndex = 0
     let pauseDetected = false
+
+    // Build a comparator for bound-vs-threshold checks.
+    const explicitComparator = options.compareEvaluations
+    function isBoundBelowThreshold(
+      boundValue: string,
+      thresholdValue: string
+    ): boolean {
+      const boundEval: LapicBoundedExactCombinationEvaluation = {
+        objectiveValue: boundValue,
+        evidenceDigest: 'bound-check',
+        orderingKey: [boundValue],
+      }
+      const thresholdEval: LapicBoundedExactCombinationEvaluation = {
+        objectiveValue: thresholdValue,
+        evidenceDigest: 'threshold-check',
+        orderingKey: [thresholdValue],
+      }
+      // The tracker orders descending (best first).
+      // A bound is below the threshold if it compares strictly less.
+      const relation = compareEvaluations(
+        boundEval, 'bound',
+        thresholdEval, 'threshold',
+        explicitComparator
+      )
+      return relation < 0
+    }
 
     const visitCombination = async (
       domainIndex: number,
@@ -236,6 +275,32 @@ export async function executeLapicBoundedExactSolve(
         return
       }
 
+      // --- Branch-and-bound pruning at intermediate recursion levels ---
+      if (
+        options.computeUpperBound &&
+        tracker.isFull() &&
+        domainIndex > 0  // At least one candidate already assigned
+      ) {
+        const threshold = tracker.currentThreshold()
+        if (threshold !== undefined) {
+          pruningStats.boundEvaluationCount += 1
+          const bound = options.computeUpperBound({
+            problem: options.problem,
+            assignedCandidates: partialCandidates,
+            assignedDomainCount: domainIndex,
+            totalDomainCount: joinPlan.value.entries.length,
+          })
+          if (bound !== undefined && isBoundBelowThreshold(bound.upperBoundValue, threshold)) {
+            // Prune entire subtree: skip all leaf combinations below this node.
+            const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
+            currentFlatIndex += subtreeSize
+            pruningStats.prunedCombinationCount += subtreeSize
+            pruningStats.prunedSubtreeCount += 1
+            return
+          }
+        }
+      }
+
       for (const plannedRow of joinPlan.value.entries[domainIndex]!.rows) {
         if (pauseDetected) return
         await visitCombination(domainIndex + 1, [
@@ -256,7 +321,8 @@ export async function executeLapicBoundedExactSolve(
         totalCombinationCount,
         tracker.snapshot(),
         createLapicSolveCursorPosition(currentFlatIndex),
-        frontierBlockIds
+        frontierBlockIds,
+        snapshotPruningStatistics(pruningStats)
       )
       const checkpointContentHash =
         `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
