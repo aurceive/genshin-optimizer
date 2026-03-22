@@ -1,0 +1,30 @@
+export type {
+  LapicBoundDirection,
+  LapicConstraintSystem,
+  LapicLinearConstraint,
+  LapicLinearModel,
+  LapicLinearObjective,
+  LapicLinearVariable,
+  LapicLpDeterministicMode,
+  LapicLpProvider,
+  LapicLpSolveOutcome,
+  LapicLpSolveResult,
+  LapicObjectiveSystem,
+  LapicRelaxationArtifact,
+  LapicRelaxationKind,
+  LapicRelaxationValidityDomain,
+  LapicRelaxationVerificationStatus,
+  LapicVariableBasis,
+  LapicVariableBasisKind,
+} from './types'
+
+export {
+  validateLinearConstraint,
+  validateLinearModel,
+  validateLinearObjective,
+  validateLinearVariable,
+  validateRelaxationArtifact,
+  validateRelaxationKind,
+  validateValidityDomain,
+  validateVariableBasis,
+} from './validation'
