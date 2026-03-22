@@ -1,5 +1,9 @@
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
-import type { LapicBoundedExactBestCandidate, LapicBoundedExactTopNTracker } from './combination'
+import type {
+  LapicBoundedExactBestCandidate,
+  LapicBoundedExactTopNTracker,
+  LapicTopNInsertResult,
+} from './combination'
 import { createTopNTracker } from './combination'
 import type { LapicTopNTrackerSnapshot } from './checkpoint-state'
 import { createLapicTopNTrackerSnapshot } from './checkpoint-state'
@@ -33,6 +37,9 @@ export function createResumableTopNTracker(
   return {
     insert(candidate: LapicBoundedExactBestCandidate): void {
       inner.insert(candidate)
+    },
+    insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult {
+      return inner.insertWithEviction(candidate)
     },
     isEmpty(): boolean {
       return inner.isEmpty()

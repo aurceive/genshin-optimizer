@@ -268,9 +268,10 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(completion.emittedCertificates).toHaveLength(1)
-    expect(completion.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
-    expect(store.snapshot()).toHaveLength(5)
+    expect(completion.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
+    expect(completion.emittedCertificates[completion.emittedCertificates.length - 1]?.certKind).toBe('FinalOptimalityCert')
+    const dominanceCerts = completion.emittedCertificates.filter((c) => c.certKind === 'DominanceCert')
+    expect(dominanceCerts.length).toBeGreaterThan(0)
     expect(
       store
         .snapshot()
@@ -358,8 +359,8 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(completion.emittedCertificates).toHaveLength(1)
-    const cert = completion.emittedCertificates[0]!
+    expect(completion.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
+    const cert = completion.emittedCertificates.find((c) => c.certKind === 'FinalOptimalityCert')!
     expect(cert.certKind).toBe('FinalOptimalityCert')
     expect(cert.referencedStateIds).toHaveLength(3)
     expect(cert.referencedStateIds[0]).toBe(
@@ -519,8 +520,8 @@ describe('lapic bounded exact solve executor', () => {
     expect(finalOutcome.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(finalOutcome.emittedCertificates).toHaveLength(1)
-    expect(finalOutcome.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
+    expect(finalOutcome.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
+    expect(finalOutcome.emittedCertificates[finalOutcome.emittedCertificates.length - 1]?.certKind).toBe('FinalOptimalityCert')
   })
 
   it('persists solve-checkpoint artifact that is included in session checkpoint closure', async () => {
@@ -1061,5 +1062,85 @@ describe('lapic bounded exact solve executor', () => {
       const validation = validateLapicCertificate(cert)
       expect(validation.ok).toBe(true)
     })
+  })
+
+  it('emits DominanceCerts when tracker evicts weaker candidates', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    // topN=1: after first insert, each better candidate evicts the previous
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem({ topN: 1 }),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    const dominanceCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'DominanceCert'
+    )
+    // With topN=1 and scores [0010, 0020, 0030, 0005]:
+    // 0010 fills → 0020 evicts 0010 (dominance) → 0030 evicts 0020 (dominance)
+    // 0005 is worse than 0030, inserted was evicted immediately → no dominance cert
+    expect(dominanceCerts).toHaveLength(2)
+
+    // Verify dominance cert payload structure
+    const firstDom = dominanceCerts[0]!
+    expect(firstDom.payload).toHaveProperty('dominatingStateId')
+    expect(firstDom.payload).toHaveProperty('dominatedStateId')
+    expect(firstDom.referencedStateIds).toHaveLength(2)
+
+    // Final optimality cert should still be present
+    const finalCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'FinalOptimalityCert'
+    )
+    expect(finalCerts).toHaveLength(1)
+  })
+
+  it('does not emit DominanceCerts when topN exceeds total combinations', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    // topN=10 with 4 combinations: tracker never fills, no evictions
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem({ topN: 10 }),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    const dominanceCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'DominanceCert'
+    )
+    expect(dominanceCerts).toHaveLength(0)
   })
 })

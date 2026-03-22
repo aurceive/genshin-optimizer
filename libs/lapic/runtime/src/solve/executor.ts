@@ -12,6 +12,7 @@ import type { LapicSolveCompletionResult } from '../types'
 import {
   createBoundPruneCertificate,
   createBranchReachabilityCertificate,
+  createDominanceCertificate,
   createFinalOptimalityCertificate,
   createInfeasibilityCertificate,
 } from './certificate'
@@ -148,6 +149,7 @@ interface TrackerSetup {
   readonly pruningStats: ReturnType<typeof createPruningStatistics>
   readonly restoredPruneCertificateIds: readonly string[]
   readonly restoredBranchReachabilityCertificateIds: readonly string[]
+  readonly restoredDominanceCertificateIds: readonly string[]
 }
 
 function setupTracker(
@@ -184,6 +186,10 @@ function setupTracker(
     ? options.resumeCheckpointState!.branchReachabilityCertificateIds ?? []
     : []
 
+  const restoredDominanceCertificateIds = isResuming
+    ? options.resumeCheckpointState!.dominanceCertificateIds ?? []
+    : []
+
   return {
     tracker,
     resumeFlatIndex,
@@ -191,6 +197,7 @@ function setupTracker(
     pruningStats,
     restoredPruneCertificateIds,
     restoredBranchReachabilityCertificateIds,
+    restoredDominanceCertificateIds,
   }
 }
 
@@ -203,7 +210,8 @@ async function completeSolve(
   tracker: ReturnType<typeof createResumableTopNTracker>,
   frontierBlockIds: readonly string[],
   pruneCertificateIds: readonly string[] = [],
-  branchReachabilityCertificateIds: readonly string[] = []
+  branchReachabilityCertificateIds: readonly string[] = [],
+  dominanceCertificateIds: readonly string[] = []
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -323,14 +331,17 @@ export async function executeLapicBoundedExactSolve(
       pruningStats,
       restoredPruneCertificateIds,
       restoredBranchReachabilityCertificateIds,
+      restoredDominanceCertificateIds,
     } = setupTracker(options, orderedDomains)
 
     let processedCombinationCount = initialProcessed
     let currentFlatIndex = 0
     let pauseDetected = false
     let pruneCertStepCounter = restoredPruneCertificateIds.length
+    let dominanceCertStepCounter = restoredDominanceCertificateIds.length
     const pruneCertificateIds: string[] = [...restoredPruneCertificateIds]
     const branchReachabilityCertificateIds: string[] = [...restoredBranchReachabilityCertificateIds]
+    const dominanceCertificateIds: string[] = [...restoredDominanceCertificateIds]
 
     // --- A-IR branch reachability inference (pre-solve static analysis) ---
     if (options.firGraph && !isResuming) {
@@ -435,11 +446,36 @@ export async function executeLapicBoundedExactSolve(
           )
 
         const stateId = createCombinationStateId(options.problem, partialCandidates)
-        tracker.insert({
+        const insertResult = tracker.insertWithEviction({
           stateId,
           candidates: [...partialCandidates],
           evaluation: evaluation.value,
         })
+
+        // Emit DominanceCert when a candidate is evicted from the top-N tracker.
+        // The evicted candidate is dominated by the remaining top-N set.
+        if (insertResult.evicted && !insertResult.insertedWasEvicted) {
+          dominanceCertStepCounter += 1
+          const dominanceCert = createDominanceCertificate(options, {
+            dominatingStateId: stateId,
+            dominatedStateId: insertResult.evicted.stateId,
+            dominatingEvidenceDigest: evaluation.value.evidenceDigest,
+            dominatedEvidenceDigest: insertResult.evicted.evaluation.evidenceDigest,
+            signatureGroupKey: orderedDomains.map((d) => d.slotId).join('+'),
+            stepIndex: dominanceCertStepCounter,
+            frontierBlockIds,
+          })
+          await persistArtifact(
+            options,
+            'certificate',
+            dominanceCert.certId,
+            dominanceCert.evidenceDigest,
+            dominanceCert,
+            frontierBlockIds
+          )
+          options.controller.emitCertificate(dominanceCert)
+          dominanceCertificateIds.push(dominanceCert.certId)
+        }
 
         // Check for pause request at each safe-point.
         const sessionState = await options.controller.inspectSessionState()
@@ -520,7 +556,8 @@ export async function executeLapicBoundedExactSolve(
         frontierBlockIds,
         snapshotPruningStatistics(pruningStats),
         pruneCertificateIds,
-        branchReachabilityCertificateIds
+        branchReachabilityCertificateIds,
+        dominanceCertificateIds
       )
       const checkpointContentHash =
         `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
@@ -535,7 +572,7 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds, branchReachabilityCertificateIds)
+    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds, branchReachabilityCertificateIds, dominanceCertificateIds)
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
     const message = error instanceof Error ? error.message : 'Unknown bounded solve failure.'

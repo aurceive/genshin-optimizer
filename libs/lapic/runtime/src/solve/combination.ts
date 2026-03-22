@@ -20,9 +20,18 @@ export interface LapicBoundedExactBestCandidate {
 
 export interface LapicBoundedExactTopNTracker {
   insert(candidate: LapicBoundedExactBestCandidate): void
+  insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult
   isEmpty(): boolean
   isFull(): boolean
   results(): readonly LapicBoundedExactBestCandidate[]
+}
+
+/** Result of an insert-with-eviction operation. */
+export interface LapicTopNInsertResult {
+  /** The candidate that was evicted, or `undefined` if no eviction occurred. */
+  readonly evicted?: LapicBoundedExactBestCandidate
+  /** Whether the inserted candidate itself was immediately evicted (ranked below top-N). */
+  readonly insertedWasEvicted: boolean
 }
 
 export function createTopNTracker(
@@ -55,6 +64,24 @@ export function createTopNTracker(
       }
       entries.splice(insertionIndex, 0, candidate)
       if (entries.length > topN) entries.pop()
+    },
+    insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult {
+      let insertionIndex = entries.length
+      for (let i = 0; i < entries.length; i += 1) {
+        if (compare(candidate, entries[i]!) > 0) {
+          insertionIndex = i
+          break
+        }
+      }
+      entries.splice(insertionIndex, 0, candidate)
+      if (entries.length > topN) {
+        const evicted = entries.pop()!
+        return {
+          evicted,
+          insertedWasEvicted: evicted === candidate,
+        }
+      }
+      return { insertedWasEvicted: false }
     },
     isEmpty(): boolean {
       return entries.length === 0
