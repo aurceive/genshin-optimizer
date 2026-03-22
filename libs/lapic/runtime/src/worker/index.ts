@@ -31,6 +31,17 @@ export type {
 export { createInProcessTransport } from './transport'
 
 export type {
+  LapicWorkerHandle,
+  LapicPoolWorkerState,
+  LapicPoolTransportConfig,
+} from './pool'
+
+export {
+  createPoolTransport,
+  createCallbackWorkerHandle,
+} from './pool'
+
+export type {
   LapicCoordinatedSolveConfig,
   LapicCoordinatedSolveResult,
 } from './coordinator'

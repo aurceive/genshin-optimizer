@@ -56,6 +56,16 @@ export interface LapicCoordinatedSolveConfig {
   readonly topN: number
   /** Optional progress callback invoked after each partition completes. */
   readonly onPartitionComplete?: (partitionIndex: number, total: number) => void
+  /**
+   * When true, all partitions are dispatched concurrently via
+   * `Promise.all()`. The transport is responsible for routing
+   * dispatches to available workers (e.g., pool transport).
+   *
+   * When false or omitted, partitions are dispatched sequentially.
+   * Sequential mode is appropriate for in-process and single-worker
+   * transports.
+   */
+  readonly parallelDispatch?: boolean
 }
 
 /**
@@ -243,25 +253,54 @@ export async function executeCoordinatedSolve(
   let totalEvaluatedCount = 0
   let totalVisitedCount = 0
 
-  // Dispatch partitions sequentially (in-process) or could be parallel
-  // for real worker backends. The transport abstracts this.
-  for (const partition of partitionPlan.partitions) {
-    const result = await config.transport.dispatch({
-      tag: 'StartWork',
-      sessionId: config.problem.problemDigest,
-      partitionIndex: partition.partitionIndex,
-      startFlatIndex: partition.startFlatIndex,
-      endFlatIndex: partition.endFlatIndex,
-    })
-
-    perWorkerResults.push(result)
-    totalEvaluatedCount += result.evaluatedCount
-    totalVisitedCount += result.visitedCount
-
-    config.onPartitionComplete?.(
-      partition.partitionIndex,
-      partitionPlan.workerCount
+  if (config.parallelDispatch) {
+    // Parallel mode: dispatch all partitions concurrently.
+    // The transport (e.g., pool transport) routes each dispatch
+    // to an available worker. Results are collected in partition
+    // index order for determinism.
+    const dispatchPromises = partitionPlan.partitions.map((partition) =>
+      config.transport.dispatch({
+        tag: 'StartWork',
+        sessionId: config.problem.problemDigest,
+        partitionIndex: partition.partitionIndex,
+        startFlatIndex: partition.startFlatIndex,
+        endFlatIndex: partition.endFlatIndex,
+      })
     )
+
+    const results = await Promise.all(dispatchPromises)
+
+    for (const result of results) {
+      perWorkerResults.push(result)
+      totalEvaluatedCount += result.evaluatedCount
+      totalVisitedCount += result.visitedCount
+
+      config.onPartitionComplete?.(
+        result.partitionIndex,
+        partitionPlan.workerCount
+      )
+    }
+  } else {
+    // Sequential mode: dispatch one partition at a time.
+    // Appropriate for in-process and single-worker transports.
+    for (const partition of partitionPlan.partitions) {
+      const result = await config.transport.dispatch({
+        tag: 'StartWork',
+        sessionId: config.problem.problemDigest,
+        partitionIndex: partition.partitionIndex,
+        startFlatIndex: partition.startFlatIndex,
+        endFlatIndex: partition.endFlatIndex,
+      })
+
+      perWorkerResults.push(result)
+      totalEvaluatedCount += result.evaluatedCount
+      totalVisitedCount += result.visitedCount
+
+      config.onPartitionComplete?.(
+        partition.partitionIndex,
+        partitionPlan.workerCount
+      )
+    }
   }
 
   const topCandidates = mergeWorkerResults(
