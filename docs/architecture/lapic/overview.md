@@ -422,7 +422,7 @@ The engine uses a cascade of admissible bounds. Each stage may terminate the cas
 3. McCormick relaxations for bilinear and multilinear kernels.
 4. Piecewise-linear envelopes for threshold, ratio, resistance, and min or max regions.
 5. LP relaxation over the active region.
-6. Reserved future extension point: convex mixed-integer relaxation may be added later for harder formula families, but it is outside the current production-required architecture scope. See [decision-log.md](./decision-log.md).
+6. Reserved future extension point: convex mixed-integer relaxation may be added for harder formula families, but it is outside this architecture version's required scope. See [decision-log.md](./decision-log.md).
 
 The cascade is ordered by cost and expected tightness. Every layer must be correctness-preserving.
 

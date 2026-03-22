@@ -519,9 +519,9 @@ For retained runs, the system must preserve:
 
 ## 18. Open Design Questions
 
-The remaining high-level validation architecture is materially complete.
+The high-level validation architecture is materially complete.
 
-The following low-level governance policy is now frozen in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md):
+The following low-level governance policy is frozen in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md):
 
 - long-horizon benchmark corpus governance,
 - browser benchmark noise model and gating policy,

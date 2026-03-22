@@ -158,7 +158,7 @@ The LP layer must support:
 
 ### 5.7 Convex Mixed-Integer Relaxations
 
-The architecture reserves this layer for future formula families where LP is insufficiently tight but exact branching remains too expensive. It is outside the current production-required scope and does not block compliance of the current bound stack. See [decision-log.md](./decision-log.md).
+The architecture reserves this layer for future formula families where LP is insufficiently tight but exact branching remains too expensive. It is outside this specification's required scope and does not block compliance of the bound stack. See [decision-log.md](./decision-log.md).
 
 ## 6. Relaxation Construction Pipeline
 
@@ -561,7 +561,7 @@ Telemetry may use float arithmetic but must not affect correctness decisions.
 
 ### 21.1 Convex Mixed-Integer Layer
 
-The extension point exists, but its final admissibility and evidence contract will be specified only if the layer is brought into scope by a later architecture decision. It is not part of the current production-required compliance set. See [decision-log.md](./decision-log.md).
+The extension point exists, but its final admissibility and evidence contract will be specified only if the layer is brought into scope by a later architecture decision. It is not part of this specification's required compliance set. See [decision-log.md](./decision-log.md).
 
 ## 22. Accepted Decisions
 

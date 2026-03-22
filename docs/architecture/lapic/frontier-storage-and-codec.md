@@ -573,7 +573,7 @@ The high-level requirement is fixed, but the exact sparse column encoding strate
 
 ### 20.2 Cross-Checkpoint Deduplicated Artifact Packs
 
-Deduplicated checkpoint packs are a deferred storage optimization rather than a required part of the current resumable checkpoint contract. The current production-required scope is satisfied by canonical paused-state checkpoint closure export and import. See [decision-log.md](./decision-log.md).
+Deduplicated checkpoint packs are a deferred storage optimization rather than a required part of the resumable checkpoint contract. This specification's required scope is satisfied by canonical paused-state checkpoint closure export and import. See [decision-log.md](./decision-log.md).
 
 ## 21. Accepted Decisions
 

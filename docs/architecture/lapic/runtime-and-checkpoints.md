@@ -628,7 +628,7 @@ If migration cannot preserve full proof and replay guarantees, the checkpoint is
 
 ### 20.1 Incremental Online Checkpointing Without Full Pause
 
-The current production-required runtime requires paused-state checkpointing only. Incremental fully online checkpointing is deferred until a separate crash-consistent correctness model is explicitly frozen. See [decision-log.md](./decision-log.md).
+This specification requires paused-state checkpointing only. Incremental fully online checkpointing is deferred until a separate crash-consistent correctness model is explicitly frozen. See [decision-log.md](./decision-log.md).
 
 ### 20.2 Optimal Worker Granularity for Large Join Blocks
 

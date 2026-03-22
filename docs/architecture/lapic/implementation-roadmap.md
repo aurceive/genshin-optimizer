@@ -300,11 +300,7 @@ Internal module decomposition within each lapic package should precede major sea
 - libs/sr/lapic-adapter
 - libs/zzz/lapic-adapter
 
-Current implementation priority is GI.
-
-SR and ZZZ adapter realization remain architecturally specified, but they are deferred for an indefinite period unless product scope changes.
-
-This is a planning and ownership decision, not a new architecture blocker.
+GI is the primary adapter target. SR and ZZZ adapters are architecturally specified but deferred until product scope explicitly includes them. This is a planning and ownership decision, not an architecture blocker.
 
 ### 11.3 GI Work Items
 
@@ -480,11 +476,11 @@ The following work can proceed in parallel once phase 1 is complete.
 - validation harness scaffolding,
 - adapter prototype planning against final package contracts.
 
-The following work should not proceed before dependencies are materially in place.
+The following work must not proceed before its architectural dependencies are satisfied.
 
-- production checkpointing before storage envelope and closure rules are implemented,
-- production app integration before runtime state machine and adapters pass validation,
-- production GI cutover before GI legacy versus canonical mode is frozen enough for parity claims.
+- production checkpointing requires storage envelope and closure rules,
+- production app integration requires runtime state machine and adapter validation,
+- production GI cutover requires GI legacy versus canonical mode to be frozen for parity claims.
 
 ## 17. Readiness Gates by Package
 
@@ -514,7 +510,7 @@ No area remains blocked by an unresolved top-level architecture question.
 
 ### 18.1 Team-Level Adapter Generalization
 
-Canonical multi-entity team-level adapter semantics are now frozen. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
+Canonical multi-entity team-level adapter semantics are frozen. See [team-level-adapter-boundary.md](./team-level-adapter-boundary.md).
 
 This unblocks:
 
@@ -524,13 +520,13 @@ This unblocks:
 
 ### 18.2 Remaining Low-Level Freeze Points
 
-The high-level architecture is decided, but final implementation closure still depends on low-level freezes for:
+The high-level architecture is decided, but final implementation closure depends on low-level freezes for:
 
-- exact-decimal wire layout details, now specified in [low-level/exact-decimal-wire-format.md](./low-level/exact-decimal-wire-format.md),
-- HiGHS evidence payload schema and deterministic configuration freeze, now specified in [low-level/highs-evidence-and-deterministic-config.md](./low-level/highs-evidence-and-deterministic-config.md),
-- benchmark corpus governance and browser noise policy, now specified in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md).
+- exact-decimal wire layout details, specified in [low-level/exact-decimal-wire-format.md](./low-level/exact-decimal-wire-format.md),
+- HiGHS evidence payload schema and deterministic configuration freeze, specified in [low-level/highs-evidence-and-deterministic-config.md](./low-level/highs-evidence-and-deterministic-config.md),
+- benchmark corpus governance and browser noise policy, specified in [low-level/benchmark-governance-and-browser-noise.md](./low-level/benchmark-governance-and-browser-noise.md).
 
-These are no longer top-level architectural blockers, but they remain implementation freeze points.
+These are not top-level architectural blockers, but they remain implementation freeze points.
 
 These freezes should be specified in the dedicated [low-level/README.md](./low-level/README.md) document set rather than as additional flat top-level architecture documents.
 
@@ -545,14 +541,4 @@ The roadmap is considered successfully executed only if:
 - checkpoint and replay workflows are operational end-to-end,
 - production cutover criteria are explicit per game.
 
-## 20. Recommended Immediate Next Tasks
 
-Given the current document set, the immediate next implementation-planning tasks are:
-
-1. Implement the first executable solve slice for GI current-only optimization: frontier build, exact-signature grouping, threshold tracking, block join expansion, residual exact resolution, and final-optimality closure through lapic runtime.
-2. Raise lapic core and cert from schema-and-validator surfaces into the minimum production-shaped correctness kernel required by that solve slice: F-IR/A-IR/S-IR realization, first admissible bounds, and certificate emission for exact symbolic and threshold-driven decisions.
-3. Continue GI adapter realization only insofar as needed to feed that solve slice with authoritative canonical source snapshots, candidate domains, objective mapping, and auxiliary outputs.
-4. Decompose the current lapic package internals so package entrypoints remain thin: split core, cert, runtime, and debug into focused internal modules before the solve slice adds another layer of search logic.
-5. Introduce the first validation harness slice for GI adapter normalization and canonical export behavior.
-6. Define the first governed GI adapter milestone as `legacyValidated` with explicit validation corpus and snapshot policy.
-7. Defer any renewed SR or ZZZ adapter scaffolding until product scope explicitly resumes those paths.
