@@ -4,6 +4,7 @@ export * from './inspection'
 export * from './audit'
 export * from './benchmark'
 export * from './validation'
+export * from './property'
 
 export {
   createLapicCheckpointClosureInventory,
