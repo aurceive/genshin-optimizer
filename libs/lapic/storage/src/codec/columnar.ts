@@ -92,10 +92,7 @@ export function columnarToFrontierBlock(
 
   return {
     blockId: columnar.blockId,
-    layout: {
-      ...columnar.layout,
-      stateOrderDigest: columnar.layoutDescriptor.stateOrderDigest,
-    },
+    layout: columnar.layout,
     stateIds: [...columnar.stateIds],
     rows,
     rowCount,

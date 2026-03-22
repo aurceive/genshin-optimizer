@@ -299,7 +299,7 @@ function extractTopNEntries(
       stateId: completion.finalOptimality.winnerStateId,
       candidateIds: [],
       evaluation: {
-        objectiveValue: completion.finalOptimality.winnerStateId,
+        objectiveValue: 'final-optimality',
         evidenceDigest:
           completion.finalOptimality.winnerDigest ?? 'final',
       },
