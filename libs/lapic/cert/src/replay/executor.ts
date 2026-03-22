@@ -381,6 +381,20 @@ function replayFinalOptimalityCert(
       'FinalOptimalityCert missing queueExhaustionSummaryDigest'
     )
   }
+  if (!payload.branchReachabilitySummaryDigest) {
+    return mismatchedResult(
+      arithmeticMode,
+      evidenceDigests,
+      'FinalOptimalityCert missing branchReachabilitySummaryDigest'
+    )
+  }
+  if (!payload.dominanceSummaryDigest) {
+    return mismatchedResult(
+      arithmeticMode,
+      evidenceDigests,
+      'FinalOptimalityCert missing dominanceSummaryDigest'
+    )
+  }
 
   return matchedResult(arithmeticMode, evidenceDigests)
 }

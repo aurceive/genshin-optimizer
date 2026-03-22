@@ -849,6 +849,10 @@ describe('lapic bounded exact solve executor', () => {
       'flower-b|plume-a': '0030',
       'flower-b|plume-b': '0005',
     }
+    // FIXME(lapic-audit): evaluationCount is incremented but never asserted.
+    // Every other test in this file asserts expect(evaluationCount).toBe(N).
+    // Plan: determine the expected evaluation count for this 4-combination
+    // pruning scenario and add the assertion. Remove the underscore prefix.
     let _evaluationCount = 0
 
     const completion = await executeLapicBoundedExactSolve({

@@ -57,6 +57,11 @@ function createAdmissibleMockProvider(): LapicLpProvider {
  * A mock LP provider that returns a dangerously tight bound
  * (the exact max rather than an over-estimate). Still admissible
  * but tests the tightness checking.
+ *
+ * FIXME(lapic-audit): This helper is defined but never called — it was likely
+ * intended for tightness-checking tests that haven't been written yet.
+ * Plan: write the tightness-checking tests using this provider, or remove
+ * the helper if the tests are no longer planned.
  */
 function _createExactMockProvider(exactValue: number): LapicLpProvider {
   return {
@@ -533,6 +538,10 @@ describe('runLapicLpGoldenHarness', () => {
 
       // critMult = 1 + critRate * critDmg
       const critProd = b.bilinearKernel(critRate, critDmg)
+      // FIXME(lapic-audit): critMult is computed but never used in the objective.
+      // The test probably intended to include it in the damage formula.
+      // Plan: verify the intended formula and wire critMult into the objective,
+      // or remove the dead computation if it's not needed.
       const _critMult = b.add(one, critProd)
 
       // dmgMult = 1 + dmgBonus

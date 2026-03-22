@@ -9,6 +9,8 @@ import {
   validateLapicReplayInspectionRequest,
 } from './validation'
 
+// FIXME(lapic-audit): createCertificate is defined but never called.
+// Plan: write the tests that need this helper, or remove it.
 function _createCertificate(
   overrides: Partial<LapicCertificate> = {}
 ): LapicCertificate {
@@ -41,6 +43,8 @@ function _createCertificate(
       finalIncumbentSetDigest: 'incumbent-set-digest',
       queueExhaustionSummaryDigest: 'queue-exhaustion-digest',
       thresholdPruneSummaryDigest: 'threshold-prune-summary-digest',
+      branchReachabilitySummaryDigest: 'branch-reachability-summary-digest',
+      dominanceSummaryDigest: 'dominance-summary-digest',
       escalatedReplaySummaryDigest: 'escalated-replay-summary-digest',
       stableOrderCompletenessDigest: 'stable-order-digest',
       rankingParticipationMode: 'auxiliary-only',

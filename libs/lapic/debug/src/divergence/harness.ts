@@ -193,10 +193,16 @@ async function runPauseResumeSolve(
       pauseResumeRounds++
       checkpointState = outcome.checkpointState
 
-      // Collect certificates emitted in this segment via controller inspection.
+      // FIXME(lapic-audit): inspectSessionState() is awaited but its result is
+      // discarded. The comment promises certificate collection, but certificates
+      // from intermediate pause/resume segments are never accumulated into
+      // allCertificates — only the final completion's certificates are captured
+      // (line ~206). This is either an incomplete implementation (should push
+      // sessionState.emittedCertificates into allCertificates) or a wasted
+      // async call that should be removed.
+      // Plan: determine whether intermediate certificates matter for divergence
+      // analysis. If yes, accumulate them. If no, remove this call entirely.
       const _sessionState = await controller.inspectSessionState()
-      // The controller stores emitted certificates — get them via completion
-      // or from the checkpoint. For bookkeeping, we just accumulate rounds.
 
       continue
     }

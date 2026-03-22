@@ -240,8 +240,8 @@ async function completeSolve(
   tracker: ReturnType<typeof createResumableTopNTracker>,
   frontierBlockIds: readonly string[],
   pruneCertificateIds: readonly string[] = [],
-  _branchReachabilityCertificateIds: readonly string[] = [],
-  _dominanceCertificateIds: readonly string[] = []
+  branchReachabilityCertificateIds: readonly string[] = [],
+  dominanceCertificateIds: readonly string[] = []
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -272,7 +272,9 @@ async function completeSolve(
     options,
     winners,
     frontierBlockIds,
-    pruneCertificateIds
+    pruneCertificateIds,
+    branchReachabilityCertificateIds,
+    dominanceCertificateIds
   )
   const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
   if (!finalOptimality.ok)

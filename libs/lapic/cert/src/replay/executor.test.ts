@@ -190,6 +190,10 @@ function makeFinalOptimalityCert(
         overrides?.queueExhaustionSummaryDigest ?? 'queue:test',
       thresholdPruneSummaryDigest:
         overrides?.thresholdPruneSummaryDigest ?? 'prune:test',
+      branchReachabilitySummaryDigest:
+        overrides?.branchReachabilitySummaryDigest ?? 'branch:test',
+      dominanceSummaryDigest:
+        overrides?.dominanceSummaryDigest ?? 'dominance:test',
       escalatedReplaySummaryDigest:
         overrides?.escalatedReplaySummaryDigest ?? 'replay:test',
       stableOrderCompletenessDigest:

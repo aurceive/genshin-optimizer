@@ -150,7 +150,9 @@ export function createFinalOptimalityCertificate(
   options: LapicBoundedExactSolveOptions,
   winners: readonly LapicBoundedExactBestCandidate[],
   frontierBlockIds: readonly string[],
-  pruneCertificateIds: readonly string[] = []
+  pruneCertificateIds: readonly string[] = [],
+  branchReachabilityCertificateIds: readonly string[] = [],
+  dominanceCertificateIds: readonly string[] = []
 ): LapicCertificate<LapicFinalOptimalityPayload> {
   const bestWinner = winners[0]!
   const allStateIds = winners.map((winner) => winner.stateId)
@@ -190,6 +192,14 @@ export function createFinalOptimalityCertificate(
         pruneCertificateIds.length > 0
           ? `threshold-prune:${pruneCertificateIds.length}:${options.problem.problemDigest}`
           : `threshold-prune:none:${options.problem.problemDigest}`,
+      branchReachabilitySummaryDigest:
+        branchReachabilityCertificateIds.length > 0
+          ? `branch-reachability:${branchReachabilityCertificateIds.length}:${options.problem.problemDigest}`
+          : `branch-reachability:none:${options.problem.problemDigest}`,
+      dominanceSummaryDigest:
+        dominanceCertificateIds.length > 0
+          ? `dominance:${dominanceCertificateIds.length}:${options.problem.problemDigest}`
+          : `dominance:none:${options.problem.problemDigest}`,
       escalatedReplaySummaryDigest: `replay:none:${options.problem.problemDigest}`,
       stableOrderCompletenessDigest: `stable-order:${incumbentSetDigest}`,
     },

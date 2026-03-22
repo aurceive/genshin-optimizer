@@ -114,6 +114,8 @@ export interface LapicFinalOptimalityPayload {
   readonly finalIncumbentSetDigest: LapicDigest
   readonly queueExhaustionSummaryDigest: LapicDigest
   readonly thresholdPruneSummaryDigest: LapicDigest
+  readonly branchReachabilitySummaryDigest: LapicDigest
+  readonly dominanceSummaryDigest: LapicDigest
   readonly escalatedReplaySummaryDigest: LapicDigest
   readonly stableOrderCompletenessDigest: LapicDigest
   readonly rankingParticipationMode?: LapicPotentialParticipationMode

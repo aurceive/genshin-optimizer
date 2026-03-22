@@ -39,6 +39,8 @@ function createCertificate() {
       finalIncumbentSetDigest: 'incumbent-set-digest',
       queueExhaustionSummaryDigest: 'queue-exhaustion-digest',
       thresholdPruneSummaryDigest: 'threshold-prune-summary-digest',
+      branchReachabilitySummaryDigest: 'branch-reachability-summary-digest',
+      dominanceSummaryDigest: 'dominance-summary-digest',
       escalatedReplaySummaryDigest: 'escalated-replay-summary-digest',
       stableOrderCompletenessDigest: 'stable-order-digest',
     },

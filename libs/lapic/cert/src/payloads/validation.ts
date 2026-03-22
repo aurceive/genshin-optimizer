@@ -252,6 +252,8 @@ export function validateLapicFinalOptimalityPayload(
     ['finalIncumbentSetDigest', payload.finalIncumbentSetDigest],
     ['queueExhaustionSummaryDigest', payload.queueExhaustionSummaryDigest],
     ['thresholdPruneSummaryDigest', payload.thresholdPruneSummaryDigest],
+    ['branchReachabilitySummaryDigest', payload.branchReachabilitySummaryDigest],
+    ['dominanceSummaryDigest', payload.dominanceSummaryDigest],
     ['escalatedReplaySummaryDigest', payload.escalatedReplaySummaryDigest],
     ['stableOrderCompletenessDigest', payload.stableOrderCompletenessDigest],
   ].forEach(([fieldName, value]) => {
