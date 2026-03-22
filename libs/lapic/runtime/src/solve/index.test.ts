@@ -15,6 +15,12 @@ import {
   createLapicSolveRequest,
 } from '../builders'
 import { createLapicInMemorySessionController } from '../session'
+import { createBoundPruneCertificate } from './certificate'
+import {
+  buildDangerZoneRecord,
+  defaultLapicDangerZoneConfig,
+  detectBoundPruneDangerZone,
+} from './danger-zone'
 import { executeLapicBoundedExactSolve } from './index'
 
 function createProblem(overrides?: { topN?: number }): LapicCanonicalProblem {
@@ -1142,5 +1148,221 @@ describe('lapic bounded exact solve executor', () => {
       (c) => c.certKind === 'DominanceCert'
     )
     expect(dominanceCerts).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Danger-zone detection unit tests
+// ---------------------------------------------------------------------------
+
+describe('detectBoundPruneDangerZone', () => {
+  it('does not trigger when gap is large', () => {
+    const result = detectBoundPruneDangerZone('10', '100', defaultLapicDangerZoneConfig)
+    expect(result.triggered).toBe(false)
+    expect(result.absoluteGap).toBe(90)
+    expect(result.relativeGap).toBe(0.9)
+    expect(result.explanation).toBeUndefined()
+  })
+
+  it('triggers when absolute gap is below safe margin', () => {
+    const config = { safeMarginRatio: 1e-15, safeMarginAbsolute: 0.01 }
+    const result = detectBoundPruneDangerZone('99.999', '100', config)
+    expect(result.triggered).toBe(true)
+    expect(result.absoluteGap).toBeCloseTo(0.001, 6)
+    expect(result.explanation).toContain('absoluteGap')
+    expect(result.explanation).toContain('safeMarginAbsolute')
+  })
+
+  it('triggers when relative gap is below safe margin', () => {
+    const config = { safeMarginRatio: 0.1, safeMarginAbsolute: 1e-15 }
+    const result = detectBoundPruneDangerZone('95', '100', config)
+    expect(result.triggered).toBe(true)
+    expect(result.relativeGap).toBe(0.05)
+    expect(result.explanation).toContain('relativeGap')
+    expect(result.explanation).toContain('safeMarginRatio')
+  })
+
+  it('triggers for non-finite values', () => {
+    const result = detectBoundPruneDangerZone('NaN', '100', defaultLapicDangerZoneConfig)
+    expect(result.triggered).toBe(true)
+    expect(result.explanation).toContain('Non-finite')
+  })
+
+  it('triggers for Infinity', () => {
+    const result = detectBoundPruneDangerZone('Infinity', '100', defaultLapicDangerZoneConfig)
+    expect(result.triggered).toBe(true)
+    expect(result.explanation).toContain('Non-finite')
+  })
+
+  it('uses denominator max(|threshold|, 1) for small thresholds', () => {
+    // Threshold near zero: denominator is 1, so relativeGap ≈ absoluteGap
+    const config = { safeMarginRatio: 0.05, safeMarginAbsolute: 1e-15 }
+    const result = detectBoundPruneDangerZone('-0.01', '0.01', config)
+    expect(result.triggered).toBe(true)
+    expect(result.relativeGap).toBeCloseTo(0.02, 6)
+  })
+
+  it('does not trigger when both margins are satisfied', () => {
+    const config = { safeMarginRatio: 0.001, safeMarginAbsolute: 0.001 }
+    const result = detectBoundPruneDangerZone('90', '100', config)
+    expect(result.triggered).toBe(false)
+  })
+
+  it('buildDangerZoneRecord creates correct record', () => {
+    const detection = detectBoundPruneDangerZone('99.9999999999', '100', {
+      safeMarginRatio: 1e-9,
+      safeMarginAbsolute: 1e-9,
+    })
+    const record = buildDangerZoneRecord(detection, false)
+    expect(record.triggered).toBe(true)
+    expect(record.verificationReplayInvoked).toBe(false)
+    expect(record.explanation).toBeDefined()
+  })
+
+  it('buildDangerZoneRecord omits explanation when not triggered', () => {
+    const detection = detectBoundPruneDangerZone('10', '100', defaultLapicDangerZoneConfig)
+    const record = buildDangerZoneRecord(detection, false)
+    expect(record.triggered).toBe(false)
+    expect(record.explanation).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Executor-level danger-zone tests
+// ---------------------------------------------------------------------------
+
+describe('executor danger-zone integration', () => {
+  it('declines to prune when danger zone is triggered', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound({ assignedCandidates }) {
+        const flowerId = assignedCandidates[0]?.candidateId
+        if (flowerId === 'flower-a') {
+          // Bound is barely below threshold — within danger zone
+          return { upperBoundValue: '0019.9999999999999', evidenceDigest: 'bound:close' }
+        }
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+      dangerZoneConfig: {
+        safeMarginRatio: 0.01,    // 1% relative margin
+        safeMarginAbsolute: 0.01, // 0.01 absolute margin
+      },
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    // Because danger zone declined the prune for flower-a subtree,
+    // ALL 4 combinations should be evaluated (no pruning).
+    expect(evaluationCount).toBe(4)
+
+    // No BoundPruneCerts should be emitted (the would-be prune was declined)
+    const pruneCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BoundPruneCert'
+    )
+    expect(pruneCerts).toHaveLength(0)
+  })
+
+  it('prunes normally when bound is safely below threshold with danger zone config', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      computeUpperBound({ assignedCandidates }) {
+        const flowerId = assignedCandidates[0]?.candidateId
+        if (flowerId === 'flower-b') {
+          // Bound far below threshold — safe to prune
+          return { upperBoundValue: '0001', evidenceDigest: 'bound:far-below' }
+        }
+        return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
+      },
+      maxCombinationCount: 16,
+      dangerZoneConfig: {
+        safeMarginRatio: 0.01,
+        safeMarginAbsolute: 0.01,
+      },
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    // Prune should still happen — gap is large
+    const pruneCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BoundPruneCert'
+    )
+    expect(pruneCerts.length).toBeGreaterThanOrEqual(1)
+
+    // The BoundPruneCert should have dangerZoneRecord.triggered === false
+    const pruneCert = pruneCerts[0]!
+    expect((pruneCert.payload as Record<string, unknown>).dangerZoneRecord).toEqual({
+      triggered: false,
+      verificationReplayInvoked: false,
+    })
+  })
+
+  it('BoundPruneCert accepts danger zone record from context', () => {
+    const problem = createProblem()
+    const cert = createBoundPruneCertificate(
+      {
+        problem,
+        controller: null as never,
+        artifactStore: null as never,
+        evaluateCombination: null as never,
+      },
+      {
+        boundValue: '50',
+        boundEvidenceDigest: 'evidence:bound',
+        thresholdValue: '100',
+        domainIndex: 0,
+        stepIndex: 1,
+        frontierBlockIds: ['block-1'],
+        dangerZoneRecord: {
+          triggered: true,
+          verificationReplayInvoked: true,
+          explanation: 'Test danger zone',
+        },
+      }
+    )
+
+    expect(cert.payload.dangerZoneRecord).toEqual({
+      triggered: true,
+      verificationReplayInvoked: true,
+      explanation: 'Test danger zone',
+    })
   })
 })

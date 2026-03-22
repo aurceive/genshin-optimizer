@@ -2,6 +2,7 @@ import type {
   LapicBoundPrunePayload,
   LapicBranchReachabilityPayload,
   LapicCertificate,
+  LapicDangerZoneHandlingRecord,
   LapicDominancePayload,
   LapicFinalOptimalityPayload,
 } from '@genshin-optimizer/lapic/cert'
@@ -92,6 +93,9 @@ export interface LapicBoundPruneCertificateContext {
   readonly stepIndex: number
   /** Frontier block IDs referenced by this prune decision. */
   readonly frontierBlockIds: readonly string[]
+  /** Danger-zone handling record for this prune decision.
+   *  When omitted, defaults to `{ triggered: false, verificationReplayInvoked: false }`. */
+  readonly dangerZoneRecord?: LapicDangerZoneHandlingRecord
 }
 
 export function createBoundPruneCertificate(
@@ -130,7 +134,7 @@ export function createBoundPruneCertificate(
       boundValue: context.boundValue,
       validityRegionId: regionId,
       numericDiagnosticsDigest: `numeric:${context.boundEvidenceDigest}`,
-      dangerZoneRecord: {
+      dangerZoneRecord: context.dangerZoneRecord ?? {
         triggered: false,
         verificationReplayInvoked: false,
       },

@@ -6,6 +6,7 @@ import type {
   LapicFirGraph,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
+import type { LapicDangerZoneConfig } from './danger-zone'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import type {
   LapicInMemorySessionController,
@@ -80,6 +81,10 @@ export interface LapicBoundedExactSolveOptions {
    *  analysis on the graph and emits BranchReachabilityCerts
    *  for all statically forced branches. */
   readonly firGraph?: LapicFirGraph
+  /** Numeric danger-zone detection configuration for bound-based pruning.
+   *  When configured, the executor checks whether the bound-threshold gap
+   *  is within a danger zone and declines to prune if so (conservative). */
+  readonly dangerZoneConfig?: LapicDangerZoneConfig
   /** When provided, the executor resumes from the given checkpoint state
    *  instead of starting a fresh solve. Frontier blocks are NOT rebuilt. */
   readonly resumeCheckpointState?: LapicSolveCheckpointState

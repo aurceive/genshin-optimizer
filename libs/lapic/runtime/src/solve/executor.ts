@@ -28,6 +28,10 @@ import {
   sortDomains,
   validateSolveOptions,
 } from './combination'
+import {
+  buildDangerZoneRecord,
+  detectBoundPruneDangerZone,
+} from './danger-zone'
 import { createFrontierBlockForDomain, createFrontierIndexForSolve } from './frontier'
 import { createFrontierJoinPlan } from './join-plan'
 import { persistArtifact } from './persistence'
@@ -395,6 +399,47 @@ export async function executeLapicBoundedExactSolve(
       return relation < 0
     }
 
+    /**
+     * Commit a bound-prune: skip the subtree, emit BoundPruneCert.
+     * Extracted from the pruning block so both danger-zone paths can call it.
+     */
+    async function commitPrune(
+      boundValue: string,
+      boundEvidenceDigest: string,
+      thresholdValue: string,
+      domainIndex: number,
+      detection?: import('./danger-zone').LapicDangerZoneDetectionResult
+    ): Promise<void> {
+      const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
+      currentFlatIndex += subtreeSize
+      pruningStats.prunedCombinationCount += subtreeSize
+      pruningStats.prunedSubtreeCount += 1
+
+      pruneCertStepCounter += 1
+      const dangerZoneRecord = detection
+        ? buildDangerZoneRecord(detection, false)
+        : undefined
+      const pruneCert = createBoundPruneCertificate(options, {
+        boundValue,
+        boundEvidenceDigest,
+        thresholdValue,
+        domainIndex,
+        stepIndex: pruneCertStepCounter,
+        frontierBlockIds,
+        dangerZoneRecord,
+      })
+      await persistArtifact(
+        options,
+        'certificate',
+        pruneCert.certId,
+        pruneCert.evidenceDigest,
+        pruneCert,
+        frontierBlockIds
+      )
+      options.controller.emitCertificate(pruneCert)
+      pruneCertificateIds.push(pruneCert.certId)
+    }
+
     const visitCombination = async (
       domainIndex: number,
       partialCandidates: readonly LapicCandidateDescriptor[]
@@ -502,33 +547,27 @@ export async function executeLapicBoundedExactSolve(
             totalDomainCount: joinPlan.value.entries.length,
           })
           if (bound !== undefined && isBoundBelowThreshold(bound.upperBoundValue, threshold)) {
-            // Prune entire subtree: skip all leaf combinations below this node.
-            const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
-            currentFlatIndex += subtreeSize
-            pruningStats.prunedCombinationCount += subtreeSize
-            pruningStats.prunedSubtreeCount += 1
-
-            // Emit a BoundPruneCert for this pruning decision.
-            pruneCertStepCounter += 1
-            const pruneCert = createBoundPruneCertificate(options, {
-              boundValue: bound.upperBoundValue,
-              boundEvidenceDigest: bound.evidenceDigest,
-              thresholdValue: threshold,
-              domainIndex,
-              stepIndex: pruneCertStepCounter,
-              frontierBlockIds,
-            })
-            await persistArtifact(
-              options,
-              'certificate',
-              pruneCert.certId,
-              pruneCert.evidenceDigest,
-              pruneCert,
-              frontierBlockIds
-            )
-            options.controller.emitCertificate(pruneCert)
-            pruneCertificateIds.push(pruneCert.certId)
-            return
+            // Check danger zone before committing the prune.
+            if (options.dangerZoneConfig) {
+              const detection = detectBoundPruneDangerZone(
+                bound.upperBoundValue,
+                threshold,
+                options.dangerZoneConfig
+              )
+              if (detection.triggered) {
+                // Conservative: decline to prune (architecture §10.3).
+                pruningStats.dangerZoneDeclinedCount += 1
+                // Fall through to explore the subtree normally.
+              } else {
+                // Safe gap — proceed to prune.
+                await commitPrune(bound.upperBoundValue, bound.evidenceDigest, threshold, domainIndex, detection)
+                return
+              }
+            } else {
+              // No danger-zone config — prune unconditionally (legacy behavior).
+              await commitPrune(bound.upperBoundValue, bound.evidenceDigest, threshold, domainIndex)
+              return
+            }
           }
         }
       }

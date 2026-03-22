@@ -43,6 +43,8 @@ export interface LapicPruningStatistics {
   prunedCombinationCount: number
   /** Number of subtrees (intermediate nodes) pruned. */
   prunedSubtreeCount: number
+  /** Number of prune decisions declined due to danger-zone detection. */
+  dangerZoneDeclinedCount: number
 }
 
 export function createPruningStatistics(): LapicPruningStatistics {
@@ -50,6 +52,7 @@ export function createPruningStatistics(): LapicPruningStatistics {
     boundEvaluationCount: 0,
     prunedCombinationCount: 0,
     prunedSubtreeCount: 0,
+    dangerZoneDeclinedCount: 0,
   }
 }
 
@@ -60,6 +63,7 @@ export interface LapicPruningStatisticsSnapshot {
   readonly boundEvaluationCount: number
   readonly prunedCombinationCount: number
   readonly prunedSubtreeCount: number
+  readonly dangerZoneDeclinedCount: number
 }
 
 export function snapshotPruningStatistics(
@@ -69,6 +73,7 @@ export function snapshotPruningStatistics(
     boundEvaluationCount: stats.boundEvaluationCount,
     prunedCombinationCount: stats.prunedCombinationCount,
     prunedSubtreeCount: stats.prunedSubtreeCount,
+    dangerZoneDeclinedCount: stats.dangerZoneDeclinedCount,
   }
 }
 
@@ -79,5 +84,6 @@ export function restorePruningStatistics(
     boundEvaluationCount: snapshot.boundEvaluationCount,
     prunedCombinationCount: snapshot.prunedCombinationCount,
     prunedSubtreeCount: snapshot.prunedSubtreeCount,
+    dangerZoneDeclinedCount: snapshot.dangerZoneDeclinedCount ?? 0,
   }
 }
