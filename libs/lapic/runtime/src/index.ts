@@ -7,6 +7,7 @@ export * from './recovery'
 export * from './solve'
 export * from './fir-bound'
 export * from './lp-bound'
+export * from './worker'
 
 export {
   createLapicArtifactRef,
