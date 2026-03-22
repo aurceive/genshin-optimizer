@@ -9,7 +9,7 @@ import {
   validateLapicReplayInspectionRequest,
 } from './validation'
 
-function createCertificate(
+function _createCertificate(
   overrides: Partial<LapicCertificate> = {}
 ): LapicCertificate {
   return {

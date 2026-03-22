@@ -31,6 +31,7 @@ import {
 import {
   buildDangerZoneRecord,
   detectBoundPruneDangerZone,
+  type LapicDangerZoneDetectionResult,
 } from './danger-zone'
 import {
   createFrontierBlockForDomain,
@@ -239,8 +240,8 @@ async function completeSolve(
   tracker: ReturnType<typeof createResumableTopNTracker>,
   frontierBlockIds: readonly string[],
   pruneCertificateIds: readonly string[] = [],
-  branchReachabilityCertificateIds: readonly string[] = [],
-  dominanceCertificateIds: readonly string[] = []
+  _branchReachabilityCertificateIds: readonly string[] = [],
+  _dominanceCertificateIds: readonly string[] = []
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -450,7 +451,7 @@ export async function executeLapicBoundedExactSolve(
       boundEvidenceDigest: string,
       thresholdValue: string,
       domainIndex: number,
-      detection?: import('./danger-zone').LapicDangerZoneDetectionResult
+      detection?: LapicDangerZoneDetectionResult
     ): Promise<void> => {
       const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
       currentFlatIndex += subtreeSize

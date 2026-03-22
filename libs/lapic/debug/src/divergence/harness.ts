@@ -194,7 +194,7 @@ async function runPauseResumeSolve(
       checkpointState = outcome.checkpointState
 
       // Collect certificates emitted in this segment via controller inspection.
-      const sessionState = await controller.inspectSessionState()
+      const _sessionState = await controller.inspectSessionState()
       // The controller stores emitted certificates — get them via completion
       // or from the checkpoint. For bookkeeping, we just accumulate rounds.
 

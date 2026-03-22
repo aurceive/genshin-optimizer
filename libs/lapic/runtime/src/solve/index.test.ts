@@ -849,14 +849,14 @@ describe('lapic bounded exact solve executor', () => {
       'flower-b|plume-a': '0030',
       'flower-b|plume-b': '0005',
     }
-    let evaluationCount = 0
+    let _evaluationCount = 0
 
     const completion = await executeLapicBoundedExactSolve({
       problem: createProblem(),
       controller,
       artifactStore: store,
       evaluateCombination({ candidates }) {
-        evaluationCount += 1
+        _evaluationCount += 1
         const key = candidates.map((c) => c.candidateId).join('|')
         return createLapicSuccessResult({
           objectiveValue: scores[key]!,

@@ -229,12 +229,12 @@ describe('lapic solve orchestrator', () => {
     })
 
     it('supports cancellation through handle', async () => {
-      let controllerRef: LapicInMemorySessionController | undefined
+      let _controllerRef: LapicInMemorySessionController | undefined
 
       const orch = createSolveOrchestration(
         createBaseConfig({
           solveFn: async (controller) => {
-            controllerRef = controller
+            _controllerRef = controller
             controller.activate('analyze')
             // Simulate cancel from outside
             const cancelResult = await controller.requestCancel()

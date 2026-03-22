@@ -31,7 +31,7 @@ import {
   validateLapicStateBlockInspectionView,
 } from './validation'
 
-function createSessionSummary() {
+function _createSessionSummary() {
   return createLapicSessionSummary(
     createLapicSessionIdentity({
       sessionId: 'session-id',

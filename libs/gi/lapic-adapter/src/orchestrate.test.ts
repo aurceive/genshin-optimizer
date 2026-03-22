@@ -115,7 +115,7 @@ function createAllSlotArtifacts(): ICachedArtifact[] {
     { slotKey: 'goblet', mainStatKey: 'pyro_dmg_' },
     { slotKey: 'circlet', mainStatKey: 'critRate_' },
   ]
-  return slots.map((s, i) =>
+  return slots.map((s, _i) =>
     createArtifact({
       id: `artifact-${s.slotKey}`,
       slotKey: s.slotKey as any,
@@ -319,7 +319,7 @@ describe('createGiLapicSolveOrchestration', () => {
     let feasibilityCalled = false
     const orch = createGiLapicSolveOrchestration(
       createBaseConfig({
-        isCombinationFeasible: (combination, canonicalExport) => {
+        isCombinationFeasible: (_combination, _canonicalExport) => {
           feasibilityCalled = true
           return true
         },

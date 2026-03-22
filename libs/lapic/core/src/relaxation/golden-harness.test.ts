@@ -58,7 +58,7 @@ function createAdmissibleMockProvider(): LapicLpProvider {
  * (the exact max rather than an over-estimate). Still admissible
  * but tests the tightness checking.
  */
-function createExactMockProvider(exactValue: number): LapicLpProvider {
+function _createExactMockProvider(exactValue: number): LapicLpProvider {
   return {
     deterministicMode: {
       profileId: 'exact-mock',
@@ -533,7 +533,7 @@ describe('runLapicLpGoldenHarness', () => {
 
       // critMult = 1 + critRate * critDmg
       const critProd = b.bilinearKernel(critRate, critDmg)
-      const critMult = b.add(one, critProd)
+      const _critMult = b.add(one, critProd)
 
       // dmgMult = 1 + dmgBonus
       const dmgMult = b.add(one, dmgBonus)

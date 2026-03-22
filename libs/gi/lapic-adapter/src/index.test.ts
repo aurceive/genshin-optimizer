@@ -852,7 +852,7 @@ describe('gi lapic adapter', () => {
       request.giContext.optimizationRequest.optimizationTarget =
         compilableTarget
 
-      let explicitBoundCalled = false
+      let _explicitBoundCalled = false
 
       const result = await executeGiLapicBoundedCurrentOnlySolve({
         request,
@@ -878,7 +878,7 @@ describe('gi lapic adapter', () => {
         },
         // Both explicit and extractor provided — explicit should win
         computeUpperBound: () => {
-          explicitBoundCalled = true
+          _explicitBoundCalled = true
           return { upperBoundValue: '9999', evidenceDigest: 'explicit-bound' }
         },
         candidateVariableExtractor: () => new Map([['x', 5]]),
