@@ -3,6 +3,7 @@ import {
   createLapicArtifactWriteRequest,
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
+import { createGiLapicBuiltinBoundProvider } from './builtin-bound-provider'
 import { buildGiLapicCanonicalExportFromRequest } from './canonical'
 import { compileGiOptNodeToFir } from './compilation'
 import type {
@@ -81,6 +82,20 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
     : undefined
   const firGraph = firCompilation?.ok ? firCompilation.result.graph : undefined
 
+  // Auto-wire the FIR-bound provider when the caller supplies a variable
+  // extractor but no explicit computeUpperBound. This combines the compiled
+  // F-IR graph with domain variable maps to produce interval-based upper
+  // bounds for branch-and-bound pruning.
+  const computeUpperBound =
+    options.computeUpperBound ??
+    (firGraph && options.candidateVariableExtractor
+      ? createGiLapicBuiltinBoundProvider({
+          firGraph,
+          canonicalExport: canonicalExport.value,
+          extractVariables: options.candidateVariableExtractor,
+        })
+      : undefined)
+
   const outcome = await executeLapicBoundedExactSolve({
     problem: canonicalExport.value.problem,
     controller: options.controller,
@@ -95,7 +110,7 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
           options.isCombinationFeasible!(combination, canonicalExport.value)
       : undefined,
     maxCombinationCount: options.maxCombinationCount,
-    computeUpperBound: options.computeUpperBound,
+    computeUpperBound,
   })
 
   if ('paused' in outcome)

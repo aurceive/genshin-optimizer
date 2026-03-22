@@ -1019,4 +1019,47 @@ describe('lapic bounded exact solve executor', () => {
     )
     expect(branchCerts).toHaveLength(0)
   })
+
+  describe('createDominanceCertificate', () => {
+    it('creates a valid dominance certificate with all required payload fields', async () => {
+      const { validateLapicCertificate } = await import('@genshin-optimizer/lapic/cert')
+      const { createDominanceCertificate } = await import('./certificate')
+
+      const problem = createProblem()
+      const options = {
+        problem,
+        controller: {} as never,
+        artifactStore: {} as never,
+        evaluateCombination: (() => {}) as never,
+      }
+
+      const cert = createDominanceCertificate(options, {
+        dominatingStateId: 'state:winner',
+        dominatedStateId: 'state:loser',
+        dominatingEvidenceDigest: 'evidence:winner',
+        dominatedEvidenceDigest: 'evidence:loser',
+        signatureGroupKey: 'flower+plume',
+        stepIndex: 42,
+        frontierBlockIds: ['block-1', 'block-2'],
+      })
+
+      expect(cert.certKind).toBe('DominanceCert')
+      expect(cert.problemId).toBe('problem-id')
+      expect(cert.referencedStateIds).toEqual(['state:winner', 'state:loser'])
+      expect(cert.referencedBlockIds).toEqual(['block-1', 'block-2'])
+      expect(cert.emittedAtStep).toBe(42)
+      expect(cert.payload.dominatingStateId).toBe('state:winner')
+      expect(cert.payload.dominatedStateId).toBe('state:loser')
+      expect(cert.payload.comparisonDigest).toBeTruthy()
+      expect(cert.payload.exactSignatureGroupKeyDigest).toContain('flower+plume')
+      expect(cert.payload.compatibilityInclusionDigest).toBeTruthy()
+      expect(cert.payload.monotoneProjectionDigest).toBeTruthy()
+      expect(cert.payload.upperBoundProfileDigest).toBeTruthy()
+      expect(cert.payload.strengthComparisonDigest).toBeTruthy()
+
+      // Must pass the existing cert validator
+      const validation = validateLapicCertificate(cert)
+      expect(validation.ok).toBe(true)
+    })
+  })
 })

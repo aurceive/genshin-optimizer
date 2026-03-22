@@ -2,6 +2,7 @@ import type {
   LapicBoundPrunePayload,
   LapicBranchReachabilityPayload,
   LapicCertificate,
+  LapicDominancePayload,
   LapicFinalOptimalityPayload,
 } from '@genshin-optimizer/lapic/cert'
 import type { LapicBoundedExactBestCandidate } from './combination'
@@ -225,6 +226,77 @@ export function createInfeasibilityCertificate(
       witnessDigest: `witness:infeasible:${options.problem.problemDigest}`,
       affectedBlockIds: [...frontierBlockIds],
       replayPathRequirement: 'bounded-cartesian-exhaustion',
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dominance certificate
+// ---------------------------------------------------------------------------
+
+/** Context for creating a dominance certificate. */
+export interface LapicDominanceCertificateContext {
+  /** State ID of the dominating (superior) candidate combination. */
+  readonly dominatingStateId: string
+  /** State ID of the dominated (inferior) candidate combination. */
+  readonly dominatedStateId: string
+  /** Evidence digest of the dominating evaluation. */
+  readonly dominatingEvidenceDigest: string
+  /** Evidence digest of the dominated evaluation. */
+  readonly dominatedEvidenceDigest: string
+  /** Signature group key shared by both combinations (e.g., same slot partition). */
+  readonly signatureGroupKey: string
+  /** Sequential step counter for ordering certificates. */
+  readonly stepIndex: number
+  /** Frontier block IDs referenced by this dominance decision. */
+  readonly frontierBlockIds: readonly string[]
+}
+
+export function createDominanceCertificate(
+  options: LapicBoundedExactSolveOptions,
+  context: LapicDominanceCertificateContext
+): LapicCertificate<LapicDominancePayload> {
+  const comparisonDigest =
+    `dominance:${context.dominatingStateId}>${context.dominatedStateId}:${options.problem.problemDigest}`
+  const signatureDigest =
+    `sig-group:${context.signatureGroupKey}:${options.problem.problemDigest}`
+
+  return {
+    certId: `cert:dominance:${options.problem.problemDigest}:step-${context.stepIndex}`,
+    certKind: 'DominanceCert',
+    schemaVersion: '0.1.0-draft',
+    problemId: options.problem.problemId,
+    arithmeticPolicyId: options.problem.arithmeticPolicyId,
+    decisionClass: 'dominance-prune',
+    referencedStateIds: [context.dominatingStateId, context.dominatedStateId],
+    referencedBlockIds: [...context.frontierBlockIds],
+    referencedRegionIds: [],
+    referencedRelaxIds: [],
+    incumbentDigest: context.dominatingEvidenceDigest,
+    evidenceDigest: comparisonDigest,
+    replayRecipe: {
+      requiredIrObjects: [options.problem.objective.expressionDigest],
+      requiredRegionPredicates: [],
+      arithmeticMode: 'exact',
+      replayPathKind: 'single-certificate',
+      exactComparisonRule: 'stable-ordering',
+      expectedVerdict: 'matched',
+    },
+    emittedAtStep: context.stepIndex,
+    validationStatus: 'validated',
+    payload: {
+      dominatingStateId: context.dominatingStateId,
+      dominatedStateId: context.dominatedStateId,
+      comparisonDigest,
+      exactSignatureGroupKeyDigest: signatureDigest,
+      compatibilityInclusionDigest:
+        `compat:${context.dominatingStateId}:${context.dominatedStateId}`,
+      monotoneProjectionDigest:
+        `monotone:${options.problem.objective.expressionDigest}`,
+      upperBoundProfileDigest:
+        `ub-profile:${context.dominatingEvidenceDigest}`,
+      strengthComparisonDigest:
+        `strength:${context.dominatingEvidenceDigest}>${context.dominatedEvidenceDigest}`,
     },
   }
 }

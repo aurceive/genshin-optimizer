@@ -29,6 +29,7 @@ import type {
   LapicSolveCompletionResult,
 } from '@genshin-optimizer/lapic/runtime'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
+import type { GiLapicCandidateVariableExtractor } from './bound-maps'
 
 export const giLapicAdapterPackageName = 'gi-lapic-adapter'
 export const giLapicAdapterSchemaVersion = '0.1.0-draft'
@@ -152,6 +153,12 @@ export interface GiLapicBoundedCurrentOnlySolveOptions {
   readonly isCombinationFeasible?: GiLapicBoundedCurrentOnlyFeasibilityEvaluator
   readonly maxCombinationCount?: number
   readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
+  /**
+   * Optional extractor that maps each candidate to its F-IR variable values.
+   * When provided and `computeUpperBound` is absent, the adapter automatically
+   * creates a built-in FIR-bound provider using the compiled F-IR graph.
+   */
+  readonly candidateVariableExtractor?: GiLapicCandidateVariableExtractor
 }
 
 export interface GiLapicBoundedCurrentOnlySolveResult {
