@@ -143,6 +143,7 @@ interface TrackerSetup {
   readonly resumeFlatIndex: number
   readonly processedCombinationCount: number
   readonly pruningStats: ReturnType<typeof createPruningStatistics>
+  readonly restoredPruneCertificateIds: readonly string[]
 }
 
 function setupTracker(
@@ -171,7 +172,11 @@ function setupTracker(
     ? restorePruningStatistics(options.resumeCheckpointState!.pruningStatistics)
     : createPruningStatistics()
 
-  return { tracker, resumeFlatIndex, processedCombinationCount, pruningStats }
+  const restoredPruneCertificateIds = isResuming
+    ? options.resumeCheckpointState!.pruneCertificateIds ?? []
+    : []
+
+  return { tracker, resumeFlatIndex, processedCombinationCount, pruningStats, restoredPruneCertificateIds }
 }
 
 // ---------------------------------------------------------------------------
@@ -300,13 +305,14 @@ export async function executeLapicBoundedExactSolve(
       resumeFlatIndex,
       processedCombinationCount: initialProcessed,
       pruningStats,
+      restoredPruneCertificateIds,
     } = setupTracker(options, orderedDomains)
 
     let processedCombinationCount = initialProcessed
     let currentFlatIndex = 0
     let pauseDetected = false
-    let pruneCertStepCounter = 0
-    const pruneCertificateIds: string[] = []
+    let pruneCertStepCounter = restoredPruneCertificateIds.length
+    const pruneCertificateIds: string[] = [...restoredPruneCertificateIds]
 
     // Build a comparator for bound-vs-threshold checks.
     const explicitComparator = options.compareEvaluations
@@ -466,7 +472,8 @@ export async function executeLapicBoundedExactSolve(
         tracker.snapshot(),
         createLapicSolveCursorPosition(currentFlatIndex),
         frontierBlockIds,
-        snapshotPruningStatistics(pruningStats)
+        snapshotPruningStatistics(pruningStats),
+        pruneCertificateIds
       )
       const checkpointContentHash =
         `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`

@@ -41,6 +41,7 @@ export interface LapicSolveCheckpointState {
   readonly frontierBlockIds: readonly string[]
   readonly phase: 'join'
   readonly pruningStatistics?: LapicPruningStatisticsSnapshot
+  readonly pruneCertificateIds?: readonly string[]
 }
 
 export function createLapicSolveCheckpointState(
@@ -50,7 +51,8 @@ export function createLapicSolveCheckpointState(
   trackerSnapshot: LapicTopNTrackerSnapshot,
   cursorPosition: LapicSolveCursorPosition,
   frontierBlockIds: readonly string[],
-  pruningStatistics?: LapicPruningStatisticsSnapshot
+  pruningStatistics?: LapicPruningStatisticsSnapshot,
+  pruneCertificateIds?: readonly string[]
 ): LapicSolveCheckpointState {
   return {
     checkpointKind: 'solve-position',
@@ -62,6 +64,7 @@ export function createLapicSolveCheckpointState(
     frontierBlockIds: [...frontierBlockIds],
     phase: 'join',
     pruningStatistics,
+    pruneCertificateIds: pruneCertificateIds ? [...pruneCertificateIds] : undefined,
   }
 }
 
