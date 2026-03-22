@@ -673,13 +673,13 @@ The existing pando and wr code should not be coupled directly into search intern
 
 Temporary elements are allowed only if they are fully compatible with the target architecture.
 
-Currently acceptable temporary elements:
+Acceptable temporary elements:
 
 - a reduced set of relaxation providers, if the provider interface already supports the full target stack,
 - a simplified block store implementation, if it already uses the final block and schema contracts,
 - a subset of diagnostic views, if trace data is already captured in final form.
 
-Currently unacceptable temporary elements:
+Unacceptable temporary elements:
 
 - brute-force fallback paths that bypass certificates,
 - heuristic pruning without replayable proof,

@@ -133,13 +133,7 @@ The roadmap is split into eight implementation phases.
 
 These phases overlap, but their gate ordering is strict.
 
-Current repository execution is no longer limited to phase 1 scaffolding.
-
-Phase 1 foundations have already been materially established for the active lapic package set.
-
-lapic storage, runtime, and debug now also have materially executable validation and session-control surfaces rather than type-only placeholders, and the active implementation stream has already closed several determinism and optional-shape correctness gaps in those packages.
-
-The largest remaining gap between the current repository state and a first engine path that can actually solve an optimization problem is no longer package scaffolding. It is the absence of the first production-shaped exact search path that connects:
+The first executable solve slice that connects all phases for GI current-only optimization requires:
 
 - canonical GI export,
 - correctness-kernel IR and certificate machinery,
@@ -147,9 +141,9 @@ The largest remaining gap between the current repository state and a first engin
 - runtime work planning and scheduling,
 - and final optimality closure.
 
-Accordingly, phases 2 through 4 and 6 remain incomplete, but the next highest-value milestone is not more isolated infrastructure polish. It is the first executable solve slice through those phases for GI current-only optimization.
+This end-to-end path is the highest-value milestone for the roadmap. It validates the full phase chain before broadening scope to additional game adapters or advanced relaxation layers.
 
-As a prerequisite hygiene step for that solve slice, the active lapic packages should stop accumulating additional behavior into index.ts monoliths. Internal module decomposition should happen before the first search-path implementation materially increases those files again.
+Internal module decomposition within each lapic package should precede major search-path additions. Package entrypoints must remain thin facades per the repository code-structure rules.
 
 ## 7. Phase 1: Foundations
 

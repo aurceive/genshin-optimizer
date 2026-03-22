@@ -155,7 +155,7 @@ The adapter must provide enough metadata for offline replay to reconstruct the e
 
 ### 6.1 Supported Formula Backends
 
-The repository currently exposes two formula families.
+The repository exposes two formula families.
 
 - GI legacy Waverider formula graph and solver path.
 - Pando-based calculators for GI, SR, and ZZZ.
@@ -202,15 +202,15 @@ The GI adapter must support:
 - Pando-backed formula integration where available,
 - TC-related subproblem integration through separate explicit adapter paths.
 
-### 8.2 Current Repository Integration Points
+### 8.2 Repository Integration Points
 
-The current repository exposes:
+The repository exposes:
 
 - Waverider optimization nodes and preprocessing in libs/gi/wr,
 - legacy exact artifact solver API in libs/gi/solver,
 - Pando-based GI calculator construction in libs/gi/formula.
 
-The new adapter architecture must acknowledge that GI currently straddles both legacy and newer formula systems.
+The adapter architecture must acknowledge that GI straddles both legacy and newer formula systems.
 
 ### 8.3 GI Canonical Entity Model
 
