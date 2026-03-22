@@ -8,6 +8,7 @@ export * from './solve'
 export * from './fir-bound'
 export * from './lp-bound'
 export * from './worker'
+export * from './scheduler'
 
 export {
   createLapicArtifactRef,
