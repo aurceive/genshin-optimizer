@@ -42,6 +42,18 @@ export {
 } from './pool'
 
 export type {
+  LapicMessagePortLike,
+  LapicPortCoordinatorEnvelope,
+  LapicPortWorkerEnvelope,
+  LapicWorkerEntryConfig,
+} from './message-port'
+
+export {
+  createMessagePortWorkerHandle,
+  createWorkerEntryHandler,
+} from './message-port'
+
+export type {
   LapicCoordinatedSolveConfig,
   LapicCoordinatedSolveResult,
 } from './coordinator'
