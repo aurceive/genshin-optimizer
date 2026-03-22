@@ -91,6 +91,11 @@ export function createSolveOrchestration(
     artifactStore: config.artifactStore,
   })
 
+  // The orchestrator manages failures via start() return value,
+  // so suppress unhandled rejections from the controller's
+  // internal completion promise.
+  controller.awaitCompletion().catch(() => {})
+
   let currentState: LapicOrchestrationState = 'created'
   let started = false
 
