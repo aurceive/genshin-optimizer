@@ -11,7 +11,6 @@
  * access to the GI calculation engine (OptNode evaluation, stat computation).
  */
 
-import type { MainStatKey } from '@genshin-optimizer/gi/consts'
 import type {
   ArtSetExclusion,
   ICachedArtifact,
@@ -100,8 +99,8 @@ export interface GiLapicConfigFactoryInput {
   readonly mainStatAssumptionLevel?: number
 
   // ---- Normalization input (pre-built) ----
-  /** Pre-built normalization input. When provided, skips internal normalization. */
-  readonly normalizationInput?: LapicProblemNormalizationInput
+  /** Pre-built normalization input from `createGiLapicProblemNormalizationInput()`. */
+  readonly normalizationInput: LapicProblemNormalizationInput
 
   // ---- Evaluators (required) ----
   /** Evaluator that scores a candidate combination. */
@@ -216,7 +215,7 @@ export function createGiLapicOrchestrationConfigFromUi(
     constraints,
     exclusion: artSetExclusion,
     topN,
-    plotBase: input.plotBase,
+    ...(input.plotBase !== undefined ? { plotBase: input.plotBase } : {}),
     statFilters: input.optConfig.statFilters,
     mainStatKeys: input.mainStatKeys ?? {
       sands: [],
@@ -233,60 +232,8 @@ export function createGiLapicOrchestrationConfigFromUi(
     mainStatAssumptionLevel: input.mainStatAssumptionLevel ?? 0,
   }
 
-  // ---- Build normalization input (use pre-built or create minimal) ----
-  const normalizationInput: LapicProblemNormalizationInput =
-    input.normalizationInput ?? {
-      teamLayout: {
-        teamSize: 1,
-        activeCharacterIndex: 0,
-        characterDescriptors: [
-          { characterId: input.problemId, role: 'on-field' },
-        ],
-      },
-      slotDescriptors: [
-        { slotId: 'flower', slotLabel: 'Flower of Life' },
-        { slotId: 'plume', slotLabel: 'Plume of Death' },
-        { slotId: 'sands', slotLabel: 'Sands of Eon' },
-        { slotId: 'goblet', slotLabel: 'Goblet of Eonothem' },
-        { slotId: 'circlet', slotLabel: 'Circlet of Logos' },
-      ],
-      sharedTeamContext: {
-        elementalResonanceBonuses: [],
-        activeBuffs: [],
-      },
-      itemDomains: [],
-      compatibilityRules: [],
-      objective: {
-        objectiveKind: 'maximize',
-        targetExpression: targetDigest,
-      },
-      constraints: constraints.map((c, i) => ({
-        constraintId: `constraint-${i}`,
-        constraintKind: 'minimum' as const,
-        targetExpression: createGiOptNodeDigest(c.value),
-        bound: String(c.min),
-      })),
-      topN,
-      orderingPolicy: {
-        primaryKey: 'objectiveValue',
-        direction: 'descending',
-      },
-      adapterMetadata: {
-        adapterKind: 'gi',
-        adapterVersion: giLapicAdapterSchemaVersion,
-        corpusId: `gi:${input.problemId}`,
-        migrationState: 'legacyValidated',
-        compilationMode: 'gi-legacy-compatibility',
-        unsupportedFeatures: [],
-        filterTransformationLog: [],
-        replayReconstructionHints: [],
-      },
-      provenance: {
-        sourceApplication: 'genshin-optimizer',
-        sourceVersion: giLapicAdapterSchemaVersion,
-        createdAt: new Date().toISOString(),
-      },
-    }
+  // ---- Build normalization input ----
+  const normalizationInput = input.normalizationInput
 
   // ---- Build adapter request ----
   const request: GiLapicAdapterRequest = {
@@ -321,11 +268,21 @@ export function createGiLapicOrchestrationConfigFromUi(
     canonicalIdentity,
     artifactStore: input.artifactStore ?? createLapicMemoryArtifactStore(),
     evaluateCombination: input.evaluateCombination,
-    compareEvaluations: input.compareEvaluations,
-    isCombinationFeasible: input.isCombinationFeasible,
-    maxCombinationCount: input.maxCombinationCount,
-    computeUpperBound: input.computeUpperBound,
-    candidateVariableExtractor: input.candidateVariableExtractor,
-    sessionId: input.sessionId,
-  }
+    ...(input.compareEvaluations !== undefined && {
+      compareEvaluations: input.compareEvaluations,
+    }),
+    ...(input.isCombinationFeasible !== undefined && {
+      isCombinationFeasible: input.isCombinationFeasible,
+    }),
+    ...(input.maxCombinationCount !== undefined && {
+      maxCombinationCount: input.maxCombinationCount,
+    }),
+    ...(input.computeUpperBound !== undefined && {
+      computeUpperBound: input.computeUpperBound,
+    }),
+    ...(input.candidateVariableExtractor !== undefined && {
+      candidateVariableExtractor: input.candidateVariableExtractor,
+    }),
+    ...(input.sessionId !== undefined && { sessionId: input.sessionId }),
+  } satisfies GiLapicSolveOrchestrationConfig
 }

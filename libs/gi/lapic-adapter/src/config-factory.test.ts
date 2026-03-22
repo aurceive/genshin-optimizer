@@ -1,5 +1,6 @@
 import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
+import type { LapicTeamProvenance } from '@genshin-optimizer/lapic/core'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
 import { createGiLapicOrchestrationConfigFromUi } from './config-factory'
 import type { GiLapicConfigFactoryInput } from './config-factory'
@@ -45,6 +46,79 @@ function createAllSlotArtifacts(): ICachedArtifact[] {
   )
 }
 
+function createNormalizationInput() {
+  const provenance: LapicTeamProvenance = {
+    teamLayoutDigest: 'team-layout-digest',
+    sharedTeamContextDigest: 'shared-context-digest',
+    crossSlotRuleDescriptorVersion: '0.1.0-draft',
+    compatibilitySignatureSchemaVersion: '0.1.0-draft',
+    slotProvenance: [],
+  }
+  return {
+    teamLayout: {
+      teamKind: 'gi-single',
+      slotCount: 5,
+      slotIds: ['flower', 'plume', 'sands', 'goblet', 'circlet'],
+      slotRoleTaxonomy: ['artifact'],
+      slotRequirements: {
+        flower: 'required',
+        plume: 'required',
+        sands: 'required',
+        goblet: 'required',
+        circlet: 'required',
+      },
+      slotOrderSemantics: 'semantic',
+      frameAxisKind: 'none',
+    },
+    slotDescriptors: [
+      {
+        slotId: 'flower',
+        slotRole: 'artifact-flower',
+        participationMode: 'optimizedBuild',
+        occupantDomainId: 'artifact-domain',
+        equipmentOwnershipModel: 'hard-reserved-inventory',
+        contributesToObjective: true,
+        contributesToConstraints: true,
+        mayRemainEmpty: false,
+      },
+    ],
+    sharedTeamContext: {
+      adapterSemanticMode: 'gi-legacy-validated',
+      aggregateFacts: {},
+      metadata: {},
+    },
+    itemDomains: [
+      {
+        domainId: 'artifact-domain',
+        slotId: 'flower',
+        candidates: [],
+      },
+    ],
+    compatibilityRules: [],
+    objective: {
+      objectiveId: 'objective',
+      objectiveKind: 'single-slot',
+      expressionDigest: 'objective-digest',
+      targetSlotIds: ['flower'],
+      frameIds: [],
+    },
+    constraints: [],
+    topN: 5,
+    orderingPolicy: {
+      tieBreakDimensions: ['value'],
+      canonicalCandidateOrdering: ['value'],
+    },
+    adapterMetadata: {
+      adapterKind: 'gi-wr',
+      adapterVersion: '0.1.0-draft',
+      sourceSnapshotDigests: ['artifact-snapshot-digest'],
+      declaredUnsupportedFeatures: [],
+      metadata: {},
+    },
+    provenance,
+  } as const
+}
+
 const dummyEvaluator: GiLapicBoundedCurrentOnlyCombinationEvaluator = (
   _combination,
   _canonicalExport
@@ -66,6 +140,7 @@ function createMinimalInput(
     artifacts: createAllSlotArtifacts(),
     optimizationTarget: {} as OptNode,
     optConfig: { statFilters: {} } as OptConfig,
+    normalizationInput: createNormalizationInput() as any,
     evaluateCombination: dummyEvaluator,
     ...overrides,
   }
@@ -295,9 +370,9 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
     expect(config.sessionId).toBeUndefined()
   })
 
-  // ---- Pre-built normalization input ----
+  // ---- Normalization input ----
 
-  it('uses pre-built normalization input when provided', () => {
+  it('uses provided normalization input', () => {
     const customNorm = { topN: 99 } as any
     const config = createGiLapicOrchestrationConfigFromUi(
       createMinimalInput({ normalizationInput: customNorm })
@@ -319,7 +394,7 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
 
   // ---- Constraints ----
 
-  it('maps constraints into normalization input', () => {
+  it('maps constraints into optimization request', () => {
     const constraints = [
       { value: {} as OptNode, min: 1000 },
       { value: {} as OptNode, min: 50 },
@@ -331,7 +406,6 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
     expect(
       config.request.giContext!.optimizationRequest.constraints
     ).toHaveLength(2)
-    expect(config.request.normalizationInput.constraints).toHaveLength(2)
   })
 
   // ---- Requested potential solve modes ----
