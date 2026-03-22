@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest'
 import { LapicFirGraphBuilder } from '../fir/builders'
 import { analyzeLapicFirGraph } from './analysis'
 import { inferForcedBranches } from './branch-inference'

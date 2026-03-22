@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest'
 import {
   LAPIC_INTERVAL_EMPTY,
   LAPIC_INTERVAL_REAL,
