@@ -1,6 +1,7 @@
 import {
   type LapicCanonicalProblem,
   type LapicExactSignatureGroupKey,
+  createFrameAxisIdentity,
   createLapicCompatibilitySignature,
   createLapicExactSignatureGroupKeyFromCompatibilitySignature,
   createLapicExactSignatureGroupOrderingKey,
@@ -24,13 +25,6 @@ interface LapicFrontierGroupAccumulator {
   readonly adapterSemanticMode: string
   readonly frameAxisIdentityDigest: string
   readonly discreteTeamModeKey?: string
-}
-
-export function createFrameAxisIdentity(problem: LapicCanonicalProblem) {
-  return {
-    axisKind: problem.teamLayout.frameAxisKind,
-    frameIds: problem.frameAxis.map((frame) => frame.frameId),
-  } as const
 }
 
 export function createFrontierBlockForDomain(

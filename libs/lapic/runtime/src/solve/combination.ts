@@ -125,36 +125,11 @@ export function compareEvaluations(
   return compareStringArrays(leftOrderingKey, rightOrderingKey)
 }
 
-export function hasExclusiveResourceConflict(
-  candidates: readonly LapicCandidateDescriptor[]
-): boolean {
-  const seenClaims = new Set<string>()
-
-  for (const candidate of candidates) {
-    for (const claim of candidate.provenance.exclusiveResourceClaims) {
-      const claimKey = [claim.resourceKind, claim.resourceId].join('|')
-      if (seenClaims.has(claimKey)) return true
-      seenClaims.add(claimKey)
-    }
-  }
-
-  return false
-}
-
 export function normalizeFeasibilityResult(
   result: boolean | LapicValidationResult<boolean>
 ): LapicValidationResult<boolean> {
   if (typeof result === 'boolean') return createLapicSuccessResult(result)
   return result
-}
-
-export function createCombinationStateId(
-  problem: LapicCanonicalProblem,
-  candidates: readonly LapicCandidateDescriptor[]
-): string {
-  return `state:${problem.problemDigest}:${candidates
-    .map((candidate) => `${candidate.slotId}:${candidate.candidateId}`)
-    .join('|')}`
 }
 
 export function sortDomains(problem: LapicCanonicalProblem) {

@@ -3,7 +3,9 @@ import {
   type LapicCandidateDescriptor,
   type LapicDiagnostic,
   analyzeLapicFirGraph,
+  createCombinationStateId,
   createLapicDiagnostic,
+  hasExclusiveResourceConflict,
   inferForcedBranches,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
@@ -22,8 +24,6 @@ import {
 } from './checkpoint-state'
 import {
   compareEvaluations,
-  createCombinationStateId,
-  hasExclusiveResourceConflict,
   normalizeFeasibilityResult,
   sortDomains,
   validateSolveOptions,
