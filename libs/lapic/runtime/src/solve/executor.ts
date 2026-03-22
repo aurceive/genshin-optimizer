@@ -2,13 +2,16 @@ import { createLapicFinalOptimalitySummary } from '@genshin-optimizer/lapic/cert
 import {
   type LapicCandidateDescriptor,
   type LapicDiagnostic,
+  analyzeLapicFirGraph,
   createLapicDiagnostic,
+  inferForcedBranches,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
 import { LapicSessionFailureError } from '../session/completion'
 import type { LapicSolveCompletionResult } from '../types'
 import {
   createBoundPruneCertificate,
+  createBranchReachabilityCertificate,
   createFinalOptimalityCertificate,
   createInfeasibilityCertificate,
 } from './certificate'
@@ -144,6 +147,7 @@ interface TrackerSetup {
   readonly processedCombinationCount: number
   readonly pruningStats: ReturnType<typeof createPruningStatistics>
   readonly restoredPruneCertificateIds: readonly string[]
+  readonly restoredBranchReachabilityCertificateIds: readonly string[]
 }
 
 function setupTracker(
@@ -176,7 +180,18 @@ function setupTracker(
     ? options.resumeCheckpointState!.pruneCertificateIds ?? []
     : []
 
-  return { tracker, resumeFlatIndex, processedCombinationCount, pruningStats, restoredPruneCertificateIds }
+  const restoredBranchReachabilityCertificateIds = isResuming
+    ? options.resumeCheckpointState!.branchReachabilityCertificateIds ?? []
+    : []
+
+  return {
+    tracker,
+    resumeFlatIndex,
+    processedCombinationCount,
+    pruningStats,
+    restoredPruneCertificateIds,
+    restoredBranchReachabilityCertificateIds,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +202,8 @@ async function completeSolve(
   options: LapicBoundedExactSolveOptions,
   tracker: ReturnType<typeof createResumableTopNTracker>,
   frontierBlockIds: readonly string[],
-  pruneCertificateIds: readonly string[] = []
+  pruneCertificateIds: readonly string[] = [],
+  branchReachabilityCertificateIds: readonly string[] = []
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -306,6 +322,7 @@ export async function executeLapicBoundedExactSolve(
       processedCombinationCount: initialProcessed,
       pruningStats,
       restoredPruneCertificateIds,
+      restoredBranchReachabilityCertificateIds,
     } = setupTracker(options, orderedDomains)
 
     let processedCombinationCount = initialProcessed
@@ -313,6 +330,35 @@ export async function executeLapicBoundedExactSolve(
     let pauseDetected = false
     let pruneCertStepCounter = restoredPruneCertificateIds.length
     const pruneCertificateIds: string[] = [...restoredPruneCertificateIds]
+    const branchReachabilityCertificateIds: string[] = [...restoredBranchReachabilityCertificateIds]
+
+    // --- A-IR branch reachability inference (pre-solve static analysis) ---
+    if (options.firGraph && !isResuming) {
+      const airGraph = analyzeLapicFirGraph(options.firGraph)
+      const forcedBranches = inferForcedBranches(airGraph)
+      for (let i = 0; i < forcedBranches.length; i++) {
+        const evidence = forcedBranches[i]!
+        const branchCert = createBranchReachabilityCertificate(options, {
+          branchNodeId: evidence.branchNodeId,
+          guardNodeId: evidence.guardNodeId,
+          forcedArm: evidence.forcedArm,
+          guardLower: evidence.guardLower,
+          guardUpper: evidence.guardUpper,
+          validityRegionId: evidence.parentRegionId,
+          stepIndex: i + 1,
+        })
+        await persistArtifact(
+          options,
+          'certificate',
+          branchCert.certId,
+          branchCert.evidenceDigest,
+          branchCert,
+          frontierBlockIds
+        )
+        options.controller.emitCertificate(branchCert)
+        branchReachabilityCertificateIds.push(branchCert.certId)
+      }
+    }
 
     // Build a comparator for bound-vs-threshold checks.
     const explicitComparator = options.compareEvaluations
@@ -473,7 +519,8 @@ export async function executeLapicBoundedExactSolve(
         createLapicSolveCursorPosition(currentFlatIndex),
         frontierBlockIds,
         snapshotPruningStatistics(pruningStats),
-        pruneCertificateIds
+        pruneCertificateIds,
+        branchReachabilityCertificateIds
       )
       const checkpointContentHash =
         `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
@@ -488,7 +535,7 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds)
+    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds, branchReachabilityCertificateIds)
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
     const message = error instanceof Error ? error.message : 'Unknown bounded solve failure.'

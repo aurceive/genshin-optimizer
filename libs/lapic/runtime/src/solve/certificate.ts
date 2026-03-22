@@ -1,10 +1,77 @@
 import type {
   LapicBoundPrunePayload,
+  LapicBranchReachabilityPayload,
   LapicCertificate,
   LapicFinalOptimalityPayload,
 } from '@genshin-optimizer/lapic/cert'
 import type { LapicBoundedExactBestCandidate } from './combination'
 import type { LapicBoundedExactSolveOptions } from './types'
+
+// ---------------------------------------------------------------------------
+// Branch-reachability certificate
+// ---------------------------------------------------------------------------
+
+/** Context for creating a branch-reachability certificate. */
+export interface LapicBranchReachabilityCertificateContext {
+  /** F-IR node ID of the thresholdSelect whose branch is forced. */
+  readonly branchNodeId: string
+  /** F-IR node ID of the guard predicate. */
+  readonly guardNodeId: string
+  /** Which arm is proven reachable. Mapped to payload's 'left'/'right'. */
+  readonly forcedArm: 'then' | 'else'
+  /** Guard lower bound (evidence). */
+  readonly guardLower?: number
+  /** Guard upper bound (evidence). */
+  readonly guardUpper?: number
+  /** A-IR region ID where this forcing is valid. */
+  readonly validityRegionId: string
+  /** Sequential step counter for ordering certificates. */
+  readonly stepIndex: number
+}
+
+export function createBranchReachabilityCertificate(
+  options: LapicBoundedExactSolveOptions,
+  context: LapicBranchReachabilityCertificateContext
+): LapicCertificate<LapicBranchReachabilityPayload> {
+  const branchPredicateDigest =
+    `branch:${context.branchNodeId}:guard:${context.guardNodeId}:${options.problem.problemDigest}`
+  const exactBoundsDigest =
+    context.guardLower !== undefined && context.guardUpper !== undefined
+      ? `bounds:[${context.guardLower},${context.guardUpper}]:${context.guardNodeId}`
+      : undefined
+  // Map 'then'/'else' to the payload's 'left'/'right' convention
+  const selectedArm: 'left' | 'right' = context.forcedArm === 'then' ? 'left' : 'right'
+
+  return {
+    certId: `cert:branch-reach:${options.problem.problemDigest}:${context.branchNodeId}:step-${context.stepIndex}`,
+    certKind: 'BranchReachabilityCert',
+    schemaVersion: '0.1.0-draft',
+    problemId: options.problem.problemId,
+    arithmeticPolicyId: options.problem.arithmeticPolicyId,
+    decisionClass: 'exact-prune',
+    referencedStateIds: [],
+    referencedBlockIds: [],
+    referencedRegionIds: [context.validityRegionId],
+    referencedRelaxIds: [],
+    evidenceDigest: exactBoundsDigest ?? branchPredicateDigest,
+    replayRecipe: {
+      requiredIrObjects: [options.problem.objective.expressionDigest],
+      requiredRegionPredicates: [context.validityRegionId],
+      arithmeticMode: 'exact',
+      replayPathKind: 'single-certificate',
+      exactComparisonRule: 'stable-ordering',
+      expectedVerdict: 'matched',
+    },
+    emittedAtStep: context.stepIndex,
+    validationStatus: 'validated',
+    payload: {
+      branchPredicateDigest,
+      exactBoundsDigest,
+      selectedArm,
+      validityRegionId: context.validityRegionId,
+    },
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Bound-prune certificate

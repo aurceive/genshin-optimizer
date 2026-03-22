@@ -1,3 +1,5 @@
 export * from './types'
 export { analyzeLapicFirGraph } from './analysis'
 export { validateLapicAirGraph } from './validation'
+export { inferForcedBranches } from './branch-inference'
+export type { LapicForcedBranchEvidence } from './branch-inference'

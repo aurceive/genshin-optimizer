@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LapicFirGraphBuilder } from '../fir/builders'
 import { analyzeLapicFirGraph } from './analysis'
+import { inferForcedBranches } from './branch-inference'
 import { validateLapicAirGraph } from './validation'
 
 // ---------------------------------------------------------------------------
@@ -271,6 +272,87 @@ describe('A-IR analysis engine', () => {
 
       // Root sufficient variables match F-IR's variable set
       expect(airGraph.rootRequiredVariables.size).toBe(5)
+    })
+  })
+
+  describe('branch inference', () => {
+    it('detects forced then-branch when guard lower bound >= threshold', () => {
+      const { airGraph } = buildAndAnalyze((b) =>
+        b.thresholdSelect(
+          b.constant(10), // guard = 10, always >= 5
+          5,
+          b.constant(100),
+          b.constant(0)
+        )
+      )
+
+      const forced = inferForcedBranches(airGraph)
+      expect(forced).toHaveLength(1)
+      expect(forced[0]!.forcedArm).toBe('then')
+      expect(forced[0]!.guardLower).toBe(10)
+      expect(forced[0]!.guardUpper).toBe(10)
+    })
+
+    it('detects forced else-branch when guard upper bound < threshold', () => {
+      const { airGraph } = buildAndAnalyze((b) =>
+        b.thresholdSelect(
+          b.constant(3), // guard = 3, always < 5
+          5,
+          b.constant(100),
+          b.constant(0)
+        )
+      )
+
+      const forced = inferForcedBranches(airGraph)
+      expect(forced).toHaveLength(1)
+      expect(forced[0]!.forcedArm).toBe('else')
+    })
+
+    it('returns empty when neither branch is forced', () => {
+      const { airGraph } = buildAndAnalyze((b) =>
+        b.thresholdSelect(
+          b.read('x'), // variable guard → both branches possible
+          5,
+          b.constant(100),
+          b.constant(0)
+        )
+      )
+
+      const forced = inferForcedBranches(airGraph)
+      expect(forced).toHaveLength(0)
+    })
+
+    it('detects multiple forced branches in a complex graph', () => {
+      const { airGraph } = buildAndAnalyze((b) => {
+        const branch1 = b.thresholdSelect(
+          b.constant(10), 5,
+          b.read('x'), b.constant(0)
+        )
+        const branch2 = b.thresholdSelect(
+          b.constant(1), 5,
+          b.constant(100), b.read('y')
+        )
+        return b.add(branch1, branch2)
+      })
+
+      const forced = inferForcedBranches(airGraph)
+      expect(forced).toHaveLength(2)
+      expect(forced.some((f) => f.forcedArm === 'then')).toBe(true)
+      expect(forced.some((f) => f.forcedArm === 'else')).toBe(true)
+    })
+
+    it('includes region IDs in evidence', () => {
+      const { airGraph } = buildAndAnalyze((b) =>
+        b.thresholdSelect(
+          b.constant(10), 5,
+          b.constant(100), b.constant(0)
+        )
+      )
+
+      const forced = inferForcedBranches(airGraph)
+      expect(forced[0]!.parentRegionId).toMatch(/^region:threshold:/)
+      expect(forced[0]!.feasibleRegionId).toMatch(/:then$/)
+      expect(forced[0]!.infeasibleRegionId).toMatch(/:else$/)
     })
   })
 

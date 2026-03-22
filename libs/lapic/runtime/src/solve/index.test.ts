@@ -1,5 +1,6 @@
 import {
   type LapicCanonicalProblem,
+  LapicFirGraphBuilder,
   createLapicDiagnostic,
   createLapicFailureResult,
   createLapicSuccessResult,
@@ -896,5 +897,126 @@ describe('lapic bounded exact solve executor', () => {
     expect(
       (finalCert.payload as Record<string, unknown>).thresholdPruneSummaryDigest
     ).not.toContain('none')
+  })
+
+  it('emits BranchReachabilityCert when firGraph has forced branches', async () => {
+    const { store, controller } = createController()
+
+    // Build a F-IR graph with a forced thresholdSelect (guard=10, threshold=5 → then forced)
+    const b = new LapicFirGraphBuilder()
+    const guardId = b.constant(10)
+    const thenId = b.read('x')
+    const elseId = b.constant(0)
+    const rootId = b.thresholdSelect(guardId, 5, thenId, elseId)
+    const firGraph = b.build(rootId)
+
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      firGraph,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    // Should have BranchReachabilityCert(s)
+    const branchCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BranchReachabilityCert'
+    )
+    expect(branchCerts.length).toBeGreaterThanOrEqual(1)
+
+    // Verify BranchReachabilityCert structure
+    const branchCert = branchCerts[0]!
+    expect(branchCert.decisionClass).toBe('exact-prune')
+    expect(branchCert.validationStatus).toBe('validated')
+    expect(branchCert.payload).toHaveProperty('branchPredicateDigest')
+    expect(branchCert.payload).toHaveProperty('selectedArm')
+    expect(branchCert.payload).toHaveProperty('validityRegionId')
+  })
+
+  it('does not emit BranchReachabilityCert when firGraph is absent', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+
+    const branchCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BranchReachabilityCert'
+    )
+    expect(branchCerts).toHaveLength(0)
+  })
+
+  it('does not emit BranchReachabilityCert when no branches are forced', async () => {
+    const { store, controller } = createController()
+
+    // Build a F-IR graph with NO forced branches (guard is variable)
+    const b = new LapicFirGraphBuilder()
+    const rootId = b.thresholdSelect(b.read('guard'), 5, b.read('x'), b.read('y'))
+    const firGraph = b.build(rootId)
+
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    const completion = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      firGraph,
+      evaluateCombination({ candidates }) {
+        const key = candidates.map((c) => c.candidateId).join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    expect(completion.summary.solveState).toBe('completed')
+    const branchCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'BranchReachabilityCert'
+    )
+    expect(branchCerts).toHaveLength(0)
   })
 })

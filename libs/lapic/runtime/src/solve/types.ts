@@ -3,6 +3,7 @@ import type {
   LapicCanonicalProblem,
   LapicDeterministicOrderingRelation,
   LapicDigest,
+  LapicFirGraph,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
@@ -75,6 +76,10 @@ export interface LapicBoundedExactSolveOptions {
   readonly isCombinationFeasible?: LapicBoundedExactFeasibilityEvaluator
   readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
   readonly maxCombinationCount?: number
+  /** When provided, the executor runs A-IR branch reachability
+   *  analysis on the graph and emits BranchReachabilityCerts
+   *  for all statically forced branches. */
+  readonly firGraph?: LapicFirGraph
   /** When provided, the executor resumes from the given checkpoint state
    *  instead of starting a fresh solve. Frontier blocks are NOT rebuilt. */
   readonly resumeCheckpointState?: LapicSolveCheckpointState
