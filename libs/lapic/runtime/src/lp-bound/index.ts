@@ -9,3 +9,8 @@ export {
   createLapicCascadeBoundProvider,
   createLapicIntervalThenLpCascade,
 } from './cascade'
+export {
+  createLapicHighsProvider,
+  serializeModelToLpFormat,
+} from './highs-provider'
+export type { LapicHighsProviderConfig } from './highs-provider'

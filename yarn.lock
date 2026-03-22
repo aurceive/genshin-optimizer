@@ -13378,6 +13378,7 @@ __metadata:
     eslint-plugin-react-hooks: 5.0.0
     eslint-plugin-unused-imports: ^4.1.4
     gh-pages: ^5.0.0
+    highs: ^1.8.0
     i18next: ^23.6.0
     i18next-browser-languagedetector: ^7.0.1
     i18next-fs-backend: ^2.3.1
@@ -13978,6 +13979,13 @@ __metadata:
   bin:
     he: bin/he
   checksum: 3d4d6babccccd79c5c5a3f929a68af33360d6445587d628087f39a965079d84f18ce9c3d3f917ee1e3978916fc833bb8b29377c3b403f919426f91bc6965e7a7
+  languageName: node
+  linkType: hard
+
+"highs@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "highs@npm:1.8.0"
+  checksum: 4d930ee9aba1028caf7426ac0666a8be179e4abc6a620d392f3abbf30232c9c5daf205ce24cb79c354f283f35154edf697cfb45bd790b3b40ac135bf5a592529
   languageName: node
   linkType: hard
 
