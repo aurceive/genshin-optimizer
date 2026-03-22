@@ -94,6 +94,9 @@
       "@genshin-optimizer/gi/lapic-adapter": [
         "libs/gi/lapic-adapter/src/index.ts"
       ],
+      "@genshin-optimizer/gi/lapic-ui": [
+        "libs/gi/lapic-ui/src/index.ts"
+      ],
       "@genshin-optimizer/gi/keymap": ["libs/gi/keymap/src/index.ts"],
       "@genshin-optimizer/gi/localization": [
         "libs/gi/localization/src/index.ts"
