@@ -1,7 +1,4 @@
-import type {
-  LapicCompressionCodec,
-  LapicPayloadEncoding,
-} from '../types'
+import type { LapicCompressionCodec, LapicPayloadEncoding } from '../types'
 
 /**
  * Generic codec that encodes a domain object to bytes and decodes bytes

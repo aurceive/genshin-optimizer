@@ -10,9 +10,7 @@ import {
   createLapicSessionIdentity,
   createLapicSolveRequest,
 } from '@genshin-optimizer/lapic/runtime'
-import {
-  createLapicMemoryArtifactStore,
-} from '@genshin-optimizer/lapic/storage'
+import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
 import {
   buildGiLapicCanonicalExportFromRequest,
   buildGiLapicDomainVariableMaps,
@@ -216,13 +214,15 @@ describe('gi lapic adapter', () => {
     const request = createGiRequest()
 
     expect(
-      validateGiLapicSourceSnapshotDescriptor(request.giContext.sourceSnapshots).ok
+      validateGiLapicSourceSnapshotDescriptor(request.giContext.sourceSnapshots)
+        .ok
     ).toBe(true)
     expect(
       validateGiLapicInventorySnapshot(request.giContext.inventorySnapshot).ok
     ).toBe(true)
     expect(
-      validateGiLapicOptimizationRequest(request.giContext.optimizationRequest).ok
+      validateGiLapicOptimizationRequest(request.giContext.optimizationRequest)
+        .ok
     ).toBe(true)
     expect(validateGiLapicAdapterContext(request.giContext).ok).toBe(true)
     expect(validateGiLapicAdapterRequest(request).ok).toBe(true)
@@ -330,8 +330,12 @@ describe('gi lapic adapter', () => {
     const domains = createGiLapicCandidateDomains(request.giContext)
 
     expect(domains).toHaveLength(2)
-    expect(domains.find((domain) => domain.slotId === 'flower')?.candidates).toHaveLength(1)
-    expect(domains.find((domain) => domain.slotId === 'plume')?.candidates).toHaveLength(1)
+    expect(
+      domains.find((domain) => domain.slotId === 'flower')?.candidates
+    ).toHaveLength(1)
+    expect(
+      domains.find((domain) => domain.slotId === 'plume')?.candidates
+    ).toHaveLength(1)
   })
 
   it('maps plotBase into auxiliary outputs without changing ordering participation', () => {
@@ -363,7 +367,9 @@ describe('gi lapic adapter', () => {
     const firstOutputs = createGiLapicAuxiliaryOutputs(request)
     const secondOutputs = createGiLapicAuxiliaryOutputs(otherRequest)
 
-    expect(firstOutputs[0]?.payloadDigest).not.toBe(secondOutputs[0]?.payloadDigest)
+    expect(firstOutputs[0]?.payloadDigest).not.toBe(
+      secondOutputs[0]?.payloadDigest
+    )
   })
 
   it('creates enriched normalization input from GI request context', () => {
@@ -475,7 +481,9 @@ describe('gi lapic adapter', () => {
       'state:problem-digest:flower:artifact-id'
     )
     expect(artifactStore.snapshot()).toHaveLength(4)
-    expect(artifactStore.snapshot().map((entry) => entry.artifactRef.artifactKind)).toEqual([
+    expect(
+      artifactStore.snapshot().map((entry) => entry.artifactRef.artifactKind)
+    ).toEqual([
       'canonical-problem',
       'frontier-block',
       'frontier-index',
@@ -519,8 +527,12 @@ describe('gi lapic adapter', () => {
 
     expect(result.completion.summary.solveState).toBe('completed')
     expect(result.completion.emittedCertificates).toHaveLength(1)
-    expect(result.completion.emittedCertificates[0]?.certKind).toBe('FinalOptimalityCert')
-    expect(result.completion.emittedCertificates[0]?.referencedStateIds.length).toBeGreaterThanOrEqual(1)
+    expect(result.completion.emittedCertificates[0]?.certKind).toBe(
+      'FinalOptimalityCert'
+    )
+    expect(
+      result.completion.emittedCertificates[0]?.referencedStateIds.length
+    ).toBeGreaterThanOrEqual(1)
   })
 
   it('rejects invalid inventory and optimization request shapes', () => {
@@ -556,9 +568,7 @@ describe('gi lapic adapter', () => {
         {
           domainId: 'gi:plume',
           slotId: 'plume',
-          candidates: [
-            { candidateId: 'plume-a', domainId: 'gi:plume' },
-          ],
+          candidates: [{ candidateId: 'plume-a', domainId: 'gi:plume' }],
         },
       ]
 
@@ -570,15 +580,20 @@ describe('gi lapic adapter', () => {
 
       const maps = buildGiLapicDomainVariableMaps(
         domains,
-        (candidateId: string) => new Map(Object.entries(variableValues[candidateId] ?? {}))
+        (candidateId: string) =>
+          new Map(Object.entries(variableValues[candidateId] ?? {}))
       )
 
       expect(maps).toHaveLength(2)
       expect(maps[0].domainId).toBe('gi:flower')
       expect(maps[0].candidateVariables.size).toBe(2)
-      expect(maps[0].candidateVariables.get('flower-a')?.get('total:hp')).toBe(4780)
+      expect(maps[0].candidateVariables.get('flower-a')?.get('total:hp')).toBe(
+        4780
+      )
       expect(maps[1].domainId).toBe('gi:plume')
-      expect(maps[1].candidateVariables.get('plume-a')?.get('total:atk')).toBe(311)
+      expect(maps[1].candidateVariables.get('plume-a')?.get('total:atk')).toBe(
+        311
+      )
     })
   })
 
@@ -598,7 +613,8 @@ describe('gi lapic adapter', () => {
         ],
         info: {},
       } as OptNode
-      request.giContext.optimizationRequest.optimizationTarget = compilableTarget
+      request.giContext.optimizationRequest.optimizationTarget =
+        compilableTarget
 
       const result = await executeGiLapicBoundedCurrentOnlySolve({
         request,
@@ -611,9 +627,7 @@ describe('gi lapic adapter', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {
@@ -649,7 +663,8 @@ describe('gi lapic adapter', () => {
         ],
         info: {},
       } as OptNode
-      request.giContext.optimizationRequest.optimizationTarget = unsupportedTarget
+      request.giContext.optimizationRequest.optimizationTarget =
+        unsupportedTarget
 
       const result = await executeGiLapicBoundedCurrentOnlySolve({
         request,
@@ -662,9 +677,7 @@ describe('gi lapic adapter', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {
@@ -690,7 +703,12 @@ describe('gi lapic adapter', () => {
       const target: OptNode = {
         operation: 'add',
         operands: [
-          { operation: 'read', operands: [], path: ['x'], info: {} } as unknown as OptNode,
+          {
+            operation: 'read',
+            operands: [],
+            path: ['x'],
+            info: {},
+          } as unknown as OptNode,
           { operation: 'const', operands: [], value: 10, info: {} } as OptNode,
         ],
         info: {},
@@ -773,12 +791,18 @@ describe('gi lapic adapter', () => {
       const compilableTarget: OptNode = {
         operation: 'add',
         operands: [
-          { operation: 'read', operands: [], path: ['x'], info: {} } as unknown as OptNode,
+          {
+            operation: 'read',
+            operands: [],
+            path: ['x'],
+            info: {},
+          } as unknown as OptNode,
           { operation: 'const', operands: [], value: 10, info: {} } as OptNode,
         ],
         info: {},
       } as OptNode
-      request.giContext.optimizationRequest.optimizationTarget = compilableTarget
+      request.giContext.optimizationRequest.optimizationTarget =
+        compilableTarget
 
       const result = await executeGiLapicBoundedCurrentOnlySolve({
         request,
@@ -791,9 +815,7 @@ describe('gi lapic adapter', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {
@@ -827,7 +849,8 @@ describe('gi lapic adapter', () => {
         value: 42,
         info: {},
       } as OptNode
-      request.giContext.optimizationRequest.optimizationTarget = compilableTarget
+      request.giContext.optimizationRequest.optimizationTarget =
+        compilableTarget
 
       let explicitBoundCalled = false
 
@@ -842,9 +865,7 @@ describe('gi lapic adapter', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {

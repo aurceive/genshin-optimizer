@@ -1,10 +1,13 @@
 import { MessageChannel } from 'worker_threads'
-import type { LapicWorkerDispatchMessage, LapicInProcessWorkResult } from './transport'
 import {
   createMessagePortWorkerHandle,
   createWorkerEntryHandler,
 } from './message-port'
 import type { LapicMessagePortLike } from './message-port'
+import type {
+  LapicInProcessWorkResult,
+  LapicWorkerDispatchMessage,
+} from './transport'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,7 +62,10 @@ function dispatchMessage(
 
 describe('MessagePort worker handle', () => {
   it('creates a handle with the correct workerId', () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
     expect(handle.workerId).toBe('w1')
     dispose()
     port1.close()
@@ -67,7 +73,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('dispatches work and receives results', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     const result = await handle.dispatch(dispatchMessage(0, 0, 100))
 
@@ -84,7 +93,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('preserves partition index across dispatches', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     const r0 = await handle.dispatch(dispatchMessage(0, 0, 10))
     const r3 = await handle.dispatch(dispatchMessage(3, 30, 40))
@@ -98,7 +110,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('supports concurrent dispatches', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     const results = await Promise.all([
       handle.dispatch(dispatchMessage(0, 0, 50)),
@@ -121,10 +136,13 @@ describe('MessagePort worker handle', () => {
 
   it('executor receives correct flat-index ranges', async () => {
     const ranges: Array<[number, number]> = []
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', (start, end) => {
-      ranges.push([start, end])
-      return simpleExecutor(start, end)
-    })
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      (start, end) => {
+        ranges.push([start, end])
+        return simpleExecutor(start, end)
+      }
+    )
 
     await handle.dispatch(dispatchMessage(0, 42, 99))
 
@@ -166,7 +184,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('requestPause returns undefined for sync executor', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     const ack = await handle.requestPause('test-session')
     expect(ack).toBeUndefined()
@@ -177,11 +198,16 @@ describe('MessagePort worker handle', () => {
   })
 
   it('dispatch after terminate rejects', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     await handle.terminate()
 
-    await expect(handle.dispatch(dispatchMessage(0, 0, 10))).rejects.toThrow(/terminated/)
+    await expect(handle.dispatch(dispatchMessage(0, 0, 10))).rejects.toThrow(
+      /terminated/
+    )
 
     dispose()
     port1.close()
@@ -189,7 +215,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('requestPause after terminate returns undefined', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     await handle.terminate()
 
@@ -202,7 +231,10 @@ describe('MessagePort worker handle', () => {
   })
 
   it('double terminate is idempotent', async () => {
-    const { handle, dispose, port1, port2 } = createLinkedPair('w1', simpleExecutor)
+    const { handle, dispose, port1, port2 } = createLinkedPair(
+      'w1',
+      simpleExecutor
+    )
 
     await handle.terminate()
     await expect(handle.terminate()).resolves.toBeUndefined()
@@ -217,7 +249,9 @@ describe('MessagePort worker handle', () => {
       throw new Error('Evaluation failed!')
     })
 
-    await expect(handle.dispatch(dispatchMessage(0, 0, 10))).rejects.toThrow('Evaluation failed!')
+    await expect(handle.dispatch(dispatchMessage(0, 0, 10))).rejects.toThrow(
+      'Evaluation failed!'
+    )
 
     dispose()
     port1.close()

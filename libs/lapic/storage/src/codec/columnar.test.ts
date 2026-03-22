@@ -52,11 +52,7 @@ describe('frontierBlockToColumnar', () => {
 
     expect(columnar.columns.stateId).toEqual(['state-0', 'state-1', 'state-2'])
     expect(columnar.columns.slotId).toEqual(['slot-0', 'slot-1', 'slot-2'])
-    expect(columnar.columns.candidateId).toEqual([
-      'cand-0',
-      'cand-1',
-      'cand-2',
-    ])
+    expect(columnar.columns.candidateId).toEqual(['cand-0', 'cand-1', 'cand-2'])
     expect(columnar.columns.candidateDigest).toEqual([
       'digest-cand-0',
       'digest-cand-1',
@@ -132,7 +128,9 @@ describe('columnarToFrontierBlock', () => {
       expect(rtKey.occupiedSlotMask).toBe(origKey.occupiedSlotMask)
       expect(rtKey.actorIds).toEqual(origKey.actorIds)
       expect(rtKey.exclusiveResourceKeys).toEqual(origKey.exclusiveResourceKeys)
-      expect(rtKey.frameAxisIdentityDigest).toBe(origKey.frameAxisIdentityDigest)
+      expect(rtKey.frameAxisIdentityDigest).toBe(
+        origKey.frameAxisIdentityDigest
+      )
       expect(rtKey.adapterSemanticMode).toBe(origKey.adapterSemanticMode)
     }
   })

@@ -3,7 +3,10 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import {
   validateLapicBoundPrunePayload,
   validateLapicBranchReachabilityPayload,
@@ -26,9 +29,13 @@ function isDecisionClassCompatible(
     case 'BranchReachabilityCert':
       return decisionClass === 'exact-prune'
     case 'InfeasibilityCert':
-      return decisionClass === 'exact-prune' || decisionClass === 'relaxation-prune'
+      return (
+        decisionClass === 'exact-prune' || decisionClass === 'relaxation-prune'
+      )
     case 'BoundPruneCert':
-      return decisionClass === 'exact-prune' || decisionClass === 'relaxation-prune'
+      return (
+        decisionClass === 'exact-prune' || decisionClass === 'relaxation-prune'
+      )
     case 'DominanceCert':
       return decisionClass === 'dominance-prune'
     case 'FinalOptimalityCert':
@@ -42,10 +49,24 @@ export function validateLapicCertificate(
   const diagnostics: LapicDiagnostic[] = []
 
   if (!certificate.certId)
-    diagnostics.push(createLapicDiagnostic('error', 'SchemaViolation', 'certId must not be empty.', ['certId']))
+    diagnostics.push(
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'certId must not be empty.',
+        ['certId']
+      )
+    )
 
   if (!certificate.problemId)
-    diagnostics.push(createLapicDiagnostic('error', 'SchemaViolation', 'problemId must not be empty.', ['problemId']))
+    diagnostics.push(
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'problemId must not be empty.',
+        ['problemId']
+      )
+    )
 
   if (!certificate.arithmeticPolicyId)
     diagnostics.push(
@@ -59,10 +80,17 @@ export function validateLapicCertificate(
 
   if (!certificate.evidenceDigest)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'evidenceDigest must not be empty.', ['evidenceDigest'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'evidenceDigest must not be empty.',
+        ['evidenceDigest']
+      )
     )
 
-  if (!isDecisionClassCompatible(certificate.certKind, certificate.decisionClass))
+  if (
+    !isDecisionClassCompatible(certificate.certKind, certificate.decisionClass)
+  )
     diagnostics.push(
       createLapicDiagnostic(
         'error',
@@ -76,8 +104,11 @@ export function validateLapicCertificate(
       )
     )
 
-  const replayRecipeValidation = validateLapicReplayRecipe(certificate.replayRecipe)
-  if (!replayRecipeValidation.ok) diagnostics.push(...replayRecipeValidation.diagnostics)
+  const replayRecipeValidation = validateLapicReplayRecipe(
+    certificate.replayRecipe
+  )
+  if (!replayRecipeValidation.ok)
+    diagnostics.push(...replayRecipeValidation.diagnostics)
 
   switch (certificate.certKind) {
     case 'BranchReachabilityCert':
@@ -91,8 +122,11 @@ export function validateLapicCertificate(
           )
         )
       else {
-        const payloadValidation = validateLapicBranchReachabilityPayload(certificate.payload)
-        if (!payloadValidation.ok) diagnostics.push(...payloadValidation.diagnostics)
+        const payloadValidation = validateLapicBranchReachabilityPayload(
+          certificate.payload
+        )
+        if (!payloadValidation.ok)
+          diagnostics.push(...payloadValidation.diagnostics)
       }
       break
     case 'InfeasibilityCert':
@@ -106,8 +140,11 @@ export function validateLapicCertificate(
           )
         )
       else {
-        const payloadValidation = validateLapicInfeasibilityPayload(certificate.payload)
-        if (!payloadValidation.ok) diagnostics.push(...payloadValidation.diagnostics)
+        const payloadValidation = validateLapicInfeasibilityPayload(
+          certificate.payload
+        )
+        if (!payloadValidation.ok)
+          diagnostics.push(...payloadValidation.diagnostics)
       }
       break
     case 'BoundPruneCert':
@@ -121,8 +158,11 @@ export function validateLapicCertificate(
           )
         )
       else {
-        const payloadValidation = validateLapicBoundPrunePayload(certificate.payload)
-        if (!payloadValidation.ok) diagnostics.push(...payloadValidation.diagnostics)
+        const payloadValidation = validateLapicBoundPrunePayload(
+          certificate.payload
+        )
+        if (!payloadValidation.ok)
+          diagnostics.push(...payloadValidation.diagnostics)
       }
       break
     case 'DominanceCert':
@@ -136,8 +176,11 @@ export function validateLapicCertificate(
           )
         )
       else {
-        const payloadValidation = validateLapicDominancePayload(certificate.payload)
-        if (!payloadValidation.ok) diagnostics.push(...payloadValidation.diagnostics)
+        const payloadValidation = validateLapicDominancePayload(
+          certificate.payload
+        )
+        if (!payloadValidation.ok)
+          diagnostics.push(...payloadValidation.diagnostics)
       }
       break
     case 'FinalOptimalityCert':
@@ -151,8 +194,11 @@ export function validateLapicCertificate(
           )
         )
       else {
-        const payloadValidation = validateLapicFinalOptimalityPayload(certificate.payload)
-        if (!payloadValidation.ok) diagnostics.push(...payloadValidation.diagnostics)
+        const payloadValidation = validateLapicFinalOptimalityPayload(
+          certificate.payload
+        )
+        if (!payloadValidation.ok)
+          diagnostics.push(...payloadValidation.diagnostics)
       }
       break
   }

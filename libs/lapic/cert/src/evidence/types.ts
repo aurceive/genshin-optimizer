@@ -1,4 +1,7 @@
-import type { LapicDigest, LapicSchemaVersion } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDigest,
+  LapicSchemaVersion,
+} from '@genshin-optimizer/lapic/core'
 
 /**
  * Deterministic configuration record for a HiGHS LP solve.

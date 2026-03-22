@@ -11,13 +11,13 @@
  * worker creation (Web Workers, Node worker_threads, etc.).
  */
 
+import type { LapicWorkerBackendKind } from '../types'
 import type {
   LapicWorkerDispatchMessage,
   LapicWorkerPauseAckMessage,
   LapicWorkerResultMessage,
   LapicWorkerTransport,
 } from './transport'
-import type { LapicWorkerBackendKind } from '../types'
 
 // ---------------------------------------------------------------------------
 // Worker handle abstraction
@@ -38,13 +38,17 @@ export interface LapicWorkerHandle {
    * Send a dispatch message and await the result.
    * The handle is responsible for serialization and transport.
    */
-  dispatch(message: LapicWorkerDispatchMessage): Promise<LapicWorkerResultMessage>
+  dispatch(
+    message: LapicWorkerDispatchMessage
+  ): Promise<LapicWorkerResultMessage>
 
   /**
    * Request this worker to pause at the next safe point.
    * Returns the pause acknowledgment.
    */
-  requestPause(sessionId: string): Promise<LapicWorkerPauseAckMessage | undefined>
+  requestPause(
+    sessionId: string
+  ): Promise<LapicWorkerPauseAckMessage | undefined>
 
   /**
    * Terminate this worker and release resources.

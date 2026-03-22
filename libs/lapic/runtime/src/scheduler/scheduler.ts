@@ -12,7 +12,7 @@
  */
 
 import type { LapicPriorityDescriptor, LapicWorkUnitEnvelope } from '../types'
-import { createLapicPriorityQueue, type LapicPriorityQueue } from './queue'
+import { type LapicPriorityQueue, createLapicPriorityQueue } from './queue'
 import type {
   LapicScheduledWorkItem,
   LapicScheduledWorkStatus,
@@ -60,7 +60,10 @@ export interface LapicWorkScheduler {
    * Update the priority of a queued work unit.
    * Has no effect on dispatched or completed units.
    */
-  reprioritize(workUnitId: string, newPriority: LapicPriorityDescriptor): boolean
+  reprioritize(
+    workUnitId: string,
+    newPriority: LapicPriorityDescriptor
+  ): boolean
 
   /**
    * Look up a work unit by ID.
@@ -80,7 +83,9 @@ export interface LapicWorkScheduler {
   /**
    * All items in the given status.
    */
-  getItemsByStatus(status: LapicScheduledWorkStatus): readonly LapicScheduledWorkItem[]
+  getItemsByStatus(
+    status: LapicScheduledWorkStatus
+  ): readonly LapicScheduledWorkItem[]
 
   /**
    * Number of items currently queued (not dispatched).
@@ -225,7 +230,11 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
     cancel(workUnitId: string): LapicScheduledWorkItem | undefined {
       const current = items.get(workUnitId)
       if (!current) return undefined
-      if (current.status === 'completed' || current.status === 'failed' || current.status === 'cancelled')
+      if (
+        current.status === 'completed' ||
+        current.status === 'failed' ||
+        current.status === 'cancelled'
+      )
         return undefined
 
       // Remove from queue or in-flight
@@ -249,7 +258,10 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
       return item
     },
 
-    reprioritize(workUnitId: string, newPriority: LapicPriorityDescriptor): boolean {
+    reprioritize(
+      workUnitId: string,
+      newPriority: LapicPriorityDescriptor
+    ): boolean {
       const current = items.get(workUnitId)
       if (!current || current.status !== 'queued') return false
 
@@ -292,7 +304,9 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
       return events
     },
 
-    getItemsByStatus(status: LapicScheduledWorkStatus): readonly LapicScheduledWorkItem[] {
+    getItemsByStatus(
+      status: LapicScheduledWorkStatus
+    ): readonly LapicScheduledWorkItem[] {
       const result: LapicScheduledWorkItem[] = []
       for (const item of items.values()) {
         if (item.status === status) result.push(item)

@@ -11,11 +11,18 @@
  * regardless of worker count (determinism invariant).
  */
 
-import type { LapicCandidateDescriptor, LapicCanonicalProblem } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicCandidateDescriptor,
+  LapicCanonicalProblem,
+} from '@genshin-optimizer/lapic/core'
 import {
   createCombinationStateId,
   hasExclusiveResourceConflict,
 } from '@genshin-optimizer/lapic/core'
+import {
+  compareEvaluations,
+  normalizeFeasibilityResult,
+} from '../solve/combination'
 import type { LapicFrontierJoinPlan } from '../solve/join-plan'
 import type {
   LapicBoundedExactCombinationEvaluation,
@@ -23,12 +30,11 @@ import type {
   LapicBoundedExactEvaluationComparator,
   LapicBoundedExactFeasibilityEvaluator,
 } from '../solve/types'
-import { compareEvaluations, normalizeFeasibilityResult } from '../solve/combination'
 import {
-  createWorkerPartitionPlan,
-  decodeFlatIndex,
   type LapicPartitionConfig,
   type LapicWorkerPartitionPlan,
+  createWorkerPartitionPlan,
+  decodeFlatIndex,
 } from './partitioner'
 import type {
   LapicInProcessWorkResult,
@@ -108,8 +114,10 @@ export function mergeWorkerResults(
 
   allEntries.sort((a, b) => {
     const relation = compareEvaluations(
-      a.evaluation, 'exact',
-      b.evaluation, 'exact',
+      a.evaluation,
+      'exact',
+      b.evaluation,
+      'exact',
       explicitComparator
     )
     if (relation !== 0) return -relation
@@ -148,12 +156,19 @@ export function createInProcessPartitionExecutor(
   compareEvals?: LapicBoundedExactEvaluationComparator,
   isFeasible?: LapicBoundedExactFeasibilityEvaluator
 ): (startFlatIndex: number, endFlatIndex: number) => LapicInProcessWorkResult {
-  return (startFlatIndex: number, endFlatIndex: number): LapicInProcessWorkResult => {
+  return (
+    startFlatIndex: number,
+    endFlatIndex: number
+  ): LapicInProcessWorkResult => {
     const entries: LapicWorkerResultEntry[] = []
     let evaluatedCount = 0
     const visitedCount = endFlatIndex - startFlatIndex
 
-    for (let flatIndex = startFlatIndex; flatIndex < endFlatIndex; flatIndex++) {
+    for (
+      let flatIndex = startFlatIndex;
+      flatIndex < endFlatIndex;
+      flatIndex++
+    ) {
       const domainIndices = decodeFlatIndex(joinPlan, flatIndex)
 
       const candidates: LapicCandidateDescriptor[] = []
@@ -188,8 +203,10 @@ export function createInProcessPartitionExecutor(
       if (entries.length > topN * 2) {
         entries.sort((a, b) => {
           const relation = compareEvaluations(
-            a.evaluation, 'exact',
-            b.evaluation, 'exact',
+            a.evaluation,
+            'exact',
+            b.evaluation,
+            'exact',
             compareEvals
           )
           if (relation !== 0) return -relation
@@ -202,8 +219,10 @@ export function createInProcessPartitionExecutor(
     // Final sort and trim
     entries.sort((a, b) => {
       const relation = compareEvaluations(
-        a.evaluation, 'exact',
-        b.evaluation, 'exact',
+        a.evaluation,
+        'exact',
+        b.evaluation,
+        'exact',
         compareEvals
       )
       if (relation !== 0) return -relation

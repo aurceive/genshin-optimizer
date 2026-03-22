@@ -1,7 +1,8 @@
+import { createLapicStateLayoutDescriptor } from '@genshin-optimizer/lapic/core'
 import {
-  createLapicStateLayoutDescriptor,
-} from '@genshin-optimizer/lapic/core'
-import { validateLapicFrontierBlock, validateLapicFrontierIndex } from './artifacts'
+  validateLapicFrontierBlock,
+  validateLapicFrontierIndex,
+} from './artifacts'
 
 function createFrontierBlock() {
   return {

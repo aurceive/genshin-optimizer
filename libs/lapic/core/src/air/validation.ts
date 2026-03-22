@@ -5,9 +5,13 @@
  * and sound with respect to the underlying F-IR graph.
  */
 
-import type { LapicDiagnostic, LapicValidationResult } from '../types'
-import { createLapicDiagnostic, createLapicSuccessResult, createLapicFailureResult } from '../diagnostics'
+import {
+  createLapicDiagnostic,
+  createLapicFailureResult,
+  createLapicSuccessResult,
+} from '../diagnostics'
 import type { LapicFirGraph } from '../fir/types'
+import type { LapicDiagnostic, LapicValidationResult } from '../types'
 import type { LapicAirGraph, LapicAirNodeAnnotation } from './types'
 
 /**

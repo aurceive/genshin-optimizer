@@ -1,10 +1,10 @@
-import fc from 'fast-check'
 import type {
   LapicFrontierBlock,
   LapicFrontierIndex,
   LapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
 import {
+  columnarToFrontierBlock,
   createFrontierBlockJsonCodec,
   createFrontierIndexJsonCodec,
   createLapicFrontierBlock,
@@ -12,8 +12,8 @@ import {
   createLapicStorageEnvelope,
   deterministicJsonStringify,
   frontierBlockToColumnar,
-  columnarToFrontierBlock,
 } from '@genshin-optimizer/lapic/storage'
+import fc from 'fast-check'
 
 // ---------------------------------------------------------------------------
 // Property: Deterministic JSON serialization
@@ -162,7 +162,9 @@ export function propFrontierBlockCloneDeterminism(
   block: LapicFrontierBlock
 ): boolean {
   const cloned = createLapicFrontierBlock(block)
-  return deterministicJsonStringify(cloned) === deterministicJsonStringify(block)
+  return (
+    deterministicJsonStringify(cloned) === deterministicJsonStringify(block)
+  )
 }
 
 /**
@@ -189,8 +191,7 @@ export function propEnvelopeCloneDeterminism(
 ): boolean {
   const cloned = createLapicStorageEnvelope(envelope)
   return (
-    deterministicJsonStringify(cloned) ===
-    deterministicJsonStringify(envelope)
+    deterministicJsonStringify(cloned) === deterministicJsonStringify(envelope)
   )
 }
 
@@ -219,10 +220,7 @@ export function runLapicProperty<T>(
   const seed = options?.seed
 
   try {
-    fc.assert(
-      fc.property(arb, predicate),
-      { numRuns, seed, verbose: false }
-    )
+    fc.assert(fc.property(arb, predicate), { numRuns, seed, verbose: false })
     return { propertyName, passed: true, numRuns, seed }
   } catch (e) {
     return {

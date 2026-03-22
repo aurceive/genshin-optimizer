@@ -9,9 +9,7 @@ import {
   createLapicMemoryArtifactStore,
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
-import {
-  createLapicAuditReportRequest,
-} from './builders'
+import { createLapicAuditReportRequest } from './builders'
 import {
   createLapicAuditReport,
   createLapicPotentialAuditSummary,
@@ -143,7 +141,9 @@ describe('lapic debug audit', () => {
       'trace-1',
       'trace-2',
     ])
-    expect(auditReport.replayCoverage?.replayedCertificateIds).toEqual(['cert-id'])
+    expect(auditReport.replayCoverage?.replayedCertificateIds).toEqual([
+      'cert-id',
+    ])
     expect(auditReport.replayCoverage?.missingCertificateIds).toEqual([])
     expect(auditReport.integrityScan?.ok).toBe(true)
     expect(auditReport.potentialAuditSummary?.auxiliaryOnlyOutputCount).toBe(1)
@@ -192,10 +192,16 @@ describe('lapic debug audit', () => {
 
   it('summarizes replay coverage and potential audit output', () => {
     const coverage = createLapicReplayCoverageFromCertificates(
-      [createCertificate({ certId: 'cert-a' }), createCertificate({ certId: 'cert-b' })],
+      [
+        createCertificate({ certId: 'cert-a' }),
+        createCertificate({ certId: 'cert-b' }),
+      ],
       ['cert-b']
     )
-    const potentialAudit = createLapicPotentialAuditSummary([createCertificate()], 2)
+    const potentialAudit = createLapicPotentialAuditSummary(
+      [createCertificate()],
+      2
+    )
 
     expect(coverage.replayedCertificateIds).toEqual(['cert-b'])
     expect(coverage.missingCertificateIds).toEqual(['cert-a'])

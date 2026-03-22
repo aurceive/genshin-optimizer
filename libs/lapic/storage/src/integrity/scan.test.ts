@@ -31,7 +31,9 @@ function createWriteRequest() {
 describe('lapic storage integrity scan', () => {
   it('detects missing artifacts during integrity scan', async () => {
     const store = createLapicMemoryArtifactStore()
-    const missingArtifact = createLapicArtifactRefFromWriteRequest(createWriteRequest())
+    const missingArtifact = createLapicArtifactRefFromWriteRequest(
+      createWriteRequest()
+    )
     const scan = await scanLapicArtifactIntegrity(store, {
       artifactRefs: [missingArtifact],
     })
@@ -45,7 +47,9 @@ describe('lapic storage integrity scan', () => {
     const summary = createLapicRepairRecommendationSummary({
       ok: false,
       classifications: ['missing-artifact', 'schema-mismatch'],
-      affectedArtifacts: [createLapicArtifactRefFromWriteRequest(createWriteRequest())],
+      affectedArtifacts: [
+        createLapicArtifactRefFromWriteRequest(createWriteRequest()),
+      ],
     })
 
     expect(summary.canRepairDeterministically).toBe(false)

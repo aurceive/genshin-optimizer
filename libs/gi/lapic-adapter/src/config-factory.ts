@@ -11,39 +11,38 @@
  * access to the GI calculation engine (OptNode evaluation, stat computation).
  */
 
-import type { ICachedArtifact, OptConfig, ArtSetExclusion } from '@genshin-optimizer/gi/db'
 import type { MainStatKey } from '@genshin-optimizer/gi/consts'
+import type {
+  ArtSetExclusion,
+  ICachedArtifact,
+  OptConfig,
+} from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 import type {
-  LapicProblemNormalizationInput,
   LapicDigest,
+  LapicProblemNormalizationInput,
 } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicBoundedExactEvaluationComparator,
+  LapicBoundedExactUpperBoundEvaluator,
+} from '@genshin-optimizer/lapic/runtime'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
-import type {
-  GiLapicSolveOrchestrationConfig,
-} from './orchestrate'
+import type { GiLapicCandidateVariableExtractor } from './bound-maps'
+import { createGiArtifactFeatureDigest, createGiOptNodeDigest } from './digest'
+import type { GiLapicSolveOrchestrationConfig } from './orchestrate'
 import type {
   GiLapicAdapterRequest,
+  GiLapicBoundedCurrentOnlyCombinationEvaluator,
+  GiLapicBoundedCurrentOnlyFeasibilityEvaluator,
   GiLapicCanonicalIdentity,
   GiLapicConstraintInput,
   GiLapicInventorySnapshot,
   GiLapicMainStatKeySelection,
   GiLapicOptimizationRequest,
   GiLapicSourceSnapshotDescriptor,
-  GiLapicBoundedCurrentOnlyCombinationEvaluator,
-  GiLapicBoundedCurrentOnlyFeasibilityEvaluator,
 } from './types'
 import { giLapicAdapterSchemaVersion } from './types'
-import type {
-  LapicBoundedExactEvaluationComparator,
-  LapicBoundedExactUpperBoundEvaluator,
-} from '@genshin-optimizer/lapic/runtime'
-import type { GiLapicCandidateVariableExtractor } from './bound-maps'
-import {
-  createGiOptNodeDigest,
-  createGiArtifactFeatureDigest,
-} from './digest'
 
 // ---------------------------------------------------------------------------
 // Input types
@@ -143,9 +142,7 @@ function computeArtifactSnapshotDigest(
   artifacts: readonly ICachedArtifact[]
 ): LapicDigest {
   if (artifacts.length === 0) return 'gi-artifact-snapshot:empty'
-  const featureDigests = artifacts
-    .map(createGiArtifactFeatureDigest)
-    .sort()
+  const featureDigests = artifacts.map(createGiArtifactFeatureDigest).sort()
   return `gi-artifact-snapshot:${featureDigests.length}:${featureDigests.join(',')}`
 }
 

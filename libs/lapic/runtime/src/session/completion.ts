@@ -110,7 +110,10 @@ export function failSession(
   moveToState(context, 'failed', context.activePhase)
   notifyFailure(context, nextFailure)
   emitTrace(context, 'ReportFailure')
-  const failedSummary = createLapicFailedSessionSummary(currentSummary(context), nextFailure)
+  const failedSummary = createLapicFailedSessionSummary(
+    currentSummary(context),
+    nextFailure
+  )
   rejectFailedCompletion(context, failedSummary)
   throw new LapicSessionFailureError(failedSummary)
 }

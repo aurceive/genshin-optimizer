@@ -5,8 +5,8 @@
  * human-readable strings and computed metrics.
  */
 
-import { useMemo } from 'react'
 import type { LapicProgressEvent } from '@genshin-optimizer/lapic/runtime'
+import { useMemo } from 'react'
 
 /**
  * Formatted progress information for display.

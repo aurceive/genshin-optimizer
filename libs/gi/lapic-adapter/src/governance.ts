@@ -1,4 +1,7 @@
-import type { LapicDigest, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDigest,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import { giLapicAdapterSchemaVersion } from './types'
 
 // ---------------------------------------------------------------------------
@@ -19,13 +22,15 @@ export type GiLapicMigrationState =
   | 'canonicalDefault'
   | 'legacyRetired'
 
-const allowedTransitions: ReadonlyMap<GiLapicMigrationState, readonly GiLapicMigrationState[]> =
-  new Map([
-    ['legacyValidated', ['dualValidated']],
-    ['dualValidated', ['canonicalDefault']],
-    ['canonicalDefault', ['legacyRetired']],
-    ['legacyRetired', []],
-  ])
+const allowedTransitions: ReadonlyMap<
+  GiLapicMigrationState,
+  readonly GiLapicMigrationState[]
+> = new Map([
+  ['legacyValidated', ['dualValidated']],
+  ['dualValidated', ['canonicalDefault']],
+  ['canonicalDefault', ['legacyRetired']],
+  ['legacyRetired', []],
+])
 
 export function isValidMigrationStateTransition(
   from: GiLapicMigrationState,
@@ -191,19 +196,32 @@ export function validateGiLapicValidationCorpus(
   corpus: unknown
 ): LapicValidationResult<GiLapicValidationCorpus> {
   if (typeof corpus !== 'object' || corpus === null)
-    return { ok: false, errors: [{ path: [], message: 'Corpus must be an object' }] }
+    return {
+      ok: false,
+      errors: [{ path: [], message: 'Corpus must be an object' }],
+    }
 
   const c = corpus as Record<string, unknown>
 
   const errors: { path: readonly string[]; message: string }[] = []
 
   if (typeof c.corpusId !== 'string' || c.corpusId.length === 0)
-    errors.push({ path: ['corpusId'], message: 'corpusId must be a non-empty string' })
+    errors.push({
+      path: ['corpusId'],
+      message: 'corpusId must be a non-empty string',
+    })
 
   if (typeof c.adapterVersion !== 'string')
-    errors.push({ path: ['adapterVersion'], message: 'adapterVersion must be a string' })
+    errors.push({
+      path: ['adapterVersion'],
+      message: 'adapterVersion must be a string',
+    })
 
-  if (!GI_LAPIC_MIGRATION_STATES.includes(c.migrationState as GiLapicMigrationState))
+  if (
+    !GI_LAPIC_MIGRATION_STATES.includes(
+      c.migrationState as GiLapicMigrationState
+    )
+  )
     errors.push({
       path: ['migrationState'],
       message: `migrationState must be one of: ${GI_LAPIC_MIGRATION_STATES.join(', ')}`,
@@ -221,8 +239,7 @@ export function validateGiLapicValidationCorpus(
       message: 'testCaseDescriptors must be an array',
     })
 
-  if (errors.length > 0)
-    return { ok: false, errors }
+  if (errors.length > 0) return { ok: false, errors }
 
   return {
     ok: true,
@@ -247,50 +264,58 @@ export function validateGiLapicValidationCorpus(
  * 6. Emitted certificates are structurally complete
  * 7. Golden enumeration passes for compiled formulas
  */
-export const giLapicLegacyValidatedGateCriteria: readonly GiLapicGateCriterion[] = [
-  {
-    criterionId: 'snapshot-digest-stability',
-    description: 'Source snapshot digests are stable and deterministic across identical inputs',
-    validationFamily: 'property-based',
-    required: true,
-  },
-  {
-    criterionId: 'candidate-extraction-lossless',
-    description: 'All inventory items map to candidate domains without data loss',
-    validationFamily: 'schema-validation',
-    required: true,
-  },
-  {
-    criterionId: 'filter-transformation-logged',
-    description: 'Every non-identity transformation is recorded in the filter log',
-    validationFamily: 'property-based',
-    required: true,
-  },
-  {
-    criterionId: 'canonical-export-idempotent',
-    description: 'Identical requests produce structurally identical canonical exports',
-    validationFamily: 'property-based',
-    required: true,
-  },
-  {
-    criterionId: 'fir-compilation-coverage',
-    description: 'F-IR compilation covers add, mul, min, max, res, threshold(const) OptNode ops',
-    validationFamily: 'schema-validation',
-    required: true,
-  },
-  {
-    criterionId: 'certificate-structural-completeness',
-    description: 'All emitted certificates have complete base fields, payloads, and replay recipes',
-    validationFamily: 'schema-validation',
-    required: true,
-  },
-  {
-    criterionId: 'golden-enumeration-admissibility',
-    description: 'F-IR interval bounds are admissible for all enumerated combinations',
-    validationFamily: 'golden-enumeration',
-    required: true,
-  },
-]
+export const giLapicLegacyValidatedGateCriteria: readonly GiLapicGateCriterion[] =
+  [
+    {
+      criterionId: 'snapshot-digest-stability',
+      description:
+        'Source snapshot digests are stable and deterministic across identical inputs',
+      validationFamily: 'property-based',
+      required: true,
+    },
+    {
+      criterionId: 'candidate-extraction-lossless',
+      description:
+        'All inventory items map to candidate domains without data loss',
+      validationFamily: 'schema-validation',
+      required: true,
+    },
+    {
+      criterionId: 'filter-transformation-logged',
+      description:
+        'Every non-identity transformation is recorded in the filter log',
+      validationFamily: 'property-based',
+      required: true,
+    },
+    {
+      criterionId: 'canonical-export-idempotent',
+      description:
+        'Identical requests produce structurally identical canonical exports',
+      validationFamily: 'property-based',
+      required: true,
+    },
+    {
+      criterionId: 'fir-compilation-coverage',
+      description:
+        'F-IR compilation covers add, mul, min, max, res, threshold(const) OptNode ops',
+      validationFamily: 'schema-validation',
+      required: true,
+    },
+    {
+      criterionId: 'certificate-structural-completeness',
+      description:
+        'All emitted certificates have complete base fields, payloads, and replay recipes',
+      validationFamily: 'schema-validation',
+      required: true,
+    },
+    {
+      criterionId: 'golden-enumeration-admissibility',
+      description:
+        'F-IR interval bounds are admissible for all enumerated combinations',
+      validationFamily: 'golden-enumeration',
+      required: true,
+    },
+  ]
 
 export const giLapicLegacyValidatedCorpus: GiLapicValidationCorpus = {
   corpusId: 'gi-legacy-validated-corpus-v1',
@@ -333,7 +358,8 @@ export const giLapicLegacyValidatedCorpus: GiLapicValidationCorpus = {
     },
     {
       caseId: 'digest-determinism-property',
-      description: 'OptNode and artifact digests are stable across identical inputs',
+      description:
+        'OptNode and artifact digests are stable across identical inputs',
       validationFamily: 'property-based',
       sourceSnapshotDigest: 'artifact-snapshot-digest',
       problemDigest: 'digest-determinism-property-digest',
@@ -351,7 +377,8 @@ export const giLapicLegacyValidatedCorpus: GiLapicValidationCorpus = {
     },
     {
       caseId: 'certificate-completeness-schema',
-      description: 'All emitted certificates have complete structural fields and replay recipes',
+      description:
+        'All emitted certificates have complete structural fields and replay recipes',
       validationFamily: 'schema-validation',
       sourceSnapshotDigest: 'artifact-snapshot-digest',
       problemDigest: 'certificate-completeness-digest',

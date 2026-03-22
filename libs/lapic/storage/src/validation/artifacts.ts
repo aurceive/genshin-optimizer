@@ -5,7 +5,10 @@ import {
   validateLapicExactSignatureGroupKey,
   validateLapicStateLayoutDescriptor,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import { createLapicArtifactRefKey } from '../builders'
 import type {
   LapicArtifactReadRequest,
@@ -35,12 +38,18 @@ export function validateLapicArtifactRef(
   artifactRef: LapicArtifactRef
 ): LapicValidationResult<LapicArtifactRef> {
   if (!isRecord(artifactRef))
-    return createStorageFailure('Artifact reference must be a record.', ['artifactRef'])
+    return createStorageFailure('Artifact reference must be a record.', [
+      'artifactRef',
+    ])
 
   if (!isNonEmptyString(artifactRef.artifactId))
-    return createStorageFailure('Artifact id must be a non-empty string.', ['artifactId'])
+    return createStorageFailure('Artifact id must be a non-empty string.', [
+      'artifactId',
+    ])
 
-  const kindValidation = validateArtifactKind(artifactRef.artifactKind, ['artifactKind'])
+  const kindValidation = validateArtifactKind(artifactRef.artifactKind, [
+    'artifactKind',
+  ])
   if (!kindValidation.ok) return kindValidation
 
   if (!isNonEmptyString(artifactRef.contentHash))
@@ -93,10 +102,14 @@ export function validateLapicFrontierBlock(
   block: LapicFrontierBlock
 ): LapicValidationResult<LapicFrontierBlock> {
   if (!isRecord(block))
-    return createStorageFailure('Frontier block must be a record.', ['frontierBlock'])
+    return createStorageFailure('Frontier block must be a record.', [
+      'frontierBlock',
+    ])
 
   if (!isNonEmptyString(block.blockId))
-    return createStorageFailure('Block id must be a non-empty string.', ['blockId'])
+    return createStorageFailure('Block id must be a non-empty string.', [
+      'blockId',
+    ])
 
   const layoutValidation = validateLapicStateLayoutDescriptor(block.layout)
   if (!layoutValidation.ok)
@@ -123,7 +136,10 @@ export function validateLapicFrontierBlock(
   const rowStateIds = new Set<string>()
   for (const [index, row] of block.rows.entries()) {
     if (!isRecord(row))
-      return createStorageFailure('Frontier rows must be records.', ['rows', String(index)])
+      return createStorageFailure('Frontier rows must be records.', [
+        'rows',
+        String(index),
+      ])
 
     if (!isNonEmptyString(row.stateId))
       return createStorageFailure(
@@ -161,12 +177,19 @@ export function validateLapicFrontierBlock(
         ['rows', String(index), 'rowDigest']
       )
 
-    const keyValidation = validateLapicExactSignatureGroupKey(row.exactSignatureGroupKey)
+    const keyValidation = validateLapicExactSignatureGroupKey(
+      row.exactSignatureGroupKey
+    )
     if (!keyValidation.ok)
       return createLapicFailureResult(
         keyValidation.diagnostics.map((diagnostic) => ({
           ...diagnostic,
-          path: ['rows', String(index), 'exactSignatureGroupKey', ...(diagnostic.path ?? [])],
+          path: [
+            'rows',
+            String(index),
+            'exactSignatureGroupKey',
+            ...(diagnostic.path ?? []),
+          ],
         }))
       )
 
@@ -177,22 +200,31 @@ export function validateLapicFrontierBlock(
       )
 
     if (rowStateIds.has(row.stateId))
-      return createStorageFailure(
-        'Frontier row stateIds must be unique.',
-        ['rows', String(index), 'stateId']
-      )
+      return createStorageFailure('Frontier row stateIds must be unique.', [
+        'rows',
+        String(index),
+        'stateId',
+      ])
 
     rowStateIds.add(row.stateId)
   }
 
   if (!isNonNegativeInteger(block.rowCount))
-    return createStorageFailure('Row count must be a non-negative integer.', ['rowCount'])
+    return createStorageFailure('Row count must be a non-negative integer.', [
+      'rowCount',
+    ])
 
   if (block.rowCount !== block.stateIds.length)
-    return createStorageFailure('Row count must match the number of state ids.', ['rowCount'])
+    return createStorageFailure(
+      'Row count must match the number of state ids.',
+      ['rowCount']
+    )
 
   if (block.rowCount !== block.rows.length)
-    return createStorageFailure('Row count must match the number of frontier rows.', ['rowCount'])
+    return createStorageFailure(
+      'Row count must match the number of frontier rows.',
+      ['rowCount']
+    )
 
   return createLapicSuccessResult(block)
 }
@@ -201,17 +233,24 @@ export function validateLapicFrontierIndex(
   index: LapicFrontierIndex
 ): LapicValidationResult<LapicFrontierIndex> {
   if (!isRecord(index))
-    return createStorageFailure('Frontier index must be a record.', ['frontierIndex'])
+    return createStorageFailure('Frontier index must be a record.', [
+      'frontierIndex',
+    ])
 
   if (!isNonEmptyString(index.indexId))
-    return createStorageFailure('Index id must be a non-empty string.', ['indexId'])
+    return createStorageFailure('Index id must be a non-empty string.', [
+      'indexId',
+    ])
 
   if (
     !Array.isArray(index.blockIds) ||
     !index.blockIds.every(isNonEmptyString) ||
     !hasUniqueValues(index.blockIds)
   )
-    return createStorageFailure('Block ids must contain unique non-empty strings.', ['blockIds'])
+    return createStorageFailure(
+      'Block ids must contain unique non-empty strings.',
+      ['blockIds']
+    )
 
   if (!isNonEmptyString(index.compatibilityDigest))
     return createStorageFailure(
@@ -220,24 +259,24 @@ export function validateLapicFrontierIndex(
     )
 
   if (!Array.isArray(index.exactSignatureGroups))
-    return createStorageFailure(
-      'Exact-signature groups must be an array.',
-      ['exactSignatureGroups']
-    )
+    return createStorageFailure('Exact-signature groups must be an array.', [
+      'exactSignatureGroups',
+    ])
 
   const seenGroupDigests = new Set<string>()
   for (const [indexPosition, group] of index.exactSignatureGroups.entries()) {
     if (!isRecord(group))
-      return createStorageFailure(
-        'Exact-signature groups must be records.',
-        ['exactSignatureGroups', String(indexPosition)]
-      )
+      return createStorageFailure('Exact-signature groups must be records.', [
+        'exactSignatureGroups',
+        String(indexPosition),
+      ])
 
     if (!isNonEmptyString(group.groupDigest))
-      return createStorageFailure(
-        'Group digest must be a non-empty string.',
-        ['exactSignatureGroups', String(indexPosition), 'groupDigest']
-      )
+      return createStorageFailure('Group digest must be a non-empty string.', [
+        'exactSignatureGroups',
+        String(indexPosition),
+        'groupDigest',
+      ])
 
     if (seenGroupDigests.has(group.groupDigest))
       return createStorageFailure(
@@ -297,7 +336,11 @@ export function validateLapicFrontierIndex(
     if (!isNonEmptyString(group.frameAxisIdentityDigest))
       return createStorageFailure(
         'Exact-signature group frameAxisIdentityDigest must be a non-empty string.',
-        ['exactSignatureGroups', String(indexPosition), 'frameAxisIdentityDigest']
+        [
+          'exactSignatureGroups',
+          String(indexPosition),
+          'frameAxisIdentityDigest',
+        ]
       )
 
     if (
@@ -323,13 +366,14 @@ export function validateLapicBlockLayoutDescriptor(
   descriptor: LapicBlockLayoutDescriptor
 ): LapicValidationResult<LapicBlockLayoutDescriptor> {
   if (!isRecord(descriptor))
-    return createStorageFailure(
-      'Block layout descriptor must be a record.',
-      ['blockLayoutDescriptor']
-    )
+    return createStorageFailure('Block layout descriptor must be a record.', [
+      'blockLayoutDescriptor',
+    ])
 
   if (!isLapicBlockLayoutKind(descriptor.layoutKind))
-    return createStorageFailure('Block layout kind must be supported.', ['layoutKind'])
+    return createStorageFailure('Block layout kind must be supported.', [
+      'layoutKind',
+    ])
 
   if (!isNonEmptyString(descriptor.stateOrderDigest))
     return createStorageFailure(
@@ -344,10 +388,14 @@ export function validateLapicBlockManifest(
   manifest: LapicBlockManifest
 ): LapicValidationResult<LapicBlockManifest> {
   if (!isRecord(manifest))
-    return createStorageFailure('Block manifest must be a record.', ['blockManifest'])
+    return createStorageFailure('Block manifest must be a record.', [
+      'blockManifest',
+    ])
 
   if (!isNonEmptyString(manifest.manifestId))
-    return createStorageFailure('Manifest id must be a non-empty string.', ['manifestId'])
+    return createStorageFailure('Manifest id must be a non-empty string.', [
+      'manifestId',
+    ])
 
   const blockRefValidation = validateLapicArtifactRef(manifest.blockRef)
   if (!blockRefValidation.ok)
@@ -385,7 +433,9 @@ export function validateLapicArtifactReadRequest(
   request: LapicArtifactReadRequest
 ): LapicValidationResult<LapicArtifactReadRequest> {
   if (!isRecord(request))
-    return createStorageFailure('Artifact read request must be a record.', ['artifactReadRequest'])
+    return createStorageFailure('Artifact read request must be a record.', [
+      'artifactReadRequest',
+    ])
 
   const artifactRefValidation = validateLapicArtifactRef(request.artifactRef)
   if (!artifactRefValidation.ok)
@@ -403,7 +453,9 @@ export function validateLapicArtifactReadResult(
   result: LapicArtifactReadResult
 ): LapicValidationResult<LapicArtifactReadResult> {
   if (!isRecord(result))
-    return createStorageFailure('Artifact read result must be a record.', ['artifactReadResult'])
+    return createStorageFailure('Artifact read result must be a record.', [
+      'artifactReadResult',
+    ])
 
   const envelopeValidation = validateLapicStorageEnvelope(result.envelope)
   if (!envelopeValidation.ok)
@@ -415,7 +467,9 @@ export function validateLapicArtifactReadResult(
     )
 
   if (!isNonEmptyString(result.payloadDigest))
-    return createStorageFailure('Payload digest must be a non-empty string.', ['payloadDigest'])
+    return createStorageFailure('Payload digest must be a non-empty string.', [
+      'payloadDigest',
+    ])
 
   return createLapicSuccessResult(result)
 }
@@ -424,7 +478,9 @@ export function validateLapicArtifactWriteRequest(
   request: LapicArtifactWriteRequest
 ): LapicValidationResult<LapicArtifactWriteRequest> {
   if (!isRecord(request))
-    return createStorageFailure('Artifact write request must be a record.', ['artifactWriteRequest'])
+    return createStorageFailure('Artifact write request must be a record.', [
+      'artifactWriteRequest',
+    ])
 
   const envelopeValidation = validateLapicStorageEnvelope(request.envelope)
   if (!envelopeValidation.ok)
@@ -436,7 +492,9 @@ export function validateLapicArtifactWriteRequest(
     )
 
   if (!isNonEmptyString(request.payloadDigest))
-    return createStorageFailure('Payload digest must be a non-empty string.', ['payloadDigest'])
+    return createStorageFailure('Payload digest must be a non-empty string.', [
+      'payloadDigest',
+    ])
 
   return createLapicSuccessResult(request)
 }
@@ -460,7 +518,9 @@ export function validateLapicArtifactWriteCommitResult(
     )
 
   if (typeof result.committed !== 'boolean')
-    return createStorageFailure('Committed flag must be a boolean.', ['committed'])
+    return createStorageFailure('Committed flag must be a boolean.', [
+      'committed',
+    ])
 
   return createLapicSuccessResult(result)
 }
@@ -469,7 +529,9 @@ export function validateLapicDebugExportRequest(
   request: LapicDebugExportRequest
 ): LapicValidationResult<LapicDebugExportRequest> {
   if (!isRecord(request))
-    return createStorageFailure('Debug export request must be a record.', ['debugExportRequest'])
+    return createStorageFailure('Debug export request must be a record.', [
+      'debugExportRequest',
+    ])
 
   const artifactRefValidation = validateLapicArtifactRef(request.artifactRef)
   if (!artifactRefValidation.ok)
@@ -481,7 +543,9 @@ export function validateLapicDebugExportRequest(
     )
 
   if (!isNonEmptyString(request.viewKind))
-    return createStorageFailure('View kind must be a non-empty string.', ['viewKind'])
+    return createStorageFailure('View kind must be a non-empty string.', [
+      'viewKind',
+    ])
 
   return createLapicSuccessResult(request)
 }
@@ -490,7 +554,9 @@ export function validateLapicDebugArtifactSummary(
   summary: LapicDebugArtifactSummary
 ): LapicValidationResult<LapicDebugArtifactSummary> {
   if (!isRecord(summary))
-    return createStorageFailure('Debug artifact summary must be a record.', ['debugArtifactSummary'])
+    return createStorageFailure('Debug artifact summary must be a record.', [
+      'debugArtifactSummary',
+    ])
 
   const artifactRefValidation = validateLapicArtifactRef(summary.artifactRef)
   if (!artifactRefValidation.ok)
@@ -502,7 +568,9 @@ export function validateLapicDebugArtifactSummary(
     )
 
   if (!isNonEmptyString(summary.summaryDigest))
-    return createStorageFailure('Summary digest must be a non-empty string.', ['summaryDigest'])
+    return createStorageFailure('Summary digest must be a non-empty string.', [
+      'summaryDigest',
+    ])
 
   return createLapicSuccessResult(summary)
 }

@@ -1,7 +1,4 @@
-import type {
-  LapicCandidateDescriptor,
-  LapicCanonicalProblem,
-} from '../types'
+import type { LapicCandidateDescriptor, LapicCanonicalProblem } from '../types'
 import {
   createCombinationStateId,
   createFrameAxisIdentity,
@@ -9,7 +6,9 @@ import {
 } from './state-composition'
 
 function minimalProblem(
-  overrides: Partial<Pick<LapicCanonicalProblem, 'teamLayout' | 'frameAxis' | 'problemDigest'>> = {}
+  overrides: Partial<
+    Pick<LapicCanonicalProblem, 'teamLayout' | 'frameAxis' | 'problemDigest'>
+  > = {}
 ): LapicCanonicalProblem {
   return {
     problemId: 'test-problem',
@@ -65,7 +64,11 @@ function minimalProblem(
   }
 }
 
-function candidate(id: string, slotId: string, exclusiveResourceClaims: LapicCandidateDescriptor['provenance']['exclusiveResourceClaims'] = []): LapicCandidateDescriptor {
+function candidate(
+  id: string,
+  slotId: string,
+  exclusiveResourceClaims: LapicCandidateDescriptor['provenance']['exclusiveResourceClaims'] = []
+): LapicCandidateDescriptor {
   return {
     candidateId: id,
     sourceRecordDigest: id,
@@ -147,10 +150,7 @@ describe('createFrameAxisIdentity', () => {
 describe('createCombinationStateId', () => {
   it('builds a deterministic state id from problem and candidates', () => {
     const problem = minimalProblem({ problemDigest: 'p-1' })
-    const candidates = [
-      candidate('c1', 'slot-a'),
-      candidate('c2', 'slot-b'),
-    ]
+    const candidates = [candidate('c1', 'slot-a'), candidate('c2', 'slot-b')]
 
     const stateId = createCombinationStateId(problem, candidates)
     expect(stateId).toBe('state:p-1:slot-a:c1|slot-b:c2')
@@ -197,10 +197,20 @@ describe('hasExclusiveResourceConflict', () => {
     expect(
       hasExclusiveResourceConflict([
         candidate('c1', 'slot-a', [
-          { resourceKind: 'weapon', resourceId: 'w-1', claimedBySlotId: 'slot-a', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'w-1',
+            claimedBySlotId: 'slot-a',
+            reservationClass: 'hardReserved',
+          },
         ]),
         candidate('c2', 'slot-b', [
-          { resourceKind: 'weapon', resourceId: 'w-2', claimedBySlotId: 'slot-b', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'w-2',
+            claimedBySlotId: 'slot-b',
+            reservationClass: 'hardReserved',
+          },
         ]),
       ])
     ).toBe(false)
@@ -210,10 +220,20 @@ describe('hasExclusiveResourceConflict', () => {
     expect(
       hasExclusiveResourceConflict([
         candidate('c1', 'slot-a', [
-          { resourceKind: 'weapon', resourceId: 'w-1', claimedBySlotId: 'slot-a', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'w-1',
+            claimedBySlotId: 'slot-a',
+            reservationClass: 'hardReserved',
+          },
         ]),
         candidate('c2', 'slot-b', [
-          { resourceKind: 'weapon', resourceId: 'w-1', claimedBySlotId: 'slot-b', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'w-1',
+            claimedBySlotId: 'slot-b',
+            reservationClass: 'hardReserved',
+          },
         ]),
       ])
     ).toBe(true)
@@ -227,10 +247,20 @@ describe('hasExclusiveResourceConflict', () => {
     expect(
       hasExclusiveResourceConflict([
         candidate('c1', 'slot-a', [
-          { resourceKind: 'weapon', resourceId: 'r-1', claimedBySlotId: 'slot-a', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'r-1',
+            claimedBySlotId: 'slot-a',
+            reservationClass: 'hardReserved',
+          },
         ]),
         candidate('c2', 'slot-b', [
-          { resourceKind: 'artifact', resourceId: 'r-1', claimedBySlotId: 'slot-b', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'artifact',
+            resourceId: 'r-1',
+            claimedBySlotId: 'slot-b',
+            reservationClass: 'hardReserved',
+          },
         ]),
       ])
     ).toBe(false)

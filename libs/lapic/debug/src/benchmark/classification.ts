@@ -4,7 +4,10 @@ import type {
   LapicSessionSummary,
   LapicTraceEvent,
 } from '@genshin-optimizer/lapic/runtime'
-import type { LapicArtifactRef, LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
+import type {
+  LapicArtifactRef,
+  LapicArtifactStore,
+} from '@genshin-optimizer/lapic/storage'
 import { createLapicAuditReport } from '../audit'
 import { createLapicAuditReportRequest } from '../audit/builders'
 import { createLapicHarnessReportManifest } from '../audit/builders'
@@ -72,7 +75,8 @@ export async function createLapicSolveSliceHarnessReport(
     createLapicTraceQuery(session.identity.sessionId, false),
     progressEvents
   )
-  const thresholdLineage = createLapicThresholdLineageFromCertificates(certificates)
+  const thresholdLineage =
+    createLapicThresholdLineageFromCertificates(certificates)
   const publicationManifest = createLapicPublicationReadyReportManifest(
     createLapicBenchmarkReport(
       benchmarkId,
@@ -83,16 +87,20 @@ export async function createLapicSolveSliceHarnessReport(
       'none',
       'Live solve-slice harness completed without benchmark-qualified regression.'
     ),
-    auditReport.session.solveState === 'completed' && certificates.some((cert) => cert.certKind === 'FinalOptimalityCert')
+    auditReport.session.solveState === 'completed' &&
+      certificates.some((cert) => cert.certKind === 'FinalOptimalityCert')
       ? (() => {
-          const finalCert = certificates.find((cert) => cert.certKind === 'FinalOptimalityCert')!
+          const finalCert = certificates.find(
+            (cert) => cert.certKind === 'FinalOptimalityCert'
+          )!
           return {
             winnerStateId: finalCert.payload.winningStateId,
             winnerDigest: finalCert.evidenceDigest,
             certId: finalCert.certId,
             decisionMetadata: {
               thresholdDigest: finalCert.payload.finalThresholdDigest,
-              exactReplayRequired: finalCert.replayRecipe.arithmeticMode === 'exact',
+              exactReplayRequired:
+                finalCert.replayRecipe.arithmeticMode === 'exact',
               dangerZoneDetected: false,
             },
           }

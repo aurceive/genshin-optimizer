@@ -6,13 +6,13 @@ import type {
   LapicFirGraph,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDangerZoneConfig } from './danger-zone'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import type {
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
 } from '../types'
 import type { LapicSolveCheckpointState } from './checkpoint-state'
+import type { LapicDangerZoneConfig } from './danger-zone'
 
 export interface LapicBoundedExactCandidateCombination {
   readonly problem: LapicCanonicalProblem

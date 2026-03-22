@@ -13,18 +13,18 @@
  * This is a correctness gate for the LP relaxation pipeline.
  */
 
-import type { LapicFirGraph, LapicFirVariableId } from '../fir/types'
-import type { LapicFirScalarEnv } from '../fir/scalar-eval'
-import { evaluateLapicFirScalar } from '../fir/scalar-eval'
-import { evaluateLapicFirIntervals } from '../fir/interval-eval'
-import type { LapicInterval } from '../interval/types'
-import { lapicIntervalPoint } from '../interval/types'
-import { buildLinearModelFromFir } from './model-builder'
-import type { LapicLpProvider } from './types'
 import type {
   LapicGoldenCandidate,
   LapicGoldenDomain,
 } from '../fir/golden-harness'
+import { evaluateLapicFirIntervals } from '../fir/interval-eval'
+import type { LapicFirScalarEnv } from '../fir/scalar-eval'
+import { evaluateLapicFirScalar } from '../fir/scalar-eval'
+import type { LapicFirGraph, LapicFirVariableId } from '../fir/types'
+import type { LapicInterval } from '../interval/types'
+import { lapicIntervalPoint } from '../interval/types'
+import { buildLinearModelFromFir } from './model-builder'
+import type { LapicLpProvider } from './types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -142,8 +142,10 @@ export function runLapicLpGoldenHarness(
   const checkedPartials = new Set<string>()
 
   function shouldContinue(): boolean {
-    return maxPartialChecks === undefined ||
+    return (
+      maxPartialChecks === undefined ||
       partialAssignmentsChecked < maxPartialChecks
+    )
   }
 
   // Check the fully-unassigned case (all domains get envelopes)
@@ -256,9 +258,8 @@ export function runLapicLpGoldenHarness(
       completionScalars
     )
 
-    const maxCompletionScalar = completionScalars.length > 0
-      ? Math.max(...completionScalars)
-      : -Infinity
+    const maxCompletionScalar =
+      completionScalars.length > 0 ? Math.max(...completionScalars) : -Infinity
 
     const candidateIds = assignedCandidates.map((c) => c.candidateId)
 
@@ -293,12 +294,15 @@ export function runLapicLpGoldenHarness(
     }
 
     // 7. Record tightness
-    const lpGap = Number.isFinite(lpUpperBound) && Number.isFinite(maxCompletionScalar)
-      ? lpUpperBound - maxCompletionScalar
-      : Infinity
-    const intervalGap = Number.isFinite(intervalUpperBound) && Number.isFinite(maxCompletionScalar)
-      ? intervalUpperBound - maxCompletionScalar
-      : Infinity
+    const lpGap =
+      Number.isFinite(lpUpperBound) && Number.isFinite(maxCompletionScalar)
+        ? lpUpperBound - maxCompletionScalar
+        : Infinity
+    const intervalGap =
+      Number.isFinite(intervalUpperBound) &&
+      Number.isFinite(maxCompletionScalar)
+        ? intervalUpperBound - maxCompletionScalar
+        : Infinity
 
     tightnessRecords.push({
       assignedCandidateIds: candidateIds,
@@ -307,9 +311,10 @@ export function runLapicLpGoldenHarness(
       maxCompletionScalar,
       lpGap,
       intervalGap,
-      lpIsTighter: Number.isFinite(lpGap) && Number.isFinite(intervalGap)
-        ? lpGap < intervalGap - tolerance
-        : false,
+      lpIsTighter:
+        Number.isFinite(lpGap) && Number.isFinite(intervalGap)
+          ? lpGap < intervalGap - tolerance
+          : false,
     })
   }
 

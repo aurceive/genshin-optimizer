@@ -29,7 +29,10 @@ export interface LapicFrontierJoinPlan {
   readonly totalCombinationCount: number
 }
 
-function failure(message: string, path?: readonly string[]): LapicValidationResult<never> {
+function failure(
+  message: string,
+  path?: readonly string[]
+): LapicValidationResult<never> {
   return createLapicFailureResult([
     createLapicDiagnostic('error', 'SchemaViolation', message, path),
   ])
@@ -41,9 +44,7 @@ function createExpectedOccupiedSlotMask(
 ): number {
   const slotIndex = problem.teamLayout.slotIds.indexOf(slotId)
   if (slotIndex < 0)
-    throw new Error(
-      `Slot '${slotId}' is not present in teamLayout.slotIds.`
-    )
+    throw new Error(`Slot '${slotId}' is not present in teamLayout.slotIds.`)
   return 1 << slotIndex
 }
 
@@ -162,7 +163,8 @@ export function createFrontierJoinPlan(
         )
 
       for (const row of block.rows) {
-        if (row.slotId !== domain.slotId || !rowDigests.has(row.rowDigest)) continue
+        if (row.slotId !== domain.slotId || !rowDigests.has(row.rowDigest))
+          continue
 
         if (seenResolvedRowDigests.has(row.rowDigest))
           return failure(
@@ -201,7 +203,9 @@ export function createFrontierJoinPlan(
 
   const entries = entriesResult.map((entry) => {
     if (!entry.ok)
-      throw new Error('Expected validated frontier join entry before extraction.')
+      throw new Error(
+        'Expected validated frontier join entry before extraction.'
+      )
     return entry.value
   })
 

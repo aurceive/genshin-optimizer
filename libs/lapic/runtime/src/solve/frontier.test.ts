@@ -48,7 +48,11 @@ function candidate(
 
 function createProblem(config: {
   slotIds: string[]
-  domains: Array<{ domainId: string; slotId: string; candidates: LapicCandidateDescriptor[] }>
+  domains: Array<{
+    domainId: string
+    slotId: string
+    candidates: LapicCandidateDescriptor[]
+  }>
 }): LapicCanonicalProblem {
   return {
     problemId: 'frontier-test',
@@ -70,7 +74,8 @@ function createProblem(config: {
       slotId,
       slotRole: `artifact-${slotId}`,
       participationMode: 'optimizedBuild' as const,
-      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!.domainId,
+      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!
+        .domainId,
       equipmentOwnershipModel: 'hard-reserved-inventory' as const,
       contributesToObjective: true,
       contributesToConstraints: true,
@@ -132,7 +137,10 @@ describe('createFrontierBlockForDomain', () => {
     }
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
-      domains: [domain, { domainId: 'd-plume', slotId: 'plume', candidates: [] }],
+      domains: [
+        domain,
+        { domainId: 'd-plume', slotId: 'plume', candidates: [] },
+      ],
     })
 
     const block = createFrontierBlockForDomain(problem, domain)
@@ -226,7 +234,12 @@ describe('createFrontierBlockForDomain', () => {
       slotId: 'flower',
       candidates: [
         candidate('c1', 'd-flower', 'flower', [
-          { resourceKind: 'weapon', resourceId: 'w-1', claimedBySlotId: 'flower', reservationClass: 'hardReserved' },
+          {
+            resourceKind: 'weapon',
+            resourceId: 'w-1',
+            claimedBySlotId: 'flower',
+            reservationClass: 'hardReserved',
+          },
         ]),
       ],
     }
@@ -277,9 +290,7 @@ describe('createFrontierIndexForSolve', () => {
     const domainPlume = {
       domainId: 'd-plume',
       slotId: 'plume',
-      candidates: [
-        candidate('c3', 'd-plume', 'plume'),
-      ],
+      candidates: [candidate('c3', 'd-plume', 'plume')],
     }
     const problem = createProblem({
       slotIds: ['flower', 'plume'],

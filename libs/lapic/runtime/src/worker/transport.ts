@@ -15,8 +15,8 @@
  */
 
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
-import type { LapicWorkerBackendKind } from '../types'
 import type { LapicBoundedExactCombinationEvaluation } from '../solve/types'
+import type { LapicWorkerBackendKind } from '../types'
 
 // ---------------------------------------------------------------------------
 // Message types
@@ -109,13 +109,17 @@ export interface LapicWorkerTransport {
    * The transport is responsible for routing, serialization,
    * and error recovery.
    */
-  dispatch(message: LapicWorkerDispatchMessage): Promise<LapicWorkerResultMessage>
+  dispatch(
+    message: LapicWorkerDispatchMessage
+  ): Promise<LapicWorkerResultMessage>
 
   /**
    * Request all active workers to pause at the next safe point.
    * Returns pause acknowledgments from each worker.
    */
-  requestPauseAll(sessionId: string): Promise<readonly LapicWorkerPauseAckMessage[]>
+  requestPauseAll(
+    sessionId: string
+  ): Promise<readonly LapicWorkerPauseAckMessage[]>
 
   /**
    * Terminate all workers and release resources.
@@ -156,7 +160,9 @@ export function createInProcessTransport(
   return {
     backendKind: 'in-process',
 
-    async dispatch(message: LapicWorkerDispatchMessage): Promise<LapicWorkerResultMessage> {
+    async dispatch(
+      message: LapicWorkerDispatchMessage
+    ): Promise<LapicWorkerResultMessage> {
       const result = executor(message.startFlatIndex, message.endFlatIndex)
 
       return {

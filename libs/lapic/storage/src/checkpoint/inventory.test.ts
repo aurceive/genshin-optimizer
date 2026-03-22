@@ -30,7 +30,9 @@ function createWriteRequest() {
 
 describe('lapic storage checkpoint inventory', () => {
   it('materializes checkpoint closure inventory with missing artifacts', () => {
-    const requiredArtifact = createLapicArtifactRefFromWriteRequest(createWriteRequest())
+    const requiredArtifact = createLapicArtifactRefFromWriteRequest(
+      createWriteRequest()
+    )
     const inventory = materializeLapicCheckpointClosureInventory(
       {
         checkpointId: 'checkpoint-id',
@@ -43,7 +45,9 @@ describe('lapic storage checkpoint inventory', () => {
   })
 
   it('validates checkpoint closure inventory when missing artifacts are a subset of required artifacts', () => {
-    const requiredArtifact = createLapicArtifactRefFromWriteRequest(createWriteRequest())
+    const requiredArtifact = createLapicArtifactRefFromWriteRequest(
+      createWriteRequest()
+    )
     const inventory = createLapicCheckpointClosureInventory(
       'checkpoint-id',
       [requiredArtifact],

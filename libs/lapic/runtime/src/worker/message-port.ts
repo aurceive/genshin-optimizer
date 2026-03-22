@@ -14,13 +14,13 @@
  *   listens for messages and runs the evaluate loop.
  */
 
+import type { LapicWorkerHandle } from './pool'
 import type {
+  LapicInProcessWorkExecutor,
   LapicWorkerDispatchMessage,
   LapicWorkerPauseAckMessage,
   LapicWorkerResultMessage,
-  LapicInProcessWorkExecutor,
 } from './transport'
-import type { LapicWorkerHandle } from './pool'
 
 // ---------------------------------------------------------------------------
 // MessagePort abstraction
@@ -36,8 +36,14 @@ import type { LapicWorkerHandle } from './pool'
 export interface LapicMessagePortLike {
   postMessage(data: unknown): void
   on?(event: 'message', handler: (data: unknown) => void): void
-  addEventListener?(type: 'message', handler: (event: { data: unknown }) => void): void
-  removeEventListener?(type: 'message', handler: (event: { data: unknown }) => void): void
+  addEventListener?(
+    type: 'message',
+    handler: (event: { data: unknown }) => void
+  ): void
+  removeEventListener?(
+    type: 'message',
+    handler: (event: { data: unknown }) => void
+  ): void
   off?(event: 'message', handler: (data: unknown) => void): void
   close?(): void
 }
@@ -50,7 +56,11 @@ export interface LapicMessagePortLike {
  * Messages sent from the main thread to the worker.
  */
 export type LapicPortCoordinatorEnvelope =
-  | { readonly kind: 'dispatch'; readonly id: number; readonly message: LapicWorkerDispatchMessage }
+  | {
+      readonly kind: 'dispatch'
+      readonly id: number
+      readonly message: LapicWorkerDispatchMessage
+    }
   | { readonly kind: 'pause'; readonly id: number; readonly sessionId: string }
   | { readonly kind: 'terminate' }
 
@@ -58,8 +68,16 @@ export type LapicPortCoordinatorEnvelope =
  * Messages sent from the worker back to the main thread.
  */
 export type LapicPortWorkerEnvelope =
-  | { readonly kind: 'dispatch-result'; readonly id: number; readonly result: LapicWorkerResultMessage }
-  | { readonly kind: 'pause-ack'; readonly id: number; readonly result: LapicWorkerPauseAckMessage | undefined }
+  | {
+      readonly kind: 'dispatch-result'
+      readonly id: number
+      readonly result: LapicWorkerResultMessage
+    }
+  | {
+      readonly kind: 'pause-ack'
+      readonly id: number
+      readonly result: LapicWorkerPauseAckMessage | undefined
+    }
   | { readonly kind: 'error'; readonly id: number; readonly message: string }
 
 // ---------------------------------------------------------------------------
@@ -114,26 +132,41 @@ export function createMessagePortWorkerHandle(
   return {
     workerId,
 
-    dispatch(message: LapicWorkerDispatchMessage): Promise<LapicWorkerResultMessage> {
-      if (terminated) return Promise.reject(new Error(`Worker ${workerId} is terminated.`))
+    dispatch(
+      message: LapicWorkerDispatchMessage
+    ): Promise<LapicWorkerResultMessage> {
+      if (terminated)
+        return Promise.reject(new Error(`Worker ${workerId} is terminated.`))
 
       const id = nextId++
       return new Promise<LapicWorkerResultMessage>((resolve, reject) => {
         pending.set(id, { resolve: resolve as (v: unknown) => void, reject })
-        const envelope: LapicPortCoordinatorEnvelope = { kind: 'dispatch', id, message }
+        const envelope: LapicPortCoordinatorEnvelope = {
+          kind: 'dispatch',
+          id,
+          message,
+        }
         port.postMessage(envelope)
       })
     },
 
-    requestPause(sessionId: string): Promise<LapicWorkerPauseAckMessage | undefined> {
+    requestPause(
+      sessionId: string
+    ): Promise<LapicWorkerPauseAckMessage | undefined> {
       if (terminated) return Promise.resolve(undefined)
 
       const id = nextId++
-      return new Promise<LapicWorkerPauseAckMessage | undefined>((resolve, reject) => {
-        pending.set(id, { resolve: resolve as (v: unknown) => void, reject })
-        const envelope: LapicPortCoordinatorEnvelope = { kind: 'pause', id, sessionId }
-        port.postMessage(envelope)
-      })
+      return new Promise<LapicWorkerPauseAckMessage | undefined>(
+        (resolve, reject) => {
+          pending.set(id, { resolve: resolve as (v: unknown) => void, reject })
+          const envelope: LapicPortCoordinatorEnvelope = {
+            kind: 'pause',
+            id,
+            sessionId,
+          }
+          port.postMessage(envelope)
+        }
+      )
     },
 
     async terminate(): Promise<void> {
@@ -243,7 +276,9 @@ export function createWorkerEntryHandler(
 
   // Attach listener
   if (typeof port.on === 'function') {
-    port.on('message', (data) => handleMessage(data as LapicPortCoordinatorEnvelope))
+    port.on('message', (data) =>
+      handleMessage(data as LapicPortCoordinatorEnvelope)
+    )
   } else if (typeof port.addEventListener === 'function') {
     port.addEventListener('message', (event) =>
       handleMessage(event.data as LapicPortCoordinatorEnvelope)

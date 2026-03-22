@@ -26,19 +26,19 @@
  * ```
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   GiLapicSolveOrchestration,
   GiLapicSolveOrchestrationConfig,
 } from '@genshin-optimizer/gi/lapic-adapter'
 import { createGiLapicSolveOrchestration } from '@genshin-optimizer/gi/lapic-adapter'
 import type {
+  LapicFailureRecord,
   LapicOrchestrationOutcome,
   LapicProgressEvent,
-  LapicFailureRecord,
-  LapicTraceEvent,
   LapicSubscriptionToken,
+  LapicTraceEvent,
 } from '@genshin-optimizer/lapic/runtime'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
 // State types

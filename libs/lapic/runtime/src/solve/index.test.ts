@@ -239,7 +239,9 @@ describe('lapic bounded exact solve executor', () => {
     }
 
     controller.subscribeProgress((event) => {
-      progressEvents.push(`${event.phase}:${event.completedUnits}/${event.totalUnits ?? 0}`)
+      progressEvents.push(
+        `${event.phase}:${event.completedUnits}/${event.totalUnits ?? 0}`
+      )
     })
     controller.subscribeDiagnostics((event) => {
       diagnosticTags.push('tag' in event ? event.tag : event.failureClass)
@@ -250,7 +252,9 @@ describe('lapic bounded exact solve executor', () => {
       controller,
       artifactStore: store,
       evaluateCombination({ candidates }) {
-        const key = candidates.map((candidate) => candidate.candidateId).join('|')
+        const key = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
         const score = scores[key]
         if (!score)
           return createLapicFailureResult([
@@ -274,9 +278,18 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(completion.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
-    expect(completion.emittedCertificates[completion.emittedCertificates.length - 1]?.certKind).toBe('FinalOptimalityCert')
-    const dominanceCerts = completion.emittedCertificates.filter((c) => c.certKind === 'DominanceCert')
+    expect(
+      completion.emittedCertificates.filter(
+        (c) => c.certKind === 'FinalOptimalityCert'
+      )
+    ).toHaveLength(1)
+    expect(
+      completion.emittedCertificates[completion.emittedCertificates.length - 1]
+        ?.certKind
+    ).toBe('FinalOptimalityCert')
+    const dominanceCerts = completion.emittedCertificates.filter(
+      (c) => c.certKind === 'DominanceCert'
+    )
     expect(dominanceCerts.length).toBeGreaterThan(0)
     expect(
       store
@@ -288,18 +301,24 @@ describe('lapic bounded exact solve executor', () => {
       'payload:frontier:problem-digest:plume',
     ])
     expect(
-      store.snapshot().find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
+      store
+        .snapshot()
+        .find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
         ?.payloadDigest
     ).toBe('payload:frontier-index:problem-digest')
     expect(
-      store.snapshot().find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
+      store
+        .snapshot()
+        .find((entry) => entry.artifactRef.artifactKind === 'frontier-index')
         ?.envelope.contentHash
     ).toBe('frontier-index:problem-digest')
     expect(
       store
         .snapshot()
         .filter((entry) => entry.artifactRef.artifactKind === 'frontier-block')
-        .every((entry) => entry.envelope.contentHash.startsWith('frontier:problem-digest:'))
+        .every((entry) =>
+          entry.envelope.contentHash.startsWith('frontier:problem-digest:')
+        )
     ).toBe(true)
     expect(progressEvents).toContain('frontier-build:1/2')
     expect(progressEvents).toContain('frontier-build:2/2')
@@ -333,7 +352,9 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.summary.solveState).toBe('completed')
     expect(completion.finalOptimality).toBeUndefined()
     expect(completion.emittedCertificates).toHaveLength(1)
-    expect(completion.emittedCertificates[0]?.certKind).toBe('InfeasibilityCert')
+    expect(completion.emittedCertificates[0]?.certKind).toBe(
+      'InfeasibilityCert'
+    )
     expect(store.snapshot()).toHaveLength(5)
   })
 
@@ -365,8 +386,14 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(completion.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
-    const cert = completion.emittedCertificates.find((c) => c.certKind === 'FinalOptimalityCert')!
+    expect(
+      completion.emittedCertificates.filter(
+        (c) => c.certKind === 'FinalOptimalityCert'
+      )
+    ).toHaveLength(1)
+    const cert = completion.emittedCertificates.find(
+      (c) => c.certKind === 'FinalOptimalityCert'
+    )!
     expect(cert.certKind).toBe('FinalOptimalityCert')
     expect(cert.referencedStateIds).toHaveLength(3)
     expect(cert.referencedStateIds[0]).toBe(
@@ -452,11 +479,15 @@ describe('lapic bounded exact solve executor', () => {
     expect(outcome.paused).toBe(true)
     expect(outcome.checkpointState.checkpointKind).toBe('solve-position')
     expect(outcome.checkpointState.problemDigest).toBe('problem-digest')
-    expect(outcome.checkpointState.visitedCombinationCount).toBeGreaterThanOrEqual(2)
+    expect(
+      outcome.checkpointState.visitedCombinationCount
+    ).toBeGreaterThanOrEqual(2)
     expect(outcome.checkpointState.totalCombinationCount).toBe(4)
     expect(outcome.checkpointState.phase).toBe('join')
     expect(outcome.checkpointState.trackerSnapshot.topN).toBe(1)
-    expect(outcome.checkpointState.trackerSnapshot.entries.length).toBeGreaterThanOrEqual(1)
+    expect(
+      outcome.checkpointState.trackerSnapshot.entries.length
+    ).toBeGreaterThanOrEqual(1)
     expect(outcome.checkpointState.frontierBlockIds).toHaveLength(2)
 
     // Verify checkpoint state was persisted to artifact store
@@ -526,8 +557,16 @@ describe('lapic bounded exact solve executor', () => {
     expect(finalOutcome.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    expect(finalOutcome.emittedCertificates.filter((c) => c.certKind === 'FinalOptimalityCert')).toHaveLength(1)
-    expect(finalOutcome.emittedCertificates[finalOutcome.emittedCertificates.length - 1]?.certKind).toBe('FinalOptimalityCert')
+    expect(
+      finalOutcome.emittedCertificates.filter(
+        (c) => c.certKind === 'FinalOptimalityCert'
+      )
+    ).toHaveLength(1)
+    expect(
+      finalOutcome.emittedCertificates[
+        finalOutcome.emittedCertificates.length - 1
+      ]?.certKind
+    ).toBe('FinalOptimalityCert')
   })
 
   it('persists solve-checkpoint artifact that is included in session checkpoint closure', async () => {
@@ -767,7 +806,9 @@ describe('lapic bounded exact solve executor', () => {
 
     // Verify pruning statistics are captured in checkpoint
     expect(firstOutcome.checkpointState.pruningStatistics).toBeDefined()
-    expect(firstOutcome.checkpointState.pruningStatistics!.boundEvaluationCount).toBeGreaterThanOrEqual(0)
+    expect(
+      firstOutcome.checkpointState.pruningStatistics!.boundEvaluationCount
+    ).toBeGreaterThanOrEqual(0)
 
     // Second run: resume and complete
     const secondRun = createController()
@@ -895,7 +936,10 @@ describe('lapic bounded exact solve executor', () => {
     expect(pruneCert.validationStatus).toBe('validated')
     expect(pruneCert.payload).toHaveProperty('boundValue')
     expect(pruneCert.payload).toHaveProperty('thresholdDigest')
-    expect(pruneCert.payload).toHaveProperty('boundSourceClass', 'relaxationDerived')
+    expect(pruneCert.payload).toHaveProperty(
+      'boundSourceClass',
+      'relaxationDerived'
+    )
     expect(pruneCert.payload).toHaveProperty('dangerZoneRecord')
 
     // FinalOptimalityCert should reference pruning
@@ -994,7 +1038,12 @@ describe('lapic bounded exact solve executor', () => {
 
     // Build a F-IR graph with NO forced branches (guard is variable)
     const b = new LapicFirGraphBuilder()
-    const rootId = b.thresholdSelect(b.read('guard'), 5, b.read('x'), b.read('y'))
+    const rootId = b.thresholdSelect(
+      b.read('guard'),
+      5,
+      b.read('x'),
+      b.read('y')
+    )
     const firGraph = b.build(rootId)
 
     const scores: Record<string, string> = {
@@ -1029,7 +1078,9 @@ describe('lapic bounded exact solve executor', () => {
 
   describe('createDominanceCertificate', () => {
     it('creates a valid dominance certificate with all required payload fields', async () => {
-      const { validateLapicCertificate } = await import('@genshin-optimizer/lapic/cert')
+      const { validateLapicCertificate } = await import(
+        '@genshin-optimizer/lapic/cert'
+      )
       const { createDominanceCertificate } = await import('./certificate')
 
       const problem = createProblem()
@@ -1058,7 +1109,9 @@ describe('lapic bounded exact solve executor', () => {
       expect(cert.payload.dominatingStateId).toBe('state:winner')
       expect(cert.payload.dominatedStateId).toBe('state:loser')
       expect(cert.payload.comparisonDigest).toBeTruthy()
-      expect(cert.payload.exactSignatureGroupKeyDigest).toContain('flower+plume')
+      expect(cert.payload.exactSignatureGroupKeyDigest).toContain(
+        'flower+plume'
+      )
       expect(cert.payload.compatibilityInclusionDigest).toBeTruthy()
       expect(cert.payload.monotoneProjectionDigest).toBeTruthy()
       expect(cert.payload.upperBoundProfileDigest).toBeTruthy()
@@ -1157,7 +1210,11 @@ describe('lapic bounded exact solve executor', () => {
 
 describe('detectBoundPruneDangerZone', () => {
   it('does not trigger when gap is large', () => {
-    const result = detectBoundPruneDangerZone('10', '100', defaultLapicDangerZoneConfig)
+    const result = detectBoundPruneDangerZone(
+      '10',
+      '100',
+      defaultLapicDangerZoneConfig
+    )
     expect(result.triggered).toBe(false)
     expect(result.absoluteGap).toBe(90)
     expect(result.relativeGap).toBe(0.9)
@@ -1183,13 +1240,21 @@ describe('detectBoundPruneDangerZone', () => {
   })
 
   it('triggers for non-finite values', () => {
-    const result = detectBoundPruneDangerZone('NaN', '100', defaultLapicDangerZoneConfig)
+    const result = detectBoundPruneDangerZone(
+      'NaN',
+      '100',
+      defaultLapicDangerZoneConfig
+    )
     expect(result.triggered).toBe(true)
     expect(result.explanation).toContain('Non-finite')
   })
 
   it('triggers for Infinity', () => {
-    const result = detectBoundPruneDangerZone('Infinity', '100', defaultLapicDangerZoneConfig)
+    const result = detectBoundPruneDangerZone(
+      'Infinity',
+      '100',
+      defaultLapicDangerZoneConfig
+    )
     expect(result.triggered).toBe(true)
     expect(result.explanation).toContain('Non-finite')
   })
@@ -1220,7 +1285,11 @@ describe('detectBoundPruneDangerZone', () => {
   })
 
   it('buildDangerZoneRecord omits explanation when not triggered', () => {
-    const detection = detectBoundPruneDangerZone('10', '100', defaultLapicDangerZoneConfig)
+    const detection = detectBoundPruneDangerZone(
+      '10',
+      '100',
+      defaultLapicDangerZoneConfig
+    )
     const record = buildDangerZoneRecord(detection, false)
     expect(record.triggered).toBe(false)
     expect(record.explanation).toBeUndefined()
@@ -1259,13 +1328,16 @@ describe('executor danger-zone integration', () => {
         const flowerId = assignedCandidates[0]?.candidateId
         if (flowerId === 'flower-a') {
           // Bound is barely below threshold — within danger zone
-          return { upperBoundValue: '0019.9999999999999', evidenceDigest: 'bound:close' }
+          return {
+            upperBoundValue: '0019.9999999999999',
+            evidenceDigest: 'bound:close',
+          }
         }
         return { upperBoundValue: '9999', evidenceDigest: 'bound:high' }
       },
       maxCombinationCount: 16,
       dangerZoneConfig: {
-        safeMarginRatio: 0.01,    // 1% relative margin
+        safeMarginRatio: 0.01, // 1% relative margin
         safeMarginAbsolute: 0.01, // 0.01 absolute margin
       },
     })
@@ -1329,7 +1401,9 @@ describe('executor danger-zone integration', () => {
 
     // The BoundPruneCert should have dangerZoneRecord.triggered === false
     const pruneCert = pruneCerts[0]!
-    expect((pruneCert.payload as Record<string, unknown>).dangerZoneRecord).toEqual({
+    expect(
+      (pruneCert.payload as Record<string, unknown>).dangerZoneRecord
+    ).toEqual({
       triggered: false,
       verificationReplayInvoked: false,
     })

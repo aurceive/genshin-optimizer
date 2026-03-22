@@ -57,7 +57,9 @@ function makeJoinPlan(rowCounts: number[]): LapicFrontierJoinPlan {
 
 describe('createWorkerPartitionPlan', () => {
   it('creates a single partition for workerCount=1', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), { workerCount: 1 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), {
+      workerCount: 1,
+    })
     expect(plan.workerCount).toBe(1)
     expect(plan.totalCombinationCount).toBe(12)
     expect(plan.partitions).toHaveLength(1)
@@ -67,7 +69,9 @@ describe('createWorkerPartitionPlan', () => {
   })
 
   it('balances partitions evenly when divisible', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), { workerCount: 4 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), {
+      workerCount: 4,
+    })
     expect(plan.workerCount).toBe(4)
     expect(plan.partitions).toHaveLength(4)
     for (const p of plan.partitions) {
@@ -76,7 +80,9 @@ describe('createWorkerPartitionPlan', () => {
   })
 
   it('distributes remainder to first partitions', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([5, 2]), { workerCount: 3 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([5, 2]), {
+      workerCount: 3,
+    })
     expect(plan.workerCount).toBe(3)
     expect(plan.partitions).toHaveLength(3)
     // 10 / 3 = 3 remainder 1 → first partition gets 4, others get 3
@@ -86,7 +92,9 @@ describe('createWorkerPartitionPlan', () => {
   })
 
   it('clamps workerCount to totalCombinationCount', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([2, 2]), { workerCount: 100 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([2, 2]), {
+      workerCount: 100,
+    })
     expect(plan.workerCount).toBe(4) // 4 combinations total
     expect(plan.partitions).toHaveLength(4)
     for (const p of plan.partitions) {
@@ -124,7 +132,9 @@ describe('createWorkerPartitionPlan', () => {
 
 describe('validatePartitionPlanCoverage', () => {
   it('validates a correct plan', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), { workerCount: 3 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), {
+      workerCount: 3,
+    })
     expect(validatePartitionPlanCoverage(plan)).toBe(true)
   })
 
@@ -144,8 +154,18 @@ describe('validatePartitionPlanCoverage', () => {
         workerCount: 2,
         totalCombinationCount: 10,
         partitions: [
-          { partitionIndex: 0, startFlatIndex: 0, endFlatIndex: 4, combinationCount: 4 },
-          { partitionIndex: 1, startFlatIndex: 6, endFlatIndex: 10, combinationCount: 4 },
+          {
+            partitionIndex: 0,
+            startFlatIndex: 0,
+            endFlatIndex: 4,
+            combinationCount: 4,
+          },
+          {
+            partitionIndex: 1,
+            startFlatIndex: 6,
+            endFlatIndex: 10,
+            combinationCount: 4,
+          },
         ],
       })
     ).toBe(false)

@@ -1,6 +1,4 @@
-import {
-  createLapicMemoryArtifactStore,
-} from '@genshin-optimizer/lapic/storage'
+import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
 import type {
   LapicOrchestrationOutcome,
   LapicOrchestrationState,
@@ -109,7 +107,9 @@ describe('validateLapicSolveOrchestrationConfig', () => {
       createValidConfig({ artifactStore: null as any })
     )
     expect(result.ok).toBe(false)
-    expect(result.diagnostics[0]!.message).toContain('Artifact store must be a record')
+    expect(result.diagnostics[0]!.message).toContain(
+      'Artifact store must be a record'
+    )
   })
 
   it('rejects artifact store without write method', () => {
@@ -179,32 +179,50 @@ describe('validateLapicOrchestrationState', () => {
 
 describe('validateLapicOrchestrationStateTransition', () => {
   it('allows created → running', () => {
-    const result = validateLapicOrchestrationStateTransition('created', 'running')
+    const result = validateLapicOrchestrationStateTransition(
+      'created',
+      'running'
+    )
     expect(result.ok).toBe(true)
   })
 
   it('allows running → completed', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'completed')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'completed'
+    )
     expect(result.ok).toBe(true)
   })
 
   it('allows running → paused', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'paused')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'paused'
+    )
     expect(result.ok).toBe(true)
   })
 
   it('allows running → failed', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'failed')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'failed'
+    )
     expect(result.ok).toBe(true)
   })
 
   it('allows running → cancelled', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'cancelled')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'cancelled'
+    )
     expect(result.ok).toBe(true)
   })
 
   it('rejects created → completed (must go through running)', () => {
-    const result = validateLapicOrchestrationStateTransition('created', 'completed')
+    const result = validateLapicOrchestrationStateTransition(
+      'created',
+      'completed'
+    )
     expect(result.ok).toBe(false)
     expect(result.diagnostics[0]!.message).toContain('Illegal')
   })
@@ -212,19 +230,28 @@ describe('validateLapicOrchestrationStateTransition', () => {
   it('rejects all transitions from terminal states', () => {
     for (const terminal of lapicOrchestrationTerminalStates) {
       for (const target of lapicOrchestrationStates) {
-        const result = validateLapicOrchestrationStateTransition(terminal, target)
+        const result = validateLapicOrchestrationStateTransition(
+          terminal,
+          target
+        )
         expect(result.ok).toBe(false)
       }
     }
   })
 
   it('rejects running → created (backward transition)', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'created')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'created'
+    )
     expect(result.ok).toBe(false)
   })
 
   it('rejects self-transitions for non-idempotent states', () => {
-    const result = validateLapicOrchestrationStateTransition('running', 'running')
+    const result = validateLapicOrchestrationStateTransition(
+      'running',
+      'running'
+    )
     expect(result.ok).toBe(false)
   })
 

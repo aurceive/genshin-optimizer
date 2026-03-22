@@ -18,19 +18,19 @@ export function validateLapicCheckpointRequest(
   request: LapicCheckpointRequest
 ): LapicValidationResult<LapicCheckpointRequest> {
   if (!isRecord(request))
-    return createRuntimeFailure(
-      'Checkpoint request must be a record.',
-      ['checkpointRequest']
-    )
+    return createRuntimeFailure('Checkpoint request must be a record.', [
+      'checkpointRequest',
+    ])
 
   if (!isNonEmptyString(request.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (!isNonEmptyString(request.checkpointId))
-    return createRuntimeFailure(
-      'Checkpoint id must be a non-empty string.',
-      ['checkpointId']
-    )
+    return createRuntimeFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   return createLapicSuccessResult(request)
 }
@@ -105,22 +105,20 @@ export function validateLapicCheckpointCompletionResult(
     )
 
   if (!isNonEmptyString(result.checkpointId))
-    return createRuntimeFailure(
-      'Checkpoint id must be a non-empty string.',
-      ['checkpointId']
-    )
+    return createRuntimeFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   if (!isRecord(result.verification))
-    return createRuntimeFailure(
-      'Checkpoint verification must be a record.',
-      ['verification']
-    )
+    return createRuntimeFailure('Checkpoint verification must be a record.', [
+      'verification',
+    ])
 
   if (!isBoolean(result.verification.resumable))
-    return createRuntimeFailure(
-      'Verification resumable must be boolean.',
-      ['verification', 'resumable']
-    )
+    return createRuntimeFailure('Verification resumable must be boolean.', [
+      'verification',
+      'resumable',
+    ])
 
   return createLapicSuccessResult(result)
 }
@@ -135,7 +133,9 @@ export function validateLapicPauseToCheckpointTransitionSummary(
     )
 
   if (!isNonEmptyString(summary.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   return validateLapicCheckpointCompletionResult(summary.checkpoint).ok
     ? createLapicSuccessResult(summary)

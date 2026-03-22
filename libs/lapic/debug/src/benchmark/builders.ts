@@ -38,7 +38,9 @@ export function createLapicBenchmarkReport(
     benchmarkId,
     environmentLabel,
     correctnessQualified,
-    ...(upgradeFrontierCostShare !== undefined ? { upgradeFrontierCostShare } : {}),
+    ...(upgradeFrontierCostShare !== undefined
+      ? { upgradeFrontierCostShare }
+      : {}),
     ...(graphOutputCostShare !== undefined ? { graphOutputCostShare } : {}),
   }
 }

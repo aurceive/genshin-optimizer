@@ -35,10 +35,14 @@ export function validateLapicIntegrityScanResult(
   result: LapicIntegrityScanResult
 ): LapicValidationResult<LapicIntegrityScanResult> {
   if (!isRecord(result))
-    return createStorageFailure('Integrity scan result must be a record.', ['integrityScanResult'])
+    return createStorageFailure('Integrity scan result must be a record.', [
+      'integrityScanResult',
+    ])
 
   if (!isBoolean(result.ok))
-    return createStorageFailure('Integrity result ok must be a boolean.', ['ok'])
+    return createStorageFailure('Integrity result ok must be a boolean.', [
+      'ok',
+    ])
 
   if (
     !Array.isArray(result.classifications) ||
@@ -49,7 +53,10 @@ export function validateLapicIntegrityScanResult(
       ['classifications']
     )
 
-  const artifactValidation = validateArtifactRefArray(result.affectedArtifacts, ['affectedArtifacts'])
+  const artifactValidation = validateArtifactRefArray(
+    result.affectedArtifacts,
+    ['affectedArtifacts']
+  )
   if (!artifactValidation.ok) return artifactValidation
 
   return createLapicSuccessResult(result)
@@ -70,8 +77,14 @@ export function validateLapicRepairRecommendationSummary(
       ['canRepairDeterministically']
     )
 
-  if (!Array.isArray(summary.actions) || !summary.actions.every(isNonEmptyString))
-    return createStorageFailure('Repair actions must contain non-empty strings.', ['actions'])
+  if (
+    !Array.isArray(summary.actions) ||
+    !summary.actions.every(isNonEmptyString)
+  )
+    return createStorageFailure(
+      'Repair actions must contain non-empty strings.',
+      ['actions']
+    )
 
   return createLapicSuccessResult(summary)
 }

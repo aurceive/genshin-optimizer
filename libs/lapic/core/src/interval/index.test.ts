@@ -1,12 +1,4 @@
 import {
-  LAPIC_INTERVAL_EMPTY,
-  LAPIC_INTERVAL_REAL,
-  lapicInterval,
-  lapicIntervalIsEmpty,
-  lapicIntervalIsPoint,
-  lapicIntervalPoint,
-} from './types'
-import {
   lapicIntervalAdd,
   lapicIntervalAffine,
   lapicIntervalMax,
@@ -24,6 +16,14 @@ import {
   lapicIntervalSum,
   lapicIntervalThresholdSelect,
 } from './arithmetic'
+import {
+  LAPIC_INTERVAL_EMPTY,
+  LAPIC_INTERVAL_REAL,
+  lapicInterval,
+  lapicIntervalIsEmpty,
+  lapicIntervalIsPoint,
+  lapicIntervalPoint,
+} from './types'
 
 // ---------------------------------------------------------------------------
 // Type helpers
@@ -245,7 +245,7 @@ describe('interval resistance transform', () => {
 
 describe('interval piecewise affine', () => {
   const segments = [
-    { breakpoint: 0, slope: 1, intercept: 0 },   // y = x for [0, 10)
+    { breakpoint: 0, slope: 1, intercept: 0 }, // y = x for [0, 10)
     { breakpoint: 10, slope: 0.5, intercept: 10 }, // y = 0.5*(x-10)+10 for [10, ∞)
   ]
 
@@ -277,10 +277,10 @@ describe('interval piecewise affine', () => {
 describe('interval threshold select', () => {
   it('selects then branch when guard above threshold', () => {
     const r = lapicIntervalThresholdSelect(
-      lapicInterval(5, 10),  // guard entirely ≥ 3
+      lapicInterval(5, 10), // guard entirely ≥ 3
       3,
       lapicInterval(100, 200), // then
-      lapicInterval(0, 1)      // else
+      lapicInterval(0, 1) // else
     )
     expect(r.lo).toBe(100)
     expect(r.hi).toBe(200)
@@ -288,10 +288,10 @@ describe('interval threshold select', () => {
 
   it('selects else branch when guard below threshold', () => {
     const r = lapicIntervalThresholdSelect(
-      lapicInterval(0, 2),     // guard entirely < 3
+      lapicInterval(0, 2), // guard entirely < 3
       3,
       lapicInterval(100, 200), // then
-      lapicInterval(0, 1)      // else
+      lapicInterval(0, 1) // else
     )
     expect(r.lo).toBe(0)
     expect(r.hi).toBe(1)
@@ -299,10 +299,10 @@ describe('interval threshold select', () => {
 
   it('returns hull when guard straddles threshold', () => {
     const r = lapicIntervalThresholdSelect(
-      lapicInterval(1, 5),     // guard straddles 3
+      lapicInterval(1, 5), // guard straddles 3
       3,
       lapicInterval(100, 200), // then
-      lapicInterval(0, 1)      // else
+      lapicInterval(0, 1) // else
     )
     expect(r.lo).toBe(0)
     expect(r.hi).toBe(200)

@@ -68,8 +68,7 @@ export function createWorkerPartitionPlan(
   config: LapicPartitionConfig
 ): LapicWorkerPartitionPlan {
   const total = joinPlan.totalCombinationCount
-  if (config.workerCount < 1)
-    throw new Error('workerCount must be >= 1')
+  if (config.workerCount < 1) throw new Error('workerCount must be >= 1')
   if (total === 0)
     return { workerCount: 0, totalCombinationCount: 0, partitions: [] }
 
@@ -110,8 +109,7 @@ export function createWorkerPartitionPlan(
 export function validatePartitionPlanCoverage(
   plan: LapicWorkerPartitionPlan
 ): boolean {
-  if (plan.partitions.length === 0)
-    return plan.totalCombinationCount === 0
+  if (plan.partitions.length === 0) return plan.totalCombinationCount === 0
 
   let covered = 0
   let expectedStart = 0
@@ -119,7 +117,11 @@ export function validatePartitionPlanCoverage(
   for (const partition of plan.partitions) {
     if (partition.startFlatIndex !== expectedStart) return false
     if (partition.endFlatIndex <= partition.startFlatIndex) return false
-    if (partition.combinationCount !== partition.endFlatIndex - partition.startFlatIndex) return false
+    if (
+      partition.combinationCount !==
+      partition.endFlatIndex - partition.startFlatIndex
+    )
+      return false
     covered += partition.combinationCount
     expectedStart = partition.endFlatIndex
   }

@@ -91,7 +91,9 @@ function createFinalOptimalityCertificate() {
 describe('lapic cert validators', () => {
   it('validates a well-formed evidence bundle manifest', () => {
     const result = validateLapicEvidenceBundleManifest({
-      evidenceDigests: [{ evidenceDigest: 'evidence-digest', sourceClass: 'exactSymbolic' }],
+      evidenceDigests: [
+        { evidenceDigest: 'evidence-digest', sourceClass: 'exactSymbolic' },
+      ],
       thresholdSnapshotDigest: 'threshold-digest',
       providerEvidence: [],
     })

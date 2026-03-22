@@ -3,7 +3,10 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDigest, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDigest,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import {
   hasUniqueValues,
   isBoolean,
@@ -96,16 +99,29 @@ export function validateArtifactKind(
   return createLapicSuccessResult(artifactKind as LapicArtifactKind)
 }
 
-export function isLapicPayloadEncoding(value: unknown): value is LapicPayloadEncoding {
-  return isNonEmptyString(value) && lapicPayloadEncodings.includes(value as LapicPayloadEncoding)
+export function isLapicPayloadEncoding(
+  value: unknown
+): value is LapicPayloadEncoding {
+  return (
+    isNonEmptyString(value) &&
+    lapicPayloadEncodings.includes(value as LapicPayloadEncoding)
+  )
 }
 
-export function isLapicCompressionCodec(value: unknown): value is LapicCompressionCodec {
-  return isNonEmptyString(value) && lapicCompressionCodecs.includes(value as LapicCompressionCodec)
+export function isLapicCompressionCodec(
+  value: unknown
+): value is LapicCompressionCodec {
+  return (
+    isNonEmptyString(value) &&
+    lapicCompressionCodecs.includes(value as LapicCompressionCodec)
+  )
 }
 
 export function isLapicBackendKind(value: unknown): value is LapicBackendKind {
-  return isNonEmptyString(value) && lapicBackendKinds.includes(value as LapicBackendKind)
+  return (
+    isNonEmptyString(value) &&
+    lapicBackendKinds.includes(value as LapicBackendKind)
+  )
 }
 
 export function isLapicBlockLayoutKind(
@@ -113,7 +129,9 @@ export function isLapicBlockLayoutKind(
 ): value is LapicBlockLayoutDescriptor['layoutKind'] {
   return (
     isNonEmptyString(value) &&
-    lapicBlockLayoutKinds.includes(value as LapicBlockLayoutDescriptor['layoutKind'])
+    lapicBlockLayoutKinds.includes(
+      value as LapicBlockLayoutDescriptor['layoutKind']
+    )
   )
 }
 
@@ -122,6 +140,8 @@ export function isLapicCorruptionClassification(
 ): value is LapicCorruptionClassification {
   return (
     isNonEmptyString(value) &&
-    lapicCorruptionClassifications.includes(value as LapicCorruptionClassification)
+    lapicCorruptionClassifications.includes(
+      value as LapicCorruptionClassification
+    )
   )
 }

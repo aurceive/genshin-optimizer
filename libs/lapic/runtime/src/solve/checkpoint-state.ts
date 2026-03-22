@@ -1,5 +1,5 @@
-import type { LapicBoundedExactCombinationEvaluation } from './types'
 import type { LapicPruningStatisticsSnapshot } from './pruning'
+import type { LapicBoundedExactCombinationEvaluation } from './types'
 
 /**
  * Entry in a serialized TopN tracker snapshot.
@@ -68,7 +68,9 @@ export function createLapicSolveCheckpointState(
     frontierBlockIds: [...frontierBlockIds],
     phase: 'join',
     pruningStatistics,
-    pruneCertificateIds: pruneCertificateIds ? [...pruneCertificateIds] : undefined,
+    pruneCertificateIds: pruneCertificateIds
+      ? [...pruneCertificateIds]
+      : undefined,
     branchReachabilityCertificateIds: branchReachabilityCertificateIds
       ? [...branchReachabilityCertificateIds]
       : undefined,

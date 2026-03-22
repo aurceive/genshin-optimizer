@@ -4,7 +4,10 @@ import {
   createLapicReplayClosureSummary,
   createLapicReplayInspectionRequest,
 } from './builders'
-import { validateLapicReplayClosureSummary, validateLapicReplayInspectionRequest } from './validation'
+import {
+  validateLapicReplayClosureSummary,
+  validateLapicReplayInspectionRequest,
+} from './validation'
 
 function createCertificate(
   overrides: Partial<LapicCertificate> = {}

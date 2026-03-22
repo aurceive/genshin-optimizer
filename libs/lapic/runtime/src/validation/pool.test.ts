@@ -1,5 +1,8 @@
 import { createCallbackWorkerHandle } from '../worker/pool'
-import type { LapicPoolTransportConfig, LapicWorkerHandle } from '../worker/pool'
+import type {
+  LapicPoolTransportConfig,
+  LapicWorkerHandle,
+} from '../worker/pool'
 import {
   validateLapicPoolTransportConfig,
   validateLapicWorkerHandle,
@@ -128,7 +131,12 @@ describe('validateLapicPoolTransportConfig', () => {
       createValidConfig({
         handles: [
           createValidHandle('ok'),
-          { workerId: '', dispatch: () => {}, requestPause: () => {}, terminate: () => {} } as any,
+          {
+            workerId: '',
+            dispatch: () => {},
+            requestPause: () => {},
+            terminate: () => {},
+          } as any,
         ],
       })
     )

@@ -94,15 +94,15 @@ describe('validateHighsDiagnostics', () => {
 
 describe('validateHighsDangerZoneAssessment', () => {
   it('accepts valid non-triggered assessment', () => {
-    expect(validateHighsDangerZoneAssessment(makeValidDangerZone(false)).ok).toBe(
-      true
-    )
+    expect(
+      validateHighsDangerZoneAssessment(makeValidDangerZone(false)).ok
+    ).toBe(true)
   })
 
   it('accepts valid triggered assessment', () => {
-    expect(validateHighsDangerZoneAssessment(makeValidDangerZone(true)).ok).toBe(
-      true
-    )
+    expect(
+      validateHighsDangerZoneAssessment(makeValidDangerZone(true)).ok
+    ).toBe(true)
   })
 
   it('rejects triggered=true with action=none', () => {
@@ -275,7 +275,12 @@ describe('validateHighsEvidenceV1', () => {
   })
 
   it('accepts all valid solve outcomes', () => {
-    const outcomes = ['solved', 'infeasible', 'unbounded', 'interrupted'] as const
+    const outcomes = [
+      'solved',
+      'infeasible',
+      'unbounded',
+      'interrupted',
+    ] as const
     for (const outcome of outcomes) {
       expect(
         validateHighsEvidenceV1(makeValidEvidence({ solveOutcome: outcome })).ok

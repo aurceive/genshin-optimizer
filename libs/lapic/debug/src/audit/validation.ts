@@ -20,16 +20,19 @@ export function validateLapicAuditReportRequest(
   request: LapicAuditReportRequest
 ): LapicValidationResult<LapicAuditReportRequest> {
   if (!isRecord(request))
-    return createDebugFailure('Audit report request must be a record.', ['auditReportRequest'])
+    return createDebugFailure('Audit report request must be a record.', [
+      'auditReportRequest',
+    ])
 
   if (!isNonEmptyString(request.sessionId))
-    return createDebugFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createDebugFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (!isBoolean(request.includeReplayCoverage))
-    return createDebugFailure(
-      'includeReplayCoverage must be boolean.',
-      ['includeReplayCoverage']
-    )
+    return createDebugFailure('includeReplayCoverage must be boolean.', [
+      'includeReplayCoverage',
+    ])
 
   if (
     request.includePotentialAudit !== undefined &&
@@ -75,9 +78,8 @@ export function validateLapicCheckpointClosureAuditSummary(
       ['checkpointClosureAuditSummary']
     )
 
-  const verificationValidation = validateLapicCheckpointClosureVerificationResult(
-    summary.verification
-  )
+  const verificationValidation =
+    validateLapicCheckpointClosureVerificationResult(summary.verification)
   if (!verificationValidation.ok)
     return createDebugFailure(
       'Verification must be a valid checkpoint verification result.',
@@ -91,10 +93,9 @@ export function validateLapicPotentialAuditSummary(
   summary: LapicPotentialAuditSummary
 ): LapicValidationResult<LapicPotentialAuditSummary> {
   if (!isRecord(summary))
-    return createDebugFailure(
-      'Potential audit summary must be a record.',
-      ['potentialAuditSummary']
-    )
+    return createDebugFailure('Potential audit summary must be a record.', [
+      'potentialAuditSummary',
+    ])
 
   if (
     !isNonNegativeInteger(summary.rankingRelevantCertificateCount) ||

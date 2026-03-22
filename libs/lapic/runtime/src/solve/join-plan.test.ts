@@ -11,7 +11,10 @@ import type {
   LapicCandidateDescriptor,
   LapicCanonicalProblem,
 } from '@genshin-optimizer/lapic/core'
-import { createFrontierBlockForDomain, createFrontierIndexForSolve } from './frontier'
+import {
+  createFrontierBlockForDomain,
+  createFrontierIndexForSolve,
+} from './frontier'
 import { createFrontierJoinPlan } from './join-plan'
 
 // ---------------------------------------------------------------------------
@@ -44,7 +47,11 @@ function candidate(
 
 function createProblem(config: {
   slotIds: string[]
-  domains: Array<{ domainId: string; slotId: string; candidates: LapicCandidateDescriptor[] }>
+  domains: Array<{
+    domainId: string
+    slotId: string
+    candidates: LapicCandidateDescriptor[]
+  }>
 }): LapicCanonicalProblem {
   return {
     problemId: 'join-plan-test',
@@ -66,7 +73,8 @@ function createProblem(config: {
       slotId,
       slotRole: `artifact-${slotId}`,
       participationMode: 'optimizedBuild' as const,
-      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!.domainId,
+      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!
+        .domainId,
       equipmentOwnershipModel: 'hard-reserved-inventory' as const,
       contributesToObjective: true,
       contributesToConstraints: true,
@@ -146,7 +154,12 @@ describe('createFrontierJoinPlan', () => {
     const frontierIndex = createFrontierIndexForSolve(problem, blocks)
     const domains = [domainFlower, domainPlume]
 
-    const result = createFrontierJoinPlan(problem, domains, blocks, frontierIndex)
+    const result = createFrontierJoinPlan(
+      problem,
+      domains,
+      blocks,
+      frontierIndex
+    )
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -166,9 +179,7 @@ describe('createFrontierJoinPlan', () => {
     const domainPlume = {
       domainId: 'd-plume',
       slotId: 'plume',
-      candidates: [
-        candidate('c3', 'd-plume', 'plume'),
-      ],
+      candidates: [candidate('c3', 'd-plume', 'plume')],
     }
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
@@ -222,24 +233,35 @@ describe('createFrontierJoinPlan', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.entries[0]!.rows[0]!.candidate.candidateId).toBe('c1')
-    expect(result.value.entries[0]!.rows[0]!.row.stateId).toBe('state:flower:c1')
+    expect(result.value.entries[0]!.rows[0]!.row.stateId).toBe(
+      'state:flower:c1'
+    )
   })
 
   it('handles three domains correctly', () => {
     const d1 = {
       domainId: 'd-flower',
       slotId: 'flower',
-      candidates: [candidate('c1', 'd-flower', 'flower'), candidate('c2', 'd-flower', 'flower')],
+      candidates: [
+        candidate('c1', 'd-flower', 'flower'),
+        candidate('c2', 'd-flower', 'flower'),
+      ],
     }
     const d2 = {
       domainId: 'd-plume',
       slotId: 'plume',
-      candidates: [candidate('c3', 'd-plume', 'plume'), candidate('c4', 'd-plume', 'plume')],
+      candidates: [
+        candidate('c3', 'd-plume', 'plume'),
+        candidate('c4', 'd-plume', 'plume'),
+      ],
     }
     const d3 = {
       domainId: 'd-sands',
       slotId: 'sands',
-      candidates: [candidate('c5', 'd-sands', 'sands'), candidate('c6', 'd-sands', 'sands')],
+      candidates: [
+        candidate('c5', 'd-sands', 'sands'),
+        candidate('c6', 'd-sands', 'sands'),
+      ],
     }
     const problem = createProblem({
       slotIds: ['flower', 'plume', 'sands'],
@@ -253,7 +275,12 @@ describe('createFrontierJoinPlan', () => {
     ]
     const frontierIndex = createFrontierIndexForSolve(problem, blocks)
 
-    const result = createFrontierJoinPlan(problem, [d1, d2, d3], blocks, frontierIndex)
+    const result = createFrontierJoinPlan(
+      problem,
+      [d1, d2, d3],
+      blocks,
+      frontierIndex
+    )
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -276,7 +303,12 @@ describe('createFrontierJoinPlan', () => {
     const blocks = [createFrontierBlockForDomain(problem, domain)]
     const frontierIndex = createFrontierIndexForSolve(problem, blocks)
 
-    const result = createFrontierJoinPlan(problem, [domain], blocks, frontierIndex)
+    const result = createFrontierJoinPlan(
+      problem,
+      [domain],
+      blocks,
+      frontierIndex
+    )
 
     expect(result.ok).toBe(true)
     if (!result.ok) return

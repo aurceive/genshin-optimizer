@@ -47,11 +47,7 @@ export type LapicAirMonotonicity =
  * - `affine`:   both convex and concave (linear)
  * - `unknown`:  analysis could not determine curvature
  */
-export type LapicAirCurvature =
-  | 'convex'
-  | 'concave'
-  | 'affine'
-  | 'unknown'
+export type LapicAirCurvature = 'convex' | 'concave' | 'affine' | 'unknown'
 
 // ---------------------------------------------------------------------------
 // Node annotations
@@ -79,7 +75,10 @@ export interface LapicAirNodeAnnotation {
    * Monotonicity of this node w.r.t. each input variable.
    * Keys are variable IDs; only variables this node depends on appear.
    */
-  readonly monotonicityByVariable?: ReadonlyMap<LapicFirVariableId, LapicAirMonotonicity>
+  readonly monotonicityByVariable?: ReadonlyMap<
+    LapicFirVariableId,
+    LapicAirMonotonicity
+  >
 
   // --- Family 3: Curvature ---
 

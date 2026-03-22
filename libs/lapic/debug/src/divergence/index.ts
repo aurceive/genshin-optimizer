@@ -1,6 +1,4 @@
-export {
-  runLapicDivergenceHarness,
-} from './harness'
+export { runLapicDivergenceHarness } from './harness'
 
 export type {
   LapicDivergenceComparisonResult,

@@ -4,7 +4,11 @@ import {
   validateLapicCanonicalProblem,
   validateLapicProblemNormalizationInput,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicPotentialSolveMode, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicPotentialSolveMode,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import { giLapicAdapterCapabilities } from './types'
 import type {
   GiLapicAdapterCapabilities,
@@ -71,10 +75,9 @@ export function validateGiLapicSourceSnapshotDescriptor(
   sourceSnapshots: GiLapicSourceSnapshotDescriptor
 ): LapicValidationResult<GiLapicSourceSnapshotDescriptor> {
   if (!isRecord(sourceSnapshots))
-    return giAdapterFailure(
-      'GI source snapshot descriptor must be a record.',
-      ['sourceSnapshots']
-    )
+    return giAdapterFailure('GI source snapshot descriptor must be a record.', [
+      'sourceSnapshots',
+    ])
 
   if (
     !isNonEmptyString(sourceSnapshots.artifactSnapshotDigest) ||
@@ -103,7 +106,9 @@ export function validateGiLapicInventorySnapshot(
   inventorySnapshot: GiLapicInventorySnapshot
 ): LapicValidationResult<GiLapicInventorySnapshot> {
   if (!isRecord(inventorySnapshot))
-    return giAdapterFailure('GI inventory snapshot must be a record.', ['inventorySnapshot'])
+    return giAdapterFailure('GI inventory snapshot must be a record.', [
+      'inventorySnapshot',
+    ])
 
   if (!Array.isArray(inventorySnapshot.artifacts))
     return giAdapterFailure(
@@ -136,7 +141,9 @@ export function validateGiLapicOptimizationRequest(
   optimizationRequest: GiLapicOptimizationRequest
 ): LapicValidationResult<GiLapicOptimizationRequest> {
   if (!isRecord(optimizationRequest))
-    return giAdapterFailure('GI optimization request must be a record.', ['optimizationRequest'])
+    return giAdapterFailure('GI optimization request must be a record.', [
+      'optimizationRequest',
+    ])
 
   if (!isPositiveInteger(optimizationRequest.topN))
     return giAdapterFailure(
@@ -170,14 +177,18 @@ export function validateGiLapicAdapterContext(
   context: GiLapicAdapterContext
 ): LapicValidationResult<GiLapicAdapterContext> {
   if (!isRecord(context))
-    return giAdapterFailure('GI adapter context must be a record.', ['giContext'])
+    return giAdapterFailure('GI adapter context must be a record.', [
+      'giContext',
+    ])
 
   const sourceSnapshotValidation = validateGiLapicSourceSnapshotDescriptor(
     context.sourceSnapshots
   )
   if (!sourceSnapshotValidation.ok) return sourceSnapshotValidation
 
-  const inventoryValidation = validateGiLapicInventorySnapshot(context.inventorySnapshot)
+  const inventoryValidation = validateGiLapicInventorySnapshot(
+    context.inventorySnapshot
+  )
   if (!inventoryValidation.ok) return inventoryValidation
 
   const optimizationValidation = validateGiLapicOptimizationRequest(
@@ -192,7 +203,9 @@ export function validateGiLapicAdapterCapabilities(
   capabilities: GiLapicAdapterCapabilities
 ): LapicValidationResult<GiLapicAdapterCapabilities> {
   if (!isRecord(capabilities))
-    return giAdapterFailure('GI adapter capabilities must be a record.', ['capabilities'])
+    return giAdapterFailure('GI adapter capabilities must be a record.', [
+      'capabilities',
+    ])
 
   if (capabilities.adapterKind !== 'gi')
     return giAdapterFailure(
@@ -220,7 +233,9 @@ export function validateGiLapicCanonicalIdentity(
   canonicalIdentity: GiLapicCanonicalIdentity
 ): LapicValidationResult<GiLapicCanonicalIdentity> {
   if (!isRecord(canonicalIdentity))
-    return giAdapterFailure('GI canonical identity must be a record.', ['canonicalIdentity'])
+    return giAdapterFailure('GI canonical identity must be a record.', [
+      'canonicalIdentity',
+    ])
 
   if (
     !isNonEmptyString(canonicalIdentity.problemId) ||
@@ -239,14 +254,18 @@ export function validateGiLapicCanonicalIdentity(
 export function isGiLapicPotentialSolveModeSupported(
   solveMode: LapicPotentialSolveMode
 ): boolean {
-  return giLapicAdapterCapabilities.supportedPotentialSolveModes.includes(solveMode)
+  return giLapicAdapterCapabilities.supportedPotentialSolveModes.includes(
+    solveMode
+  )
 }
 
 export function normalizeGiLapicAdapterRequest(
   request: GiLapicAdapterRequest
 ): LapicValidationResult<GiLapicAdapterRequest> {
   if (request.adapterKind !== 'gi')
-    return giAdapterFailure('GI lapic adapter received a non-GI request.', ['adapterKind'])
+    return giAdapterFailure('GI lapic adapter received a non-GI request.', [
+      'adapterKind',
+    ])
 
   if (!request.normalizationInput.adapterMetadata.adapterKind.startsWith('gi'))
     return giAdapterFailure(
@@ -275,7 +294,10 @@ export function normalizeGiLapicAdapterRequest(
         { topN: request.giContext.optimizationRequest.topN }
       )
 
-    if (request.giContext.optimizationRequest.topN !== request.normalizationInput.topN)
+    if (
+      request.giContext.optimizationRequest.topN !==
+      request.normalizationInput.topN
+    )
       return giAdapterFailure(
         'GI lapic adapter requires normalizationInput.topN to match giContext.optimizationRequest.topN.',
         ['normalizationInput', 'topN'],
@@ -285,7 +307,10 @@ export function normalizeGiLapicAdapterRequest(
         }
       )
 
-    if (request.giContext.optimizationRequest.levelLow > request.giContext.optimizationRequest.levelHigh)
+    if (
+      request.giContext.optimizationRequest.levelLow >
+      request.giContext.optimizationRequest.levelHigh
+    )
       return giAdapterFailure(
         'GI lapic adapter requires levelLow <= levelHigh.',
         ['giContext', 'optimizationRequest'],
@@ -309,7 +334,8 @@ export function normalizeGiLapicAdapterRequest(
       )
   }
 
-  const requestedPotentialSolveModes = request.requestedPotentialSolveModes ??
+  const requestedPotentialSolveModes =
+    request.requestedPotentialSolveModes ??
     (request.normalizationInput.potentialConfiguration
       ? [request.normalizationInput.potentialConfiguration.solveMode]
       : [])
@@ -356,9 +382,13 @@ export function validateGiLapicCanonicalExport(
   canonicalExport: GiLapicCanonicalExport
 ): LapicValidationResult<GiLapicCanonicalExport> {
   if (!isRecord(canonicalExport))
-    return giAdapterFailure('GI canonical export must be a record.', ['canonicalExport'])
+    return giAdapterFailure('GI canonical export must be a record.', [
+      'canonicalExport',
+    ])
 
-  const problemValidation = validateLapicCanonicalProblem(canonicalExport.problem)
+  const problemValidation = validateLapicCanonicalProblem(
+    canonicalExport.problem
+  )
   if (!problemValidation.ok)
     return createLapicFailureResult(problemValidation.diagnostics)
 

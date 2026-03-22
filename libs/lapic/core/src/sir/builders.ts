@@ -39,7 +39,12 @@ export function areLapicSirStatesExactComparable(
 
   if (!leftComparisonKey.ok || !rightComparisonKey.ok) return false
 
-  return compareLapicStringArrays(leftComparisonKey.value, rightComparisonKey.value) === 0
+  return (
+    compareLapicStringArrays(
+      leftComparisonKey.value,
+      rightComparisonKey.value
+    ) === 0
+  )
 }
 
 export function createLapicSirStateIdentityOrderingKey(state: LapicSirState) {
@@ -51,12 +56,14 @@ export function createLapicSirStateIdentityOrderingKey(state: LapicSirState) {
   )
   if (!exactSignatureOrderingKey.ok) return exactSignatureOrderingKey
 
-  const actorUniquenessClaimKeys = state.compatibilitySignature.actorUniquenessClaims
-    .map(createLapicActorUniquenessClaimOrderingKey)
-    .sort()
-  const branchToggleKeys = state.compatibilitySignature.branchCompatibilityToggles
-    .map((toggle) => `${toggle.toggleId}|${toggle.enabled ? '1' : '0'}`)
-    .sort()
+  const actorUniquenessClaimKeys =
+    state.compatibilitySignature.actorUniquenessClaims
+      .map(createLapicActorUniquenessClaimOrderingKey)
+      .sort()
+  const branchToggleKeys =
+    state.compatibilitySignature.branchCompatibilityToggles
+      .map((toggle) => `${toggle.toggleId}|${toggle.enabled ? '1' : '0'}`)
+      .sort()
 
   return createLapicSuccessResult([
     ...exactSignatureOrderingKey.value,
@@ -70,7 +77,10 @@ export function createLapicSirStateIdentityOrderingKey(state: LapicSirState) {
   ])
 }
 
-export function compareLapicSirStateIdentity(left: LapicSirState, right: LapicSirState) {
+export function compareLapicSirStateIdentity(
+  left: LapicSirState,
+  right: LapicSirState
+) {
   const leftValidation = validateLapicSirState(left)
   if (!leftValidation.ok) return leftValidation
 
@@ -107,7 +117,9 @@ export function createLapicSirState(state: LapicSirState): LapicSirState {
   }
 }
 
-export function validateLapicStateLayoutDescriptor(layout: LapicStateLayoutDescriptor) {
+export function validateLapicStateLayoutDescriptor(
+  layout: LapicStateLayoutDescriptor
+) {
   const diagnostics: LapicDiagnostic[] = []
 
   if (!layout.layoutId)
@@ -222,7 +234,8 @@ export function validateLapicSirState(state: LapicSirState) {
         ['compatibilitySignature', 'frameAxisIdentity', 'axisKind'],
         {
           layoutAxisKind: state.layout.frameAxisIdentity.axisKind,
-          compatibilityAxisKind: state.compatibilitySignature.frameAxisIdentity.axisKind,
+          compatibilityAxisKind:
+            state.compatibilitySignature.frameAxisIdentity.axisKind,
         }
       )
     )
@@ -232,7 +245,8 @@ export function validateLapicSirState(state: LapicSirState) {
       state.compatibilitySignature.frameAxisIdentity.frameIds.length ||
     state.layout.frameAxisIdentity.frameIds.some(
       (frameId, index) =>
-        frameId !== state.compatibilitySignature.frameAxisIdentity.frameIds[index]
+        frameId !==
+        state.compatibilitySignature.frameAxisIdentity.frameIds[index]
     )
   )
     diagnostics.push(
@@ -255,8 +269,10 @@ export function validateLapicSirState(state: LapicSirState) {
         'exactSignatureGroupKey.occupiedSlotMask must match compatibilitySignature.occupiedSlotMask.',
         ['exactSignatureGroupKey', 'occupiedSlotMask'],
         {
-          exactSignatureOccupiedSlotMask: state.exactSignatureGroupKey.occupiedSlotMask,
-          compatibilityOccupiedSlotMask: state.compatibilitySignature.occupiedSlotMask,
+          exactSignatureOccupiedSlotMask:
+            state.exactSignatureGroupKey.occupiedSlotMask,
+          compatibilityOccupiedSlotMask:
+            state.compatibilitySignature.occupiedSlotMask,
         }
       )
     )
@@ -272,8 +288,10 @@ export function validateLapicSirState(state: LapicSirState) {
         'exactSignatureGroupKey.adapterSemanticMode must match compatibilitySignature.adapterSemanticMode.',
         ['exactSignatureGroupKey', 'adapterSemanticMode'],
         {
-          exactSignatureAdapterSemanticMode: state.exactSignatureGroupKey.adapterSemanticMode,
-          compatibilityAdapterSemanticMode: state.compatibilitySignature.adapterSemanticMode,
+          exactSignatureAdapterSemanticMode:
+            state.exactSignatureGroupKey.adapterSemanticMode,
+          compatibilityAdapterSemanticMode:
+            state.compatibilitySignature.adapterSemanticMode,
         }
       )
     )
@@ -289,8 +307,10 @@ export function validateLapicSirState(state: LapicSirState) {
         'provenance.compatibilitySignatureSchemaVersion must match compatibilitySignature.schemaVersion.',
         ['provenance', 'compatibilitySignatureSchemaVersion'],
         {
-          provenanceSchemaVersion: state.provenance.compatibilitySignatureSchemaVersion,
-          compatibilitySchemaVersion: state.compatibilitySignature.schemaVersion,
+          provenanceSchemaVersion:
+            state.provenance.compatibilitySignatureSchemaVersion,
+          compatibilitySchemaVersion:
+            state.compatibilitySignature.schemaVersion,
         }
       )
     )

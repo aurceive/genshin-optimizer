@@ -32,7 +32,10 @@ import {
   buildDangerZoneRecord,
   detectBoundPruneDangerZone,
 } from './danger-zone'
-import { createFrontierBlockForDomain, createFrontierIndexForSolve } from './frontier'
+import {
+  createFrontierBlockForDomain,
+  createFrontierIndexForSolve,
+} from './frontier'
 import { createFrontierJoinPlan } from './join-plan'
 import { persistArtifact } from './persistence'
 import {
@@ -98,7 +101,10 @@ async function buildFrontierFromScratch(
     })
   }
 
-  const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
+  const frontierIndex = createFrontierIndexForSolve(
+    options.problem,
+    frontierBlocks
+  )
   await persistArtifact(
     options,
     'frontier-index',
@@ -118,16 +124,26 @@ async function rebuildFrontierForResume(
 ): Promise<FrontierSetupResult> {
   const ckpt = options.resumeCheckpointState!
   if (ckpt.problemDigest !== options.problem.problemDigest)
-    return failSolve(options, 'Checkpoint problemDigest does not match current problem.', [
-      createLapicDiagnostic('error', 'SchemaViolation',
-        'Checkpoint problemDigest does not match current problem.',
-        ['resumeCheckpointState', 'problemDigest']),
-    ])
+    return failSolve(
+      options,
+      'Checkpoint problemDigest does not match current problem.',
+      [
+        createLapicDiagnostic(
+          'error',
+          'SchemaViolation',
+          'Checkpoint problemDigest does not match current problem.',
+          ['resumeCheckpointState', 'problemDigest']
+        ),
+      ]
+    )
   if (ckpt.totalCombinationCount !== totalCombinationCount)
     return failSolve(options, 'Checkpoint totalCombinationCount diverged.', [
-      createLapicDiagnostic('error', 'SchemaViolation',
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
         'Checkpoint totalCombinationCount diverged.',
-        ['resumeCheckpointState', 'totalCombinationCount']),
+        ['resumeCheckpointState', 'totalCombinationCount']
+      ),
     ])
 
   const frontierBlocks: LapicFrontierBlock[] = []
@@ -138,7 +154,10 @@ async function rebuildFrontierForResume(
     frontierBlockIds.push(block.blockId)
   }
 
-  const frontierIndex = createFrontierIndexForSolve(options.problem, frontierBlocks)
+  const frontierIndex = createFrontierIndexForSolve(
+    options.problem,
+    frontierBlocks
+  )
   return { frontierBlocks, frontierBlockIds, frontierIndex }
 }
 
@@ -169,7 +188,10 @@ function setupTracker(
         candidateIndex,
         options.compareEvaluations
       )
-    : createResumableTopNTracker(options.problem.topN, options.compareEvaluations)
+    : createResumableTopNTracker(
+        options.problem.topN,
+        options.compareEvaluations
+      )
 
   const resumeFlatIndex = isResuming
     ? options.resumeCheckpointState!.cursorPosition.flatIndex
@@ -178,20 +200,23 @@ function setupTracker(
     ? options.resumeCheckpointState!.visitedCombinationCount
     : 0
 
-  const pruningStats = isResuming && options.resumeCheckpointState!.pruningStatistics
-    ? restorePruningStatistics(options.resumeCheckpointState!.pruningStatistics)
-    : createPruningStatistics()
+  const pruningStats =
+    isResuming && options.resumeCheckpointState!.pruningStatistics
+      ? restorePruningStatistics(
+          options.resumeCheckpointState!.pruningStatistics
+        )
+      : createPruningStatistics()
 
   const restoredPruneCertificateIds = isResuming
-    ? options.resumeCheckpointState!.pruneCertificateIds ?? []
+    ? (options.resumeCheckpointState!.pruneCertificateIds ?? [])
     : []
 
   const restoredBranchReachabilityCertificateIds = isResuming
-    ? options.resumeCheckpointState!.branchReachabilityCertificateIds ?? []
+    ? (options.resumeCheckpointState!.branchReachabilityCertificateIds ?? [])
     : []
 
   const restoredDominanceCertificateIds = isResuming
-    ? options.resumeCheckpointState!.dominanceCertificateIds ?? []
+    ? (options.resumeCheckpointState!.dominanceCertificateIds ?? [])
     : []
 
   return {
@@ -290,11 +315,18 @@ export async function executeLapicBoundedExactSolve(
     const totalCombinationCount = validation.value
     const isResuming = options.resumeCheckpointState !== undefined
 
-    options.controller.publishTrace('InitSession', `solve:${options.problem.problemDigest}`)
+    options.controller.publishTrace(
+      'InitSession',
+      `solve:${options.problem.problemDigest}`
+    )
 
     // --- Frontier setup ---
     const { frontierBlocks, frontierBlockIds, frontierIndex } = isResuming
-      ? await rebuildFrontierForResume(options, orderedDomains, totalCombinationCount)
+      ? await rebuildFrontierForResume(
+          options,
+          orderedDomains,
+          totalCombinationCount
+        )
       : await buildFrontierFromScratch(options, orderedDomains)
 
     const joinPlan = createFrontierJoinPlan(
@@ -344,8 +376,12 @@ export async function executeLapicBoundedExactSolve(
     let pruneCertStepCounter = restoredPruneCertificateIds.length
     let dominanceCertStepCounter = restoredDominanceCertificateIds.length
     const pruneCertificateIds: string[] = [...restoredPruneCertificateIds]
-    const branchReachabilityCertificateIds: string[] = [...restoredBranchReachabilityCertificateIds]
-    const dominanceCertificateIds: string[] = [...restoredDominanceCertificateIds]
+    const branchReachabilityCertificateIds: string[] = [
+      ...restoredBranchReachabilityCertificateIds,
+    ]
+    const dominanceCertificateIds: string[] = [
+      ...restoredDominanceCertificateIds,
+    ]
 
     // --- A-IR branch reachability inference (pre-solve static analysis) ---
     if (options.firGraph && !isResuming) {
@@ -392,8 +428,10 @@ export async function executeLapicBoundedExactSolve(
         orderingKey: [thresholdValue],
       }
       const relation = compareEvaluations(
-        boundEval, 'bound',
-        thresholdEval, 'threshold',
+        boundEval,
+        'bound',
+        thresholdEval,
+        'threshold',
         explicitComparator
       )
       return relation < 0
@@ -490,7 +528,10 @@ export async function executeLapicBoundedExactSolve(
             evaluation.diagnostics
           )
 
-        const stateId = createCombinationStateId(options.problem, partialCandidates)
+        const stateId = createCombinationStateId(
+          options.problem,
+          partialCandidates
+        )
         const insertResult = tracker.insertWithEviction({
           stateId,
           candidates: [...partialCandidates],
@@ -505,7 +546,8 @@ export async function executeLapicBoundedExactSolve(
             dominatingStateId: stateId,
             dominatedStateId: insertResult.evicted.stateId,
             dominatingEvidenceDigest: evaluation.value.evidenceDigest,
-            dominatedEvidenceDigest: insertResult.evicted.evaluation.evidenceDigest,
+            dominatedEvidenceDigest:
+              insertResult.evicted.evaluation.evidenceDigest,
             signatureGroupKey: orderedDomains.map((d) => d.slotId).join('+'),
             stepIndex: dominanceCertStepCounter,
             frontierBlockIds,
@@ -535,7 +577,7 @@ export async function executeLapicBoundedExactSolve(
       if (
         options.computeUpperBound &&
         tracker.isFull() &&
-        domainIndex > 0  // At least one candidate already assigned
+        domainIndex > 0 // At least one candidate already assigned
       ) {
         const threshold = tracker.currentThreshold()
         if (threshold !== undefined) {
@@ -546,7 +588,10 @@ export async function executeLapicBoundedExactSolve(
             assignedDomainCount: domainIndex,
             totalDomainCount: joinPlan.value.entries.length,
           })
-          if (bound !== undefined && isBoundBelowThreshold(bound.upperBoundValue, threshold)) {
+          if (
+            bound !== undefined &&
+            isBoundBelowThreshold(bound.upperBoundValue, threshold)
+          ) {
             // Check danger zone before committing the prune.
             if (options.dangerZoneConfig) {
               const detection = detectBoundPruneDangerZone(
@@ -560,12 +605,23 @@ export async function executeLapicBoundedExactSolve(
                 // Fall through to explore the subtree normally.
               } else {
                 // Safe gap — proceed to prune.
-                await commitPrune(bound.upperBoundValue, bound.evidenceDigest, threshold, domainIndex, detection)
+                await commitPrune(
+                  bound.upperBoundValue,
+                  bound.evidenceDigest,
+                  threshold,
+                  domainIndex,
+                  detection
+                )
                 return
               }
             } else {
               // No danger-zone config — prune unconditionally (legacy behavior).
-              await commitPrune(bound.upperBoundValue, bound.evidenceDigest, threshold, domainIndex)
+              await commitPrune(
+                bound.upperBoundValue,
+                bound.evidenceDigest,
+                threshold,
+                domainIndex
+              )
               return
             }
           }
@@ -598,8 +654,7 @@ export async function executeLapicBoundedExactSolve(
         branchReachabilityCertificateIds,
         dominanceCertificateIds
       )
-      const checkpointContentHash =
-        `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
+      const checkpointContentHash = `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
       await persistArtifact(
         options,
         'solve-checkpoint',
@@ -611,14 +666,20 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    return completeSolve(options, tracker, frontierBlockIds, pruneCertificateIds, branchReachabilityCertificateIds, dominanceCertificateIds)
+    return completeSolve(
+      options,
+      tracker,
+      frontierBlockIds,
+      pruneCertificateIds,
+      branchReachabilityCertificateIds,
+      dominanceCertificateIds
+    )
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
-    const message = error instanceof Error ? error.message : 'Unknown bounded solve failure.'
-    return failSolve(
-      options,
-      message,
-      [createLapicDiagnostic('error', 'InternalBugDetected', message)]
-    )
+    const message =
+      error instanceof Error ? error.message : 'Unknown bounded solve failure.'
+    return failSolve(options, message, [
+      createLapicDiagnostic('error', 'InternalBugDetected', message),
+    ])
   }
 }

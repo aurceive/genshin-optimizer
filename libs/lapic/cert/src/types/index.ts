@@ -32,7 +32,10 @@ export type LapicCertificateValidationStatus =
   | 'validated'
   | 'rejected'
 
-export type LapicReplayMode = 'single-certificate' | 'block-level' | 'full-solve'
+export type LapicReplayMode =
+  | 'single-certificate'
+  | 'block-level'
+  | 'full-solve'
 export type LapicReplayVerdict = 'matched' | 'mismatched' | 'inconclusive'
 export type LapicEvidenceSourceClass =
   | 'exactSymbolic'

@@ -78,8 +78,7 @@ export function detectBoundPruneDangerZone(
       triggered: true,
       absoluteGap: NaN,
       relativeGap: NaN,
-      explanation:
-        `Non-finite values detected: bound=${boundValue}, threshold=${thresholdValue}`,
+      explanation: `Non-finite values detected: bound=${boundValue}, threshold=${thresholdValue}`,
     }
   }
 

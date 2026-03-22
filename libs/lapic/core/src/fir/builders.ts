@@ -112,9 +112,16 @@ export class LapicFirGraphBuilder {
     return nodeId
   }
 
-  affineForm(bias: number, terms: readonly LapicFirAffineTerm[]): LapicFirNodeId {
-    const sortedTerms = [...terms].sort((a, b) => a.childId.localeCompare(b.childId))
-    const termsDesc = sortedTerms.map((t) => `${t.coeff}*${t.childId}`).join('+')
+  affineForm(
+    bias: number,
+    terms: readonly LapicFirAffineTerm[]
+  ): LapicFirNodeId {
+    const sortedTerms = [...terms].sort((a, b) =>
+      a.childId.localeCompare(b.childId)
+    )
+    const termsDesc = sortedTerms
+      .map((t) => `${t.coeff}*${t.childId}`)
+      .join('+')
     const desc = `affineForm:${bias}+[${termsDesc}]`
     const nodeId = contentHash(desc)
     if (!this.nodeMap.has(nodeId)) {
@@ -157,7 +164,11 @@ export class LapicFirGraphBuilder {
     const desc = `resistanceTransform:${resId}`
     const nodeId = contentHash(desc)
     if (!this.nodeMap.has(nodeId)) {
-      this.nodeMap.set(nodeId, { nodeId, operator: 'resistanceTransform', resId })
+      this.nodeMap.set(nodeId, {
+        nodeId,
+        operator: 'resistanceTransform',
+        resId,
+      })
     }
     return nodeId
   }
@@ -182,7 +193,10 @@ export class LapicFirGraphBuilder {
     return nodeId
   }
 
-  bilinearKernel(leftId: LapicFirNodeId, rightId: LapicFirNodeId): LapicFirNodeId {
+  bilinearKernel(
+    leftId: LapicFirNodeId,
+    rightId: LapicFirNodeId
+  ): LapicFirNodeId {
     const [a, b] = [leftId, rightId].sort()
     const desc = `bilinearKernel:${a},${b}`
     const nodeId = contentHash(desc)

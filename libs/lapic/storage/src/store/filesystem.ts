@@ -118,9 +118,7 @@ export function createLapicFilesystemArtifactStore(
     async read(request) {
       const validation = validateLapicArtifactReadRequest(request)
       if (!validation.ok) {
-        const details = validation.diagnostics
-          .map((d) => d.message)
-          .join('; ')
+        const details = validation.diagnostics.map((d) => d.message).join('; ')
         throw new Error(
           `Invalid filesystem store read request: ${details || 'unknown validation failure'}`
         )
@@ -143,10 +141,8 @@ export function createLapicFilesystemArtifactStore(
 
       // Verify ref consistency
       if (
-        record.artifactRef.artifactKind !==
-          request.artifactRef.artifactKind ||
-        record.artifactRef.contentHash !==
-          request.artifactRef.contentHash
+        record.artifactRef.artifactKind !== request.artifactRef.artifactKind ||
+        record.artifactRef.contentHash !== request.artifactRef.contentHash
       ) {
         throw new Error(
           `Artifact reference mismatch for ${request.artifactRef.artifactId}`
@@ -162,9 +158,7 @@ export function createLapicFilesystemArtifactStore(
     async write(request) {
       const validation = validateLapicArtifactWriteRequest(request)
       if (!validation.ok) {
-        const details = validation.diagnostics
-          .map((d) => d.message)
-          .join('; ')
+        const details = validation.diagnostics.map((d) => d.message).join('; ')
         throw new Error(
           `Invalid filesystem store write request: ${details || 'unknown validation failure'}`
         )
@@ -209,10 +203,7 @@ export function createLapicFilesystemArtifactStore(
         for (const file of files) {
           if (!file.isFile() || !file.name.endsWith('.json')) continue
           try {
-            const raw = fs.readFileSync(
-              path.join(kindPath, file.name),
-              'utf-8'
-            )
+            const raw = fs.readFileSync(path.join(kindPath, file.name), 'utf-8')
             const record: LapicFilesystemArtifactRecord = JSON.parse(raw)
             refs.push(createLapicArtifactRef(record.artifactRef))
           } catch {

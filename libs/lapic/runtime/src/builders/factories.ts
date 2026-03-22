@@ -8,12 +8,12 @@ import type {
   LapicStateId,
 } from '@genshin-optimizer/lapic/core'
 import { createLapicArtifactRef } from '@genshin-optimizer/lapic/storage'
-import type { LapicArtifactRef, LapicClosureImportDescriptor } from '@genshin-optimizer/lapic/storage'
+import type {
+  LapicArtifactRef,
+  LapicClosureImportDescriptor,
+} from '@genshin-optimizer/lapic/storage'
 import { projectLapicSolveState } from '../session/internal'
-import {
-  lapicRuntimePackageName,
-  lapicRuntimeProtocolVersion,
-} from '../types'
+import { lapicRuntimePackageName, lapicRuntimeProtocolVersion } from '../types'
 import type {
   LapicActivePhase,
   LapicCancelRequestResult,

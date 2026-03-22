@@ -9,13 +9,13 @@
  * if bounds are not admissible, pruning may discard optimal solutions.
  */
 
-import type { LapicFirGraph, LapicFirVariableId } from './types'
+import type { LapicInterval } from '../interval/types'
+import { lapicIntervalPoint } from '../interval/types'
 import type { LapicFirIntervalEnv } from './interval-eval'
 import { evaluateLapicFirIntervals } from './interval-eval'
 import type { LapicFirScalarEnv } from './scalar-eval'
 import { evaluateLapicFirScalar } from './scalar-eval'
-import type { LapicInterval } from '../interval/types'
-import { lapicIntervalPoint } from '../interval/types'
+import type { LapicFirGraph, LapicFirVariableId } from './types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -153,7 +153,10 @@ export function runLapicGoldenHarness(
       const ib = intervalResult.rootBound
       const candidateIds = chosenCandidates.map((c) => c.candidateId)
 
-      if (Number.isFinite(sv) && (sv < ib.lo - tolerance || sv > ib.hi + tolerance)) {
+      if (
+        Number.isFinite(sv) &&
+        (sv < ib.lo - tolerance || sv > ib.hi + tolerance)
+      ) {
         violations.push({
           candidateIds,
           scalarValue: sv,

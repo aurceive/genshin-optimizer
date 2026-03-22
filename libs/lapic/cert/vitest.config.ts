@@ -15,7 +15,7 @@ export default defineConfig({
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../../coverage/libs/lapic/cert',
-      provider: 'v8'
-    }
-  }
+      provider: 'v8',
+    },
+  },
 })

@@ -24,19 +24,26 @@ export function deterministicJsonStringify(
       : JSON.stringify(value)
   }
 
-  return JSON.stringify(value, (_key, val) => {
-    if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
-      const sorted: Record<string, unknown> = {}
-      for (const k of Object.keys(val).sort()) {
-        sorted[k] = val[k]
+  return JSON.stringify(
+    value,
+    (_key, val) => {
+      if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+        const sorted: Record<string, unknown> = {}
+        for (const k of Object.keys(val).sort()) {
+          sorted[k] = val[k]
+        }
+        return sorted
       }
-      return sorted
-    }
-    return val
-  }, indent)
+      return val
+    },
+    indent
+  )
 }
 
-function encodeDeterministicJson<T>(value: T, options?: LapicDeterministicJsonOptions): Uint8Array {
+function encodeDeterministicJson<T>(
+  value: T,
+  options?: LapicDeterministicJsonOptions
+): Uint8Array {
   const json = deterministicJsonStringify(value, options)
   return textEncoder.encode(json)
 }

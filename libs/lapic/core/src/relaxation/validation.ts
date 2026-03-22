@@ -84,7 +84,9 @@ export function validateValidityDomain(
   if (!Array.isArray(domain.categoricalAssumptions))
     return fail('Validity domain must have categoricalAssumptions array')
   if (!Array.isArray(domain.compatibilityConstraintDigests))
-    return fail('Validity domain must have compatibilityConstraintDigests array')
+    return fail(
+      'Validity domain must have compatibilityConstraintDigests array'
+    )
   return succeed(domain)
 }
 
@@ -116,7 +118,9 @@ export function validateLinearConstraint(
     !Array.isArray(c.variableIndices) ||
     c.coefficients.length !== c.variableIndices.length
   )
-    return fail('Constraint coefficients and variableIndices must be arrays of equal length')
+    return fail(
+      'Constraint coefficients and variableIndices must be arrays of equal length'
+    )
   if (c.coefficients.length === 0)
     return fail('Constraint must have at least one coefficient')
   if (typeof c.lowerBound !== 'number' || typeof c.upperBound !== 'number')
@@ -132,7 +136,9 @@ export function validateLinearObjective(
   obj: LapicLinearObjective
 ): LapicValidationResult<LapicLinearObjective> {
   if (obj.sense !== 'minimize' && obj.sense !== 'maximize')
-    return fail(`Objective sense must be 'minimize' or 'maximize', got '${obj.sense}'`)
+    return fail(
+      `Objective sense must be 'minimize' or 'maximize', got '${obj.sense}'`
+    )
   if (
     !Array.isArray(obj.coefficients) ||
     !Array.isArray(obj.variableIndices) ||
@@ -186,12 +192,8 @@ export function validateRelaxationArtifact(
     return fail('Relaxation artifact must have a non-empty relaxId')
   const kindResult = validateRelaxationKind(artifact.relaxationKind)
   if (!kindResult.ok) return kindResult as LapicValidationResult<never>
-  if (
-    !VALID_VERIFICATION_STATUSES.includes(artifact.verificationStatus)
-  )
-    return fail(
-      `Invalid verification status '${artifact.verificationStatus}'`
-    )
+  if (!VALID_VERIFICATION_STATUSES.includes(artifact.verificationStatus))
+    return fail(`Invalid verification status '${artifact.verificationStatus}'`)
   const basisResult = validateVariableBasis(artifact.variableBasis)
   if (!basisResult.ok) return basisResult as LapicValidationResult<never>
   const domainResult = validateValidityDomain(artifact.validityDomain)
@@ -207,7 +209,10 @@ export function validateRelaxationArtifact(
       artifact.objectiveSystem?.sense !== 'maximize')
   )
     return fail('Relaxation artifact must have a valid objectiveSystem')
-  if (artifact.boundDirection !== 'lower' && artifact.boundDirection !== 'upper')
+  if (
+    artifact.boundDirection !== 'lower' &&
+    artifact.boundDirection !== 'upper'
+  )
     return fail(`Bound direction must be 'lower' or 'upper'`)
   if (
     artifact.relaxationKind === 'LinearProgramRelax' &&

@@ -42,7 +42,10 @@ export function validateLapicProblemNormalizationInput(
   const diagnostics: LapicDiagnostic[] = []
   const slotIdSet = new Set(normalizationInput.teamLayout.slotIds)
 
-  if (normalizationInput.teamLayout.slotCount !== normalizationInput.teamLayout.slotIds.length)
+  if (
+    normalizationInput.teamLayout.slotCount !==
+    normalizationInput.teamLayout.slotIds.length
+  )
     diagnostics.push(
       createLapicDiagnostic(
         'error',

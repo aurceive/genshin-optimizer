@@ -42,7 +42,9 @@ export function reachPauseSafePoint(
   context: LapicSessionControllerContext
 ): void {
   if (context.internalState !== 'pausing')
-    throw new Error('Pause safe point can only be reached from the pausing state.')
+    throw new Error(
+      'Pause safe point can only be reached from the pausing state.'
+    )
 
   moveToState(context, 'paused', context.activePhase)
   emitTrace(context, 'PauseAtSafePoint')
@@ -53,8 +55,13 @@ export function resumeSession(
   phase = context.activePhase ?? 'analyze'
 ): void {
   ensureNonTerminal(context, 'resume session')
-  if (context.internalState !== 'paused' && context.internalState !== 'checkpointing')
-    throw new Error('Resume is only allowed from paused or checkpointing states.')
+  if (
+    context.internalState !== 'paused' &&
+    context.internalState !== 'checkpointing'
+  )
+    throw new Error(
+      'Resume is only allowed from paused or checkpointing states.'
+    )
 
   moveToState(context, 'resuming', phase)
   emitTrace(context, 'LoadArtifacts')
@@ -69,7 +76,8 @@ export async function requestCheckpoint(
   context: LapicSessionControllerContext
 ): Promise<LapicPauseToCheckpointTransitionSummary> {
   ensureNonTerminal(context, 'request checkpoint')
-  if (context.internalState === 'created') moveToState(context, 'initializing', context.activePhase)
+  if (context.internalState === 'created')
+    moveToState(context, 'initializing', context.activePhase)
   if (context.internalState === 'pausing') reachPauseSafePoint(context)
   if (context.internalState !== 'paused') {
     const pauseRequest = await requestPause(context)
@@ -84,11 +92,17 @@ export async function requestCheckpoint(
     context.checkpointOrdinal
   )
   const artifacts = checkpointArtifacts(context)
-  const verification = await verifyLapicCheckpointClosure(context.artifactStore, {
+  const verification = await verifyLapicCheckpointClosure(
+    context.artifactStore,
+    {
+      checkpointId,
+      artifactRefs: artifacts,
+    }
+  )
+  const completion = createLapicCheckpointCompletionResult(
     checkpointId,
-    artifactRefs: artifacts,
-  })
-  const completion = createLapicCheckpointCompletionResult(checkpointId, verification)
+    verification
+  )
   context.latestCheckpoint = createLapicPauseToCheckpointTransitionSummary(
     context.options.identity.sessionId,
     completion
@@ -98,11 +112,10 @@ export async function requestCheckpoint(
   return context.latestCheckpoint
 }
 
-export async function exportCheckpoint(
-  context: LapicSessionControllerContext
-) {
+export async function exportCheckpoint(context: LapicSessionControllerContext) {
   ensureNonTerminal(context, 'export checkpoint')
-  const checkpointSummary = context.latestCheckpoint ?? (await requestCheckpoint(context))
+  const checkpointSummary =
+    context.latestCheckpoint ?? (await requestCheckpoint(context))
   const artifacts = checkpointArtifacts(context)
   const inventory =
     checkpointSummary.checkpoint.verification.diagnostics.length === 0

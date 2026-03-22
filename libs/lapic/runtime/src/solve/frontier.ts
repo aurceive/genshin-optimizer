@@ -71,11 +71,17 @@ export function createFrontierBlockForDomain(
     const rowExactSignatureGroupKey: LapicExactSignatureGroupKey = {
       occupiedSlotMask: exactSignatureGroupKey.value.occupiedSlotMask,
       actorIds: [...exactSignatureGroupKey.value.actorIds],
-      exclusiveResourceKeys: [...exactSignatureGroupKey.value.exclusiveResourceKeys],
-      frameAxisIdentityDigest: exactSignatureGroupKey.value.frameAxisIdentityDigest,
+      exclusiveResourceKeys: [
+        ...exactSignatureGroupKey.value.exclusiveResourceKeys,
+      ],
+      frameAxisIdentityDigest:
+        exactSignatureGroupKey.value.frameAxisIdentityDigest,
       adapterSemanticMode: exactSignatureGroupKey.value.adapterSemanticMode,
       ...(exactSignatureGroupKey.value.discreteTeamModeKey
-        ? { discreteTeamModeKey: exactSignatureGroupKey.value.discreteTeamModeKey }
+        ? {
+            discreteTeamModeKey:
+              exactSignatureGroupKey.value.discreteTeamModeKey,
+          }
         : {}),
     }
 
@@ -84,7 +90,8 @@ export function createFrontierBlockForDomain(
       `mode:${compatibilitySignature.adapterSemanticMode}`,
       `frame:${frameAxisIdentityDigest}`,
       ...compatibilitySignature.exclusiveResourceClaims.map(
-        (claim) => `${claim.resourceKind}|${claim.resourceId}|${claim.claimedBySlotId}`
+        (claim) =>
+          `${claim.resourceKind}|${claim.resourceId}|${claim.claimedBySlotId}`
       ),
       ...compatibilitySignature.aggregateCounts.map(
         (count) => `${count.counterId}|${count.value}`
@@ -122,7 +129,10 @@ function createFrontierCompatibilityDigest(
   groups: readonly LapicFrontierGroupSummary[]
 ): string {
   const orderedGroupDigests = groups
-    .map((group) => `${group.groupDigest}|${group.rowCount}|${group.slotIds.join('|')}`)
+    .map(
+      (group) =>
+        `${group.groupDigest}|${group.rowCount}|${group.slotIds.join('|')}`
+    )
     .sort()
 
   return `frontier-index:${problem.problemDigest}:${orderedGroupDigests.join(',')}`
@@ -147,22 +157,24 @@ function createFrontierGroupSummaries(
         )
 
       const groupDigest = `frontier-group:${problem.problemDigest}:${orderingKey.value.join('|')}`
-      const existing: LapicFrontierGroupAccumulator =
-        groups.get(groupDigest) ?? {
-          groupDigest,
-          blockIds: new Set<string>(),
-          slotIds: new Set<string>(),
-          rowDigests: new Set<string>(),
-          occupiedSlotMask: row.exactSignatureGroupKey.occupiedSlotMask,
-          adapterSemanticMode: row.exactSignatureGroupKey.adapterSemanticMode,
-          frameAxisIdentityDigest: row.exactSignatureGroupKey.frameAxisIdentityDigest,
-          ...(row.exactSignatureGroupKey.discreteTeamModeKey
-            ? {
-                discreteTeamModeKey:
-                  row.exactSignatureGroupKey.discreteTeamModeKey,
-              }
-            : {}),
-        }
+      const existing: LapicFrontierGroupAccumulator = groups.get(
+        groupDigest
+      ) ?? {
+        groupDigest,
+        blockIds: new Set<string>(),
+        slotIds: new Set<string>(),
+        rowDigests: new Set<string>(),
+        occupiedSlotMask: row.exactSignatureGroupKey.occupiedSlotMask,
+        adapterSemanticMode: row.exactSignatureGroupKey.adapterSemanticMode,
+        frameAxisIdentityDigest:
+          row.exactSignatureGroupKey.frameAxisIdentityDigest,
+        ...(row.exactSignatureGroupKey.discreteTeamModeKey
+          ? {
+              discreteTeamModeKey:
+                row.exactSignatureGroupKey.discreteTeamModeKey,
+            }
+          : {}),
+      }
 
       existing.blockIds.add(block.blockId)
       existing.slotIds.add(row.slotId)
@@ -172,19 +184,22 @@ function createFrontierGroupSummaries(
   }
 
   return [...groups.values()]
-    .map((group) => ({
-      groupDigest: group.groupDigest,
-      blockIds: [...group.blockIds].sort(),
-      slotIds: [...group.slotIds].sort(),
-      rowDigests: [...group.rowDigests].sort(),
-      rowCount: group.rowDigests.size,
-      occupiedSlotMask: group.occupiedSlotMask,
-      adapterSemanticMode: group.adapterSemanticMode,
-      frameAxisIdentityDigest: group.frameAxisIdentityDigest,
-      ...(group.discreteTeamModeKey
-        ? { discreteTeamModeKey: group.discreteTeamModeKey }
-        : {}),
-    }) satisfies LapicFrontierGroupSummary)
+    .map(
+      (group) =>
+        ({
+          groupDigest: group.groupDigest,
+          blockIds: [...group.blockIds].sort(),
+          slotIds: [...group.slotIds].sort(),
+          rowDigests: [...group.rowDigests].sort(),
+          rowCount: group.rowDigests.size,
+          occupiedSlotMask: group.occupiedSlotMask,
+          adapterSemanticMode: group.adapterSemanticMode,
+          frameAxisIdentityDigest: group.frameAxisIdentityDigest,
+          ...(group.discreteTeamModeKey
+            ? { discreteTeamModeKey: group.discreteTeamModeKey }
+            : {}),
+        }) satisfies LapicFrontierGroupSummary
+    )
     .sort((left, right) => left.groupDigest.localeCompare(right.groupDigest))
 }
 
@@ -196,7 +211,10 @@ export function createFrontierIndexForSolve(
   return createLapicFrontierIndex({
     indexId: `frontier-index:${problem.problemDigest}`,
     blockIds: blocks.map((block) => block.blockId),
-    compatibilityDigest: createFrontierCompatibilityDigest(problem, exactSignatureGroups),
+    compatibilityDigest: createFrontierCompatibilityDigest(
+      problem,
+      exactSignatureGroups
+    ),
     exactSignatureGroups,
   })
 }

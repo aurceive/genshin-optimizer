@@ -7,11 +7,21 @@ import { compileGiOptNodeToFir } from './compilation'
 // ---------------------------------------------------------------------------
 
 function constNode(value: number): OptNode {
-  return { operation: 'const', operands: [], value, type: 'number' } as unknown as OptNode
+  return {
+    operation: 'const',
+    operands: [],
+    value,
+    type: 'number',
+  } as unknown as OptNode
 }
 
 function readNode(path: string[]): OptNode {
-  return { operation: 'read', operands: [], path, type: 'number' } as unknown as OptNode
+  return {
+    operation: 'read',
+    operands: [],
+    path,
+    type: 'number',
+  } as unknown as OptNode
 }
 
 function addNode(...children: OptNode[]): OptNode {
@@ -160,9 +170,7 @@ describe('GI OptNode → F-IR compiler', () => {
 
     it('compiles res with variable input', () => {
       const tree = resNode(readNode(['enemy', 'res']))
-      expect(
-        compileAndEval(tree, { 'enemy:res': 0.1 })
-      ).toBeCloseTo(0.9, 10)
+      expect(compileAndEval(tree, { 'enemy:res': 0.1 })).toBeCloseTo(0.9, 10)
     })
   })
 

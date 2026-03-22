@@ -1,11 +1,11 @@
+import { lapicInterval, lapicIntervalPoint } from '../interval/types'
 import { LapicFirGraphBuilder } from './builders'
-import { validateLapicFirGraph } from './validation'
+import { runLapicGoldenHarness } from './golden-harness'
 import { evaluateLapicFirIntervals } from './interval-eval'
 import { evaluateLapicFirScalar } from './scalar-eval'
-import { runLapicGoldenHarness } from './golden-harness'
-import { lapicInterval, lapicIntervalPoint } from '../interval/types'
 import { lapicFirNodeChildIds } from './types'
 import type { LapicFirNode } from './types'
+import { validateLapicFirGraph } from './validation'
 
 // =========================================================================
 // Graph Builder
@@ -148,12 +148,20 @@ describe('lapicFirNodeChildIds', () => {
   })
 
   it('returns empty for read', () => {
-    const node: LapicFirNode = { nodeId: 'r', operator: 'read', variableId: 'x' }
+    const node: LapicFirNode = {
+      nodeId: 'r',
+      operator: 'read',
+      variableId: 'x',
+    }
     expect(lapicFirNodeChildIds(node)).toEqual([])
   })
 
   it('returns childIds for add', () => {
-    const node: LapicFirNode = { nodeId: 'a', operator: 'add', childIds: ['x', 'y'] }
+    const node: LapicFirNode = {
+      nodeId: 'a',
+      operator: 'add',
+      childIds: ['x', 'y'],
+    }
     expect(lapicFirNodeChildIds(node)).toEqual(['x', 'y'])
   })
 
@@ -200,14 +208,23 @@ describe('validateLapicFirGraph', () => {
     const graph = {
       rootId: 'add1',
       nodes: new Map([
-        ['add1', { nodeId: 'add1', operator: 'add' as const, childIds: ['x', 'missing'] }],
+        [
+          'add1',
+          {
+            nodeId: 'add1',
+            operator: 'add' as const,
+            childIds: ['x', 'missing'],
+          },
+        ],
         ['x', { nodeId: 'x', operator: 'read' as const, variableId: 'x' }],
       ]),
       variableIds: new Set(['x']),
     }
     const result = validateLapicFirGraph(graph)
     expect(result.ok).toBe(false)
-    expect(result.diagnostics.some((d) => d.message.includes('missing'))).toBe(true)
+    expect(result.diagnostics.some((d) => d.message.includes('missing'))).toBe(
+      true
+    )
   })
 
   it('fails with too few children in add', () => {
@@ -232,7 +249,9 @@ describe('validateLapicFirGraph', () => {
     const tampered = { ...g, variableIds: new Set(['x', 'phantom']) }
     const result = validateLapicFirGraph(tampered)
     expect(result.ok).toBe(true) // warnings don't fail
-    expect(result.diagnostics.some((d) => d.message.includes('phantom'))).toBe(true)
+    expect(result.diagnostics.some((d) => d.message.includes('phantom'))).toBe(
+      true
+    )
   })
 
   it('fails on unsorted piecewise breakpoints', () => {
@@ -240,15 +259,18 @@ describe('validateLapicFirGraph', () => {
       rootId: 'pw',
       nodes: new Map([
         ['x', { nodeId: 'x', operator: 'read' as const, variableId: 'x' }],
-        ['pw', {
-          nodeId: 'pw',
-          operator: 'piecewiseAffineKernel' as const,
-          childId: 'x',
-          segments: [
-            { breakpoint: 10, slope: 1, intercept: 0 },
-            { breakpoint: 5, slope: 0.5, intercept: 10 },
-          ],
-        }],
+        [
+          'pw',
+          {
+            nodeId: 'pw',
+            operator: 'piecewiseAffineKernel' as const,
+            childId: 'x',
+            segments: [
+              { breakpoint: 10, slope: 1, intercept: 0 },
+              { breakpoint: 5, slope: 0.5, intercept: 10 },
+            ],
+          },
+        ],
       ]),
       variableIds: new Set(['x']),
     }
@@ -536,7 +558,7 @@ describe('evaluateLapicFirIntervals', () => {
       ['atk', lapicInterval(2000, 2500)],
       ['dmgBonus', lapicInterval(0.4, 0.8)],
       ['critMult', lapicInterval(1.5, 2.0)],
-      ['enemyRes', lapicIntervalPoint(0.1)],  // 1-0.1 = 0.9
+      ['enemyRes', lapicIntervalPoint(0.1)], // 1-0.1 = 0.9
     ])
 
     const result = evaluateLapicFirIntervals(g, env)
@@ -636,7 +658,13 @@ describe('evaluateLapicFirScalar', () => {
     ])
     const g = b.build(root)
 
-    const result = evaluateLapicFirScalar(g, new Map([['x', 4], ['y', 5]]))
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['x', 4],
+        ['y', 5],
+      ])
+    )
     // 10 + 2*4 + 3*5 = 10 + 8 + 15 = 33
     expect(result.rootValue).toBe(33)
   })
@@ -698,8 +726,8 @@ describe('evaluateLapicFirScalar', () => {
   it('evaluates piecewise affine kernel', () => {
     const b = new LapicFirGraphBuilder()
     const root = b.piecewiseAffineKernel(b.read('x'), [
-      { breakpoint: 0, slope: 1, intercept: 0 },     // y = x for x < 10
-      { breakpoint: 10, slope: 0.5, intercept: 10 },  // y = 0.5*(x-10) + 10 for x >= 10
+      { breakpoint: 0, slope: 1, intercept: 0 }, // y = x for x < 10
+      { breakpoint: 10, slope: 0.5, intercept: 10 }, // y = 0.5*(x-10) + 10 for x >= 10
     ])
     const g = b.build(root)
 
@@ -714,7 +742,13 @@ describe('evaluateLapicFirScalar', () => {
     const root = b.bilinearKernel(b.read('x'), b.read('y'))
     const g = b.build(root)
 
-    const result = evaluateLapicFirScalar(g, new Map([['x', 3], ['y', 7]]))
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['x', 3],
+        ['y', 7],
+      ])
+    )
     expect(result.rootValue).toBe(21)
   })
 
@@ -723,7 +757,14 @@ describe('evaluateLapicFirScalar', () => {
     const root = b.multilinearKernel(b.read('a'), b.read('b'), b.read('c'))
     const g = b.build(root)
 
-    const result = evaluateLapicFirScalar(g, new Map([['a', 2], ['b', 3], ['c', 5]]))
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['a', 2],
+        ['b', 3],
+        ['c', 5],
+      ])
+    )
     expect(result.rootValue).toBe(30)
   })
 
@@ -743,7 +784,13 @@ describe('evaluateLapicFirScalar', () => {
     const root = b.add(x, y)
     const g = b.build(root)
 
-    const result = evaluateLapicFirScalar(g, new Map([['x', 3], ['y', 4]]))
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['x', 3],
+        ['y', 4],
+      ])
+    )
     expect(result.nodeValues.size).toBe(3)
     expect(result.nodeValues.get(x)).toBe(3)
     expect(result.nodeValues.get(y)).toBe(4)
@@ -840,7 +887,7 @@ describe('runLapicGoldenHarness', () => {
 
     expect(result.ok).toBe(true)
     expect(result.violations).toHaveLength(0)
-    expect(result.minScalarValue).toBe(6)  // 2*3
+    expect(result.minScalarValue).toBe(6) // 2*3
     expect(result.maxScalarValue).toBe(20) // 4*5
   })
 
@@ -927,9 +974,27 @@ describe('runLapicGoldenHarness', () => {
         {
           domainId: 'flower',
           candidates: [
-            { candidateId: 'f1', variables: new Map([['atkFlat', 100], ['critRate', 0.05]]) },
-            { candidateId: 'f2', variables: new Map([['atkFlat', 200], ['critRate', 0.10]]) },
-            { candidateId: 'f3', variables: new Map([['atkFlat', 150], ['critRate', 0.08]]) },
+            {
+              candidateId: 'f1',
+              variables: new Map([
+                ['atkFlat', 100],
+                ['critRate', 0.05],
+              ]),
+            },
+            {
+              candidateId: 'f2',
+              variables: new Map([
+                ['atkFlat', 200],
+                ['critRate', 0.1],
+              ]),
+            },
+            {
+              candidateId: 'f3',
+              variables: new Map([
+                ['atkFlat', 150],
+                ['critRate', 0.08],
+              ]),
+            },
           ],
         },
         {
@@ -961,9 +1026,7 @@ describe('runLapicGoldenHarness', () => {
       domains: [
         {
           domainId: 'A',
-          candidates: [
-            { candidateId: 'a1', variables: new Map([['x', 42]]) },
-          ],
+          candidates: [{ candidateId: 'a1', variables: new Map([['x', 42]]) }],
         },
       ],
     })

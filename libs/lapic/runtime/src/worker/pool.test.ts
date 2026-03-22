@@ -1,12 +1,12 @@
+import {
+  type LapicWorkerHandle,
+  createCallbackWorkerHandle,
+  createPoolTransport,
+} from './pool'
 import type {
   LapicWorkerDispatchMessage,
   LapicWorkerResultMessage,
 } from './transport'
-import {
-  createCallbackWorkerHandle,
-  createPoolTransport,
-  type LapicWorkerHandle,
-} from './pool'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -331,9 +331,7 @@ describe('pool transport', () => {
               stateId: `state-${msg.startFlatIndex}-${msg.endFlatIndex}`,
               candidates: [],
               evaluation: {
-                objectiveValue: String(
-                  msg.endFlatIndex - msg.startFlatIndex
-                ),
+                objectiveValue: String(msg.endFlatIndex - msg.startFlatIndex),
                 evidenceDigest: `digest-${msg.partitionIndex}`,
               },
             },

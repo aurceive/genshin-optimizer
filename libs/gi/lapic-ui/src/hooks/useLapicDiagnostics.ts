@@ -5,11 +5,11 @@
  * `LapicFailureRecord` entries) into a structured list suitable for rendering.
  */
 
-import { useMemo } from 'react'
 import type {
-  LapicTraceEvent,
   LapicFailureRecord,
+  LapicTraceEvent,
 } from '@genshin-optimizer/lapic/runtime'
+import { useMemo } from 'react'
 
 // ---------------------------------------------------------------------------
 // Types

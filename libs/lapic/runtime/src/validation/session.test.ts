@@ -119,7 +119,10 @@ describe('lapic runtime session validation', () => {
   })
 
   it('omits undefined optional fields from runtime constructor helpers', () => {
-    const summary = createLapicSessionSummary(createSessionIdentityFixture(), 'created')
+    const summary = createLapicSessionSummary(
+      createSessionIdentityFixture(),
+      'created'
+    )
     const solveRequest = createLapicSolveRequest('problem-digest')
     const progressEvent = createLapicProgressEvent('session-id', 'analyze', 1)
     const completionResult = createLapicSolveCompletionResult(summary, [])

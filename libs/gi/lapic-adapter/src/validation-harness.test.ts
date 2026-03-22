@@ -255,7 +255,10 @@ describe('gi lapic adapter validation harness', () => {
     it('produces stable artifact feature and categorical digests', () => {
       const artifact = createArtifact()
       const sameArtifact = createArtifact()
-      const differentArtifact = createArtifact({ slotKey: 'plume', mainStatKey: 'atk' })
+      const differentArtifact = createArtifact({
+        slotKey: 'plume',
+        mainStatKey: 'atk',
+      })
 
       // Feature digest: same → same, different → different
       const featureA = createGiArtifactFeatureDigest(artifact)
@@ -444,9 +447,7 @@ describe('gi lapic adapter validation harness', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {
@@ -522,9 +523,7 @@ describe('gi lapic adapter validation harness', () => {
         controller,
         artifactStore,
         evaluateCombination({ candidates }) {
-          const score = candidates
-            .map((c) => c.candidateId)
-            .join('|')
+          const score = candidates.map((c) => c.candidateId).join('|')
           return {
             ok: true,
             value: {

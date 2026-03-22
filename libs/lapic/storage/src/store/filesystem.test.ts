@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
-import * as path from 'node:path'
 import * as os from 'node:os'
+import * as path from 'node:path'
 import {
   createLapicArtifactWriteRequest,
   createLapicStorageEnvelope,
@@ -12,7 +12,10 @@ function makeTempDir(): string {
 }
 
 function createWriteRequest(
-  artifactKind: 'frontier-block' | 'certificate' | 'checkpoint-manifest' = 'frontier-block',
+  artifactKind:
+    | 'frontier-block'
+    | 'certificate'
+    | 'checkpoint-manifest' = 'frontier-block',
   contentHash = 'content-hash-1'
 ) {
   return createLapicArtifactWriteRequest(
@@ -84,9 +87,7 @@ describe('createLapicFilesystemArtifactStore', () => {
       const store = createLapicFilesystemArtifactStore({ rootDir })
       const result = await store.write(createWriteRequest())
 
-      const files = fs.readdirSync(
-        path.join(rootDir, 'frontier-block')
-      )
+      const files = fs.readdirSync(path.join(rootDir, 'frontier-block'))
       expect(files.length).toBe(1)
       expect(files[0]!.endsWith('.json')).toBe(true)
 
@@ -95,9 +96,7 @@ describe('createLapicFilesystemArtifactStore', () => {
         'utf-8'
       )
       const record = JSON.parse(raw)
-      expect(record.artifactRef.artifactId).toBe(
-        result.artifactRef.artifactId
-      )
+      expect(record.artifactRef.artifactId).toBe(result.artifactRef.artifactId)
       expect(record.payloadDigest).toBe('payload-digest-1')
     })
 
@@ -105,9 +104,7 @@ describe('createLapicFilesystemArtifactStore', () => {
       const store = createLapicFilesystemArtifactStore({ rootDir })
       await store.write(createWriteRequest())
 
-      const files = fs.readdirSync(
-        path.join(rootDir, 'frontier-block')
-      )
+      const files = fs.readdirSync(path.join(rootDir, 'frontier-block'))
       const tmpFiles = files.filter((f) => f.includes('.tmp.'))
       expect(tmpFiles).toHaveLength(0)
     })
@@ -184,9 +181,7 @@ describe('createLapicFilesystemArtifactStore', () => {
       const store = createLapicFilesystemArtifactStore({ rootDir })
       await store.write(createWriteRequest('frontier-block', 'hash-1'))
       await store.write(createWriteRequest('certificate', 'hash-2'))
-      await store.write(
-        createWriteRequest('checkpoint-manifest', 'hash-3')
-      )
+      await store.write(createWriteRequest('checkpoint-manifest', 'hash-3'))
 
       const refs = store.listArtifactRefs()
       expect(refs).toHaveLength(3)
@@ -239,9 +234,7 @@ describe('createLapicFilesystemArtifactStore', () => {
       await store.write(createWriteRequest('frontier-block'))
       await store.write(createWriteRequest('certificate', 'hash-c'))
 
-      expect(fs.existsSync(path.join(rootDir, 'frontier-block'))).toBe(
-        true
-      )
+      expect(fs.existsSync(path.join(rootDir, 'frontier-block'))).toBe(true)
       expect(fs.existsSync(path.join(rootDir, 'certificate'))).toBe(true)
     })
 
@@ -249,9 +242,7 @@ describe('createLapicFilesystemArtifactStore', () => {
       const store = createLapicFilesystemArtifactStore({ rootDir })
       await store.write(createWriteRequest())
 
-      const files = fs.readdirSync(
-        path.join(rootDir, 'frontier-block')
-      )
+      const files = fs.readdirSync(path.join(rootDir, 'frontier-block'))
       // Artifact ID is "frontier-block:content-hash-1", colons become dashes
       expect(files[0]).not.toContain(':')
       expect(files[0]!.endsWith('.json')).toBe(true)

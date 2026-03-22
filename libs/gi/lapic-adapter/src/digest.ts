@@ -1,6 +1,9 @@
 import type { ICachedArtifact } from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
-import type { LapicAggregateCountFact, LapicDigest } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicAggregateCountFact,
+  LapicDigest,
+} from '@genshin-optimizer/lapic/core'
 
 export function createGiOptNodeDigest(node: OptNode): LapicDigest {
   const operands = 'operands' in node ? node.operands : []
@@ -8,16 +11,23 @@ export function createGiOptNodeDigest(node: OptNode): LapicDigest {
     .map((operand) => createGiOptNodeDigest(operand as OptNode))
     .join(',')
 
-  const localPayloadEntries = Object.entries(node as unknown as Record<string, unknown>)
+  const localPayloadEntries = Object.entries(
+    node as unknown as Record<string, unknown>
+  )
     .filter(([key]) => key !== 'operands')
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => {
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean'
+      )
         return `${key}=${String(value)}`
 
       if (value === null) return `${key}=null`
       if (value === undefined) return `${key}=undefined`
-      if (Array.isArray(value)) return `${key}=[${value.map((entry) => String(entry)).join(',')}]`
+      if (Array.isArray(value))
+        return `${key}=[${value.map((entry) => String(entry)).join(',')}]`
 
       return `${key}=[object]`
     })
@@ -29,7 +39,9 @@ export function createGiOptNodeDigest(node: OptNode): LapicDigest {
   return `gi-opt-node:unknown:${localPayloadEntries}:${operands.length}:${operandDigest}`
 }
 
-export function createGiArtifactFeatureDigest(artifact: ICachedArtifact): LapicDigest {
+export function createGiArtifactFeatureDigest(
+  artifact: ICachedArtifact
+): LapicDigest {
   return [
     artifact.id,
     artifact.slotKey,

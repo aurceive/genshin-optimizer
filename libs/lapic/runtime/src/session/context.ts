@@ -8,11 +8,11 @@ import {
   createLapicArtifactRefKey,
   createLapicMemoryArtifactStore,
 } from '@genshin-optimizer/lapic/storage'
-import type { LapicArtifactRef, LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
-import {
-  createLapicSessionSummary,
-  createLapicTraceEvent,
-} from '../builders'
+import type {
+  LapicArtifactRef,
+  LapicArtifactStore,
+} from '@genshin-optimizer/lapic/storage'
+import { createLapicSessionSummary, createLapicTraceEvent } from '../builders'
 import type {
   LapicActivePhase,
   LapicFailureRecord,
@@ -52,14 +52,21 @@ export interface LapicSessionControllerContext {
 export function createSessionControllerContext(
   options: LapicInMemorySessionControllerOptions
 ): LapicSessionControllerContext {
-  const artifactStore = options.artifactStore ?? createLapicMemoryArtifactStore()
-  const progressListeners = new Map<string, (event: LapicProgressEvent) => void>()
+  const artifactStore =
+    options.artifactStore ?? createLapicMemoryArtifactStore()
+  const progressListeners = new Map<
+    string,
+    (event: LapicProgressEvent) => void
+  >()
   const diagnosticListeners = new Map<
     string,
     (event: LapicTraceEvent | LapicFailureRecord) => void
   >()
 
-  const openArtifacts = new Map<string, ReturnType<typeof createLapicArtifactRef>>()
+  const openArtifacts = new Map<
+    string,
+    ReturnType<typeof createLapicArtifactRef>
+  >()
   options.initialArtifacts?.forEach((artifactRef) => {
     openArtifacts.set(
       createLapicArtifactRefKey(artifactRef),
@@ -67,14 +74,18 @@ export function createSessionControllerContext(
     )
   })
 
-  const emittedCertificates: LapicCertificate[] = [...(options.initialCertificates ?? [])]
+  const emittedCertificates: LapicCertificate[] = [
+    ...(options.initialCertificates ?? []),
+  ]
 
   let resolveCompletion!: (result: LapicSolveCompletionResult) => void
   let rejectCompletion!: (reason: unknown) => void
-  const completionPromise = new Promise<LapicSolveCompletionResult>((resolve, reject) => {
-    resolveCompletion = resolve
-    rejectCompletion = reject
-  })
+  const completionPromise = new Promise<LapicSolveCompletionResult>(
+    (resolve, reject) => {
+      resolveCompletion = resolve
+      rejectCompletion = reject
+    }
+  )
 
   return {
     options,

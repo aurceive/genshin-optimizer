@@ -29,10 +29,9 @@ export function validateLapicPriorityDescriptor(
   descriptor: LapicPriorityDescriptor
 ): LapicValidationResult<LapicPriorityDescriptor> {
   if (!isRecord(descriptor))
-    return createRuntimeFailure(
-      'Priority descriptor must be a record.',
-      ['priorityDescriptor']
-    )
+    return createRuntimeFailure('Priority descriptor must be a record.', [
+      'priorityDescriptor',
+    ])
 
   if (
     !isNonEmptyString(descriptor.upperBoundOrderingDigest) ||
@@ -53,7 +52,9 @@ export function validateLapicRetryPolicy(
   policy: LapicRetryPolicy
 ): LapicValidationResult<LapicRetryPolicy> {
   if (!isRecord(policy))
-    return createRuntimeFailure('Retry policy must be a record.', ['retryPolicy'])
+    return createRuntimeFailure('Retry policy must be a record.', [
+      'retryPolicy',
+    ])
 
   if (!isNonNegativeInteger(policy.maxAttempts))
     return createRuntimeFailure(
@@ -62,7 +63,9 @@ export function validateLapicRetryPolicy(
     )
 
   if (!isBoolean(policy.replaySafe))
-    return createRuntimeFailure('Replay safe must be a boolean.', ['replaySafe'])
+    return createRuntimeFailure('Replay safe must be a boolean.', [
+      'replaySafe',
+    ])
 
   return createLapicSuccessResult(policy)
 }
@@ -71,10 +74,14 @@ export function validateLapicWorkUnitEnvelope(
   envelope: LapicWorkUnitEnvelope
 ): LapicValidationResult<LapicWorkUnitEnvelope> {
   if (!isRecord(envelope))
-    return createRuntimeFailure('Work unit envelope must be a record.', ['workUnitEnvelope'])
+    return createRuntimeFailure('Work unit envelope must be a record.', [
+      'workUnitEnvelope',
+    ])
 
   if (!isNonEmptyString(envelope.workUnitId))
-    return createRuntimeFailure('Work unit id must be a non-empty string.', ['workUnitId'])
+    return createRuntimeFailure('Work unit id must be a non-empty string.', [
+      'workUnitId',
+    ])
 
   if (
     !isNonEmptyString(envelope.kind) ||
@@ -88,10 +95,9 @@ export function validateLapicWorkUnitEnvelope(
       envelope.determinismClass as LapicDeterminismClass
     )
   )
-    return createRuntimeFailure(
-      'Determinism class must be supported.',
-      ['determinismClass']
-    )
+    return createRuntimeFailure('Determinism class must be supported.', [
+      'determinismClass',
+    ])
 
   const priorityValidation = validateLapicPriorityDescriptor(envelope.priority)
   if (!priorityValidation.ok) return priorityValidation
@@ -106,16 +112,24 @@ export function validateLapicWorkerRequest(
   request: LapicWorkerRequest
 ): LapicValidationResult<LapicWorkerRequest> {
   if (!isRecord(request))
-    return createRuntimeFailure('Worker request must be a record.', ['workerRequest'])
+    return createRuntimeFailure('Worker request must be a record.', [
+      'workerRequest',
+    ])
 
   if (
     !isNonEmptyString(request.tag) ||
-    !lapicWorkerProtocolMessageTags.includes(request.tag as LapicWorkerProtocolMessageTag)
+    !lapicWorkerProtocolMessageTags.includes(
+      request.tag as LapicWorkerProtocolMessageTag
+    )
   )
-    return createRuntimeFailure('Worker request tag must be supported.', ['tag'])
+    return createRuntimeFailure('Worker request tag must be supported.', [
+      'tag',
+    ])
 
   if (!isNonEmptyString(request.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (request.workUnit) {
     const workUnitValidation = validateLapicWorkUnitEnvelope(request.workUnit)
@@ -136,15 +150,18 @@ export function validateLapicExecutorCapabilityDescriptor(
 
   if (
     !isNonEmptyString(descriptor.backendKind) ||
-    !lapicWorkerBackendKinds.includes(descriptor.backendKind as LapicWorkerBackendKind)
+    !lapicWorkerBackendKinds.includes(
+      descriptor.backendKind as LapicWorkerBackendKind
+    )
   )
-    return createRuntimeFailure('Backend kind must be supported.', ['backendKind'])
+    return createRuntimeFailure('Backend kind must be supported.', [
+      'backendKind',
+    ])
 
   if (!isBoolean(descriptor.supportsPauseAtSafePoint))
-    return createRuntimeFailure(
-      'supportsPauseAtSafePoint must be boolean.',
-      ['supportsPauseAtSafePoint']
-    )
+    return createRuntimeFailure('supportsPauseAtSafePoint must be boolean.', [
+      'supportsPauseAtSafePoint',
+    ])
 
   if (!isBoolean(descriptor.supportsArtifactPublication))
     return createRuntimeFailure(
@@ -159,24 +176,33 @@ export function validateLapicWorkerResponse(
   response: LapicWorkerResponse
 ): LapicValidationResult<LapicWorkerResponse> {
   if (!isRecord(response))
-    return createRuntimeFailure('Worker response must be a record.', ['workerResponse'])
+    return createRuntimeFailure('Worker response must be a record.', [
+      'workerResponse',
+    ])
 
   if (
     !isNonEmptyString(response.tag) ||
-    !lapicWorkerProtocolMessageTags.includes(response.tag as LapicWorkerProtocolMessageTag)
+    !lapicWorkerProtocolMessageTags.includes(
+      response.tag as LapicWorkerProtocolMessageTag
+    )
   )
-    return createRuntimeFailure('Worker response tag must be supported.', ['tag'])
+    return createRuntimeFailure('Worker response tag must be supported.', [
+      'tag',
+    ])
 
   if (!isNonEmptyString(response.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (response.producedArtifacts)
-    return validateArtifactRefs(response.producedArtifacts, ['producedArtifacts']).ok
+    return validateArtifactRefs(response.producedArtifacts, [
+      'producedArtifacts',
+    ]).ok
       ? createLapicSuccessResult(response)
-      : createRuntimeFailure(
-          'Produced artifacts must be valid and unique.',
-          ['producedArtifacts']
-        )
+      : createRuntimeFailure('Produced artifacts must be valid and unique.', [
+          'producedArtifacts',
+        ])
 
   return createLapicSuccessResult(response)
 }

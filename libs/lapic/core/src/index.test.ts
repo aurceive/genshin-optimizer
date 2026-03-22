@@ -202,7 +202,9 @@ function createSirState() {
 
 describe('lapic core builders and validators', () => {
   it('validates a well-formed normalization input', () => {
-    const result = validateLapicProblemNormalizationInput(createNormalizationInput())
+    const result = validateLapicProblemNormalizationInput(
+      createNormalizationInput()
+    )
 
     expect(result.ok).toBe(true)
   })

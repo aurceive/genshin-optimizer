@@ -147,7 +147,9 @@ describe('lapic debug inspection', () => {
         contentHash: 'content-hash',
       },
     })
-    const certificateView = createLapicCertificateInspectionView(createCertificate())
+    const certificateView = createLapicCertificateInspectionView(
+      createCertificate()
+    )
 
     expect('potentialSummaryDigests' in artifactSummary).toBe(false)
     expect('compatibilitySignature' in stateBlockView).toBe(false)
@@ -173,7 +175,10 @@ describe('lapic debug inspection', () => {
       ]
     )
 
-    expect(summaries.map((summary) => summary.phase)).toEqual(['analyze', 'join'])
+    expect(summaries.map((summary) => summary.phase)).toEqual([
+      'analyze',
+      'join',
+    ])
   })
 
   it('builds threshold lineage from certificates', () => {

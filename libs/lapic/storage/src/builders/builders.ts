@@ -62,11 +62,17 @@ export function createLapicFrontierBlock(
       exactSignatureGroupKey: {
         occupiedSlotMask: row.exactSignatureGroupKey.occupiedSlotMask,
         actorIds: [...row.exactSignatureGroupKey.actorIds],
-        exclusiveResourceKeys: [...row.exactSignatureGroupKey.exclusiveResourceKeys],
-        frameAxisIdentityDigest: row.exactSignatureGroupKey.frameAxisIdentityDigest,
+        exclusiveResourceKeys: [
+          ...row.exactSignatureGroupKey.exclusiveResourceKeys,
+        ],
+        frameAxisIdentityDigest:
+          row.exactSignatureGroupKey.frameAxisIdentityDigest,
         adapterSemanticMode: row.exactSignatureGroupKey.adapterSemanticMode,
         ...(row.exactSignatureGroupKey.discreteTeamModeKey
-          ? { discreteTeamModeKey: row.exactSignatureGroupKey.discreteTeamModeKey }
+          ? {
+              discreteTeamModeKey:
+                row.exactSignatureGroupKey.discreteTeamModeKey,
+            }
           : {}),
       },
       rowDigest: row.rowDigest,
@@ -237,7 +243,9 @@ export function createLapicDebugArtifactSummary(
   }
 }
 
-export function createLapicArtifactRefKey(artifactRef: LapicArtifactRef): string {
+export function createLapicArtifactRefKey(
+  artifactRef: LapicArtifactRef
+): string {
   return [
     artifactRef.artifactId,
     artifactRef.artifactKind,

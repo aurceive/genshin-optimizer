@@ -1,4 +1,7 @@
-import { createLapicArtifactRefKey, createLapicCheckpointClosureVerificationResult } from '../builders'
+import {
+  createLapicArtifactRefKey,
+  createLapicCheckpointClosureVerificationResult,
+} from '../builders'
 import { scanLapicArtifactIntegrity } from '../integrity'
 import type {
   LapicArtifactStore,
@@ -23,7 +26,8 @@ export async function verifyLapicCheckpointClosure(
     integrityScan.ok
       ? request.artifactRefs
       : request.artifactRefs.filter(
-          (artifactRef) => !affectedKeys.has(createLapicArtifactRefKey(artifactRef))
+          (artifactRef) =>
+            !affectedKeys.has(createLapicArtifactRefKey(artifactRef))
         )
   )
 

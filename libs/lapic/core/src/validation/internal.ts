@@ -1,8 +1,5 @@
 import { createLapicDiagnostic } from '../diagnostics'
-import type {
-  LapicDiagnostic,
-  LapicFrameAxisIdentity,
-} from '../types'
+import type { LapicDiagnostic, LapicFrameAxisIdentity } from '../types'
 
 export function validateLapicFrameAxisIdentity(
   frameAxisIdentity: LapicFrameAxisIdentity,
@@ -10,7 +7,10 @@ export function validateLapicFrameAxisIdentity(
 ): readonly LapicDiagnostic[] {
   const diagnostics: LapicDiagnostic[] = []
 
-  if (frameAxisIdentity.axisKind === 'none' && frameAxisIdentity.frameIds.length)
+  if (
+    frameAxisIdentity.axisKind === 'none' &&
+    frameAxisIdentity.frameIds.length
+  )
     diagnostics.push(
       createLapicDiagnostic(
         'error',

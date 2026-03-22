@@ -30,7 +30,9 @@ function createWriteRequest() {
 
 describe('lapic storage builders', () => {
   it('creates a deterministic artifact ref from a write request', () => {
-    const artifactRef = createLapicArtifactRefFromWriteRequest(createWriteRequest())
+    const artifactRef = createLapicArtifactRefFromWriteRequest(
+      createWriteRequest()
+    )
 
     expect(artifactRef.artifactId).toBe('frontier-block:content-hash')
     expect(artifactRef.artifactKind).toBe('frontier-block')
@@ -75,7 +77,9 @@ describe('lapic storage builders', () => {
     expect(block.rows).toHaveLength(1)
     expect(block.rows[0]?.stateId).toBe('state:flower:flower-a')
     expect(block.rows[0]?.compatibilityDigest).toBe('compat:flower-a')
-    expect(block.rows[0]?.exactSignatureGroupKey.discreteTeamModeKey).toBe('flower')
+    expect(block.rows[0]?.exactSignatureGroupKey.discreteTeamModeKey).toBe(
+      'flower'
+    )
     expect(block.rows[0]).not.toBeUndefined()
   })
 
@@ -104,6 +108,8 @@ describe('lapic storage builders', () => {
       'frontier-group:problem-digest:group-a'
     )
     expect(index.exactSignatureGroups[0]?.rowCount).toBe(1)
-    expect(index.exactSignatureGroups[0]?.adapterSemanticMode).toBe('gi-legacy-validated')
+    expect(index.exactSignatureGroups[0]?.adapterSemanticMode).toBe(
+      'gi-legacy-validated'
+    )
   })
 })

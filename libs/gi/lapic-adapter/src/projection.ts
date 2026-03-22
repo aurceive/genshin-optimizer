@@ -62,7 +62,8 @@ export function createGiLapicCandidateDescriptor(
     slotId: artifact.slotKey,
     additiveFeatureDigest: createGiArtifactFeatureDigest(artifact),
     discreteCounters: createGiArtifactCounterFacts(artifact),
-    categoricalSignatureDigest: createGiArtifactCategoricalSignatureDigest(artifact),
+    categoricalSignatureDigest:
+      createGiArtifactCategoricalSignatureDigest(artifact),
     provenance: {
       slotId: artifact.slotKey,
       sourceEntityId: artifact.location || 'inventory',

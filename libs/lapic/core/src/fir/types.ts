@@ -212,7 +212,9 @@ export interface LapicFirGraph {
 // ---------------------------------------------------------------------------
 
 /** Return all direct child node IDs of a given node. */
-export function lapicFirNodeChildIds(node: LapicFirNode): readonly LapicFirNodeId[] {
+export function lapicFirNodeChildIds(
+  node: LapicFirNode
+): readonly LapicFirNodeId[] {
   switch (node.operator) {
     case 'constant':
     case 'read':

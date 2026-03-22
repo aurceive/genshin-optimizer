@@ -30,7 +30,9 @@ describe('lapic storage memory store', () => {
     const store = createLapicMemoryArtifactStore()
     const writeRequest = createWriteRequest()
     const commitResult = await store.write(writeRequest)
-    const readResult = await store.read({ artifactRef: commitResult.artifactRef })
+    const readResult = await store.read({
+      artifactRef: commitResult.artifactRef,
+    })
 
     expect(commitResult.committed).toBe(true)
     expect(readResult.envelope.contentHash).toBe('content-hash')

@@ -65,7 +65,10 @@ export type LapicWorkUnitKind =
   | 'PersistArtifact'
   | 'ReloadArtifact'
 export type LapicDeterminismClass = 'pure-deterministic' | 'provider-verified'
-export type LapicWorkerBackendKind = 'browser-worker' | 'node-worker' | 'in-process'
+export type LapicWorkerBackendKind =
+  | 'browser-worker'
+  | 'node-worker'
+  | 'in-process'
 export type LapicWorkerProtocolMessageTag =
   | 'InitSession'
   | 'LoadArtifacts'
@@ -267,7 +270,9 @@ export interface LapicInMemorySessionController extends LapicPublicSolveHandle {
   emitCertificate(certificate: LapicCertificate): void
   reachPauseSafePoint(): void
   resume(phase?: LapicActivePhase): void
-  complete(finalOptimality?: LapicFinalOptimalitySummary): Promise<LapicSolveCompletionResult>
+  complete(
+    finalOptimality?: LapicFinalOptimalitySummary
+  ): Promise<LapicSolveCompletionResult>
   fail(
     failureClass: LapicFailureClass,
     message: string,

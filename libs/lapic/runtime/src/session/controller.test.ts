@@ -7,9 +7,7 @@ import {
   createLapicSessionIdentity,
   createLapicSolveRequest,
 } from '../builders'
-import {
-  createLapicInMemorySessionController,
-} from './index'
+import { createLapicInMemorySessionController } from './index'
 
 function createCertificate() {
   return {

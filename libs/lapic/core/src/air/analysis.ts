@@ -89,19 +89,19 @@ function freezeAnnotation(m: MutableAnnotation): LapicAirNodeAnnotation {
     firNodeId: m.firNodeId,
     exactLower: m.exactLower,
     exactUpper: m.exactUpper,
-    monotonicityByVariable: m.monotonicityByVariable.size > 0
-      ? new Map(m.monotonicityByVariable)
-      : undefined,
+    monotonicityByVariable:
+      m.monotonicityByVariable.size > 0
+        ? new Map(m.monotonicityByVariable)
+        : undefined,
     curvature: m.curvature,
-    branchControlSet: m.branchControlSet.size > 0
-      ? new Set(m.branchControlSet)
-      : undefined,
-    requiredVariables: m.requiredVariables.size > 0
-      ? new Set(m.requiredVariables)
-      : undefined,
-    nonlinearInteractions: m.nonlinearInteractions.size > 0
-      ? new Set(m.nonlinearInteractions)
-      : undefined,
+    branchControlSet:
+      m.branchControlSet.size > 0 ? new Set(m.branchControlSet) : undefined,
+    requiredVariables:
+      m.requiredVariables.size > 0 ? new Set(m.requiredVariables) : undefined,
+    nonlinearInteractions:
+      m.nonlinearInteractions.size > 0
+        ? new Set(m.nonlinearInteractions)
+        : undefined,
   }
 }
 
@@ -137,22 +137,39 @@ class AirAnalysisEngine {
     return result
   }
 
-  private analyzeNode(nodeId: LapicFirNodeId, node: LapicFirNode): MutableAnnotation {
+  private analyzeNode(
+    nodeId: LapicFirNodeId,
+    node: LapicFirNode
+  ): MutableAnnotation {
     switch (node.operator) {
-      case 'constant': return this.analyzeConstant(nodeId, node.value)
-      case 'read': return this.analyzeRead(nodeId, node.variableId)
-      case 'add': return this.analyzeAdd(nodeId, node.childIds)
-      case 'mul': return this.analyzeMul(nodeId, node.childIds)
-      case 'min': return this.analyzeMin(nodeId, node.childIds)
-      case 'max': return this.analyzeMax(nodeId, node.childIds)
-      case 'neg': return this.analyzeNeg(nodeId, node.childId)
-      case 'affineForm': return this.analyzeAffineForm(nodeId, node)
-      case 'thresholdSelect': return this.analyzeThresholdSelect(nodeId, node)
-      case 'resistanceTransform': return this.analyzeResistanceTransform(nodeId, node.resId)
-      case 'piecewiseAffineKernel': return this.analyzePiecewiseAffineKernel(nodeId, node.childId)
-      case 'bilinearKernel': return this.analyzeBilinearKernel(nodeId, node.leftId, node.rightId)
-      case 'multilinearKernel': return this.analyzeMultilinearKernel(nodeId, node.childIds)
-      case 'saturatingKernel': return this.analyzeSaturatingKernel(nodeId, node)
+      case 'constant':
+        return this.analyzeConstant(nodeId, node.value)
+      case 'read':
+        return this.analyzeRead(nodeId, node.variableId)
+      case 'add':
+        return this.analyzeAdd(nodeId, node.childIds)
+      case 'mul':
+        return this.analyzeMul(nodeId, node.childIds)
+      case 'min':
+        return this.analyzeMin(nodeId, node.childIds)
+      case 'max':
+        return this.analyzeMax(nodeId, node.childIds)
+      case 'neg':
+        return this.analyzeNeg(nodeId, node.childId)
+      case 'affineForm':
+        return this.analyzeAffineForm(nodeId, node)
+      case 'thresholdSelect':
+        return this.analyzeThresholdSelect(nodeId, node)
+      case 'resistanceTransform':
+        return this.analyzeResistanceTransform(nodeId, node.resId)
+      case 'piecewiseAffineKernel':
+        return this.analyzePiecewiseAffineKernel(nodeId, node.childId)
+      case 'bilinearKernel':
+        return this.analyzeBilinearKernel(nodeId, node.leftId, node.rightId)
+      case 'multilinearKernel':
+        return this.analyzeMultilinearKernel(nodeId, node.childIds)
+      case 'saturatingKernel':
+        return this.analyzeSaturatingKernel(nodeId, node)
       default: {
         const fallback = createMutableAnnotation(nodeId)
         return fallback
@@ -162,7 +179,10 @@ class AirAnalysisEngine {
 
   // --- Leaf nodes ---
 
-  private analyzeConstant(nodeId: LapicFirNodeId, value: number): MutableAnnotation {
+  private analyzeConstant(
+    nodeId: LapicFirNodeId,
+    value: number
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     ann.exactLower = value
     ann.exactUpper = value
@@ -170,7 +190,10 @@ class AirAnalysisEngine {
     return ann
   }
 
-  private analyzeRead(nodeId: LapicFirNodeId, variableId: LapicFirVariableId): MutableAnnotation {
+  private analyzeRead(
+    nodeId: LapicFirNodeId,
+    variableId: LapicFirVariableId
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     ann.curvature = 'affine'
     ann.requiredVariables.add(variableId)
@@ -180,7 +203,10 @@ class AirAnalysisEngine {
 
   // --- Arithmetic: add ---
 
-  private analyzeAdd(nodeId: LapicFirNodeId, childIds: readonly LapicFirNodeId[]): MutableAnnotation {
+  private analyzeAdd(
+    nodeId: LapicFirNodeId,
+    childIds: readonly LapicFirNodeId[]
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const children = childIds.map((id) => this.analyze(id))
 
@@ -208,7 +234,10 @@ class AirAnalysisEngine {
 
   // --- Arithmetic: mul ---
 
-  private analyzeMul(nodeId: LapicFirNodeId, childIds: readonly LapicFirNodeId[]): MutableAnnotation {
+  private analyzeMul(
+    nodeId: LapicFirNodeId,
+    childIds: readonly LapicFirNodeId[]
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const children = childIds.map((id) => this.analyze(id))
 
@@ -219,9 +248,8 @@ class AirAnalysisEngine {
     this.computeMulMonotonicity(ann, children)
 
     // Curvature: product is generally not convex/concave
-    ann.curvature = children.length <= 1
-      ? (children[0]?.curvature ?? 'unknown')
-      : 'unknown'
+    ann.curvature =
+      children.length <= 1 ? (children[0]?.curvature ?? 'unknown') : 'unknown'
 
     // Dependencies
     mergeRequiredVariables(ann, children)
@@ -234,8 +262,16 @@ class AirAnalysisEngine {
     return ann
   }
 
-  private computeMulBounds(ann: MutableAnnotation, children: MutableAnnotation[]): void {
-    if (!children.every((c) => c.exactLower !== undefined && c.exactUpper !== undefined)) return
+  private computeMulBounds(
+    ann: MutableAnnotation,
+    children: MutableAnnotation[]
+  ): void {
+    if (
+      !children.every(
+        (c) => c.exactLower !== undefined && c.exactUpper !== undefined
+      )
+    )
+      return
 
     // Compute all corner products to find exact bounds
     let lo = Infinity
@@ -245,7 +281,7 @@ class AirAnalysisEngine {
     // For n children, check 2^n corners
     const n = bounds.length
     if (n > 10) return // Too many children for exact corner enumeration
-    for (let mask = 0; mask < (1 << n); mask++) {
+    for (let mask = 0; mask < 1 << n; mask++) {
       let product = 1
       for (let i = 0; i < n; i++) {
         product *= (mask >> i) & 1 ? bounds[i]![1] : bounds[i]![0]
@@ -257,7 +293,10 @@ class AirAnalysisEngine {
     ann.exactUpper = hi
   }
 
-  private computeMulMonotonicity(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+  private computeMulMonotonicity(
+    ann: MutableAnnotation,
+    children: MutableAnnotation[]
+  ): void {
     // For a product, monotonicity w.r.t. variable x depends on
     // whether the co-factor (product of other children) is non-negative.
     // We can only determine this when co-factor bounds are known and same-sign.
@@ -280,7 +319,11 @@ class AirAnalysisEngine {
           combineMonotonicity(ann.monotonicityByVariable, varId, childMono)
         } else if (coFactorNonPos) {
           // Co-factor ≤ 0 → monotonicity flipped
-          combineMonotonicity(ann.monotonicityByVariable, varId, flipMonotonicity(childMono))
+          combineMonotonicity(
+            ann.monotonicityByVariable,
+            varId,
+            flipMonotonicity(childMono)
+          )
         } else {
           // Unknown sign → unknown monotonicity
           ann.monotonicityByVariable.set(varId, 'unknown')
@@ -289,7 +332,10 @@ class AirAnalysisEngine {
     }
   }
 
-  private addCrossChildInteractions(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+  private addCrossChildInteractions(
+    ann: MutableAnnotation,
+    children: MutableAnnotation[]
+  ): void {
     for (let i = 0; i < children.length; i++) {
       for (let j = i + 1; j < children.length; j++) {
         const varsI = children[i]!.requiredVariables
@@ -305,7 +351,10 @@ class AirAnalysisEngine {
 
   // --- Arithmetic: min/max ---
 
-  private analyzeMin(nodeId: LapicFirNodeId, childIds: readonly LapicFirNodeId[]): MutableAnnotation {
+  private analyzeMin(
+    nodeId: LapicFirNodeId,
+    childIds: readonly LapicFirNodeId[]
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const children = childIds.map((id) => this.analyze(id))
 
@@ -327,7 +376,10 @@ class AirAnalysisEngine {
     return ann
   }
 
-  private analyzeMax(nodeId: LapicFirNodeId, childIds: readonly LapicFirNodeId[]): MutableAnnotation {
+  private analyzeMax(
+    nodeId: LapicFirNodeId,
+    childIds: readonly LapicFirNodeId[]
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const children = childIds.map((id) => this.analyze(id))
 
@@ -351,7 +403,10 @@ class AirAnalysisEngine {
 
   // --- Negation ---
 
-  private analyzeNeg(nodeId: LapicFirNodeId, childId: LapicFirNodeId): MutableAnnotation {
+  private analyzeNeg(
+    nodeId: LapicFirNodeId,
+    childId: LapicFirNodeId
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const child = this.analyze(childId)
 
@@ -375,10 +430,19 @@ class AirAnalysisEngine {
 
   private analyzeAffineForm(
     nodeId: LapicFirNodeId,
-    node: { readonly terms: readonly { readonly coeff: number; readonly childId: LapicFirNodeId }[]; readonly bias: number }
+    node: {
+      readonly terms: readonly {
+        readonly coeff: number
+        readonly childId: LapicFirNodeId
+      }[]
+      readonly bias: number
+    }
   ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
-    const children = node.terms.map((t) => ({ ann: this.analyze(t.childId), coeff: t.coeff }))
+    const children = node.terms.map((t) => ({
+      ann: this.analyze(t.childId),
+      coeff: t.coeff,
+    }))
 
     // Bounds: Σ coeff_i * [lo_i, hi_i] + bias
     let lo = node.bias
@@ -402,11 +466,12 @@ class AirAnalysisEngine {
     // Monotonicity: depends on coefficient sign
     for (const { ann: child, coeff } of children) {
       for (const [varId, childMono] of child.monotonicityByVariable) {
-        const effective = coeff > 0
-          ? childMono
-          : coeff < 0
-            ? flipMonotonicity(childMono)
-            : ('constant' as LapicAirMonotonicity)
+        const effective =
+          coeff > 0
+            ? childMono
+            : coeff < 0
+              ? flipMonotonicity(childMono)
+              : ('constant' as LapicAirMonotonicity)
         combineMonotonicity(ann.monotonicityByVariable, varId, effective)
       }
     }
@@ -440,7 +505,10 @@ class AirAnalysisEngine {
     let forcedFace: LapicAirFaceSelection = 'both'
     if (guard.exactLower !== undefined && guard.exactLower >= node.threshold) {
       forcedFace = 'then'
-    } else if (guard.exactUpper !== undefined && guard.exactUpper < node.threshold) {
+    } else if (
+      guard.exactUpper !== undefined &&
+      guard.exactUpper < node.threshold
+    ) {
       forcedFace = 'else'
     }
 
@@ -453,10 +521,16 @@ class AirAnalysisEngine {
       ann.exactUpper = elseChild.exactUpper
     } else {
       // Both branches possible
-      if (thenChild.exactLower !== undefined && elseChild.exactLower !== undefined) {
+      if (
+        thenChild.exactLower !== undefined &&
+        elseChild.exactLower !== undefined
+      ) {
         ann.exactLower = Math.min(thenChild.exactLower, elseChild.exactLower)
       }
-      if (thenChild.exactUpper !== undefined && elseChild.exactUpper !== undefined) {
+      if (
+        thenChild.exactUpper !== undefined &&
+        elseChild.exactUpper !== undefined
+      ) {
         ann.exactUpper = Math.max(thenChild.exactUpper, elseChild.exactUpper)
       }
     }
@@ -518,7 +592,12 @@ class AirAnalysisEngine {
       regionId: thenRegionId,
       guardPredicates: [guardId],
       activeFaces: new Map([[nodeId, 'then']]),
-      feasibilityStatus: forced === 'else' ? 'infeasible' : forced === 'then' ? 'feasible' : 'unknown',
+      feasibilityStatus:
+        forced === 'else'
+          ? 'infeasible'
+          : forced === 'then'
+            ? 'feasible'
+            : 'unknown',
       parentRegionId: parentId,
       childRegionIds: [],
     }
@@ -527,7 +606,12 @@ class AirAnalysisEngine {
       regionId: elseRegionId,
       guardPredicates: [guardId],
       activeFaces: new Map([[nodeId, 'else']]),
-      feasibilityStatus: forced === 'then' ? 'infeasible' : forced === 'else' ? 'feasible' : 'unknown',
+      feasibilityStatus:
+        forced === 'then'
+          ? 'infeasible'
+          : forced === 'else'
+            ? 'feasible'
+            : 'unknown',
       parentRegionId: parentId,
       childRegionIds: [],
     }
@@ -545,7 +629,10 @@ class AirAnalysisEngine {
 
   // --- Game kernels ---
 
-  private analyzeResistanceTransform(nodeId: LapicFirNodeId, resId: LapicFirNodeId): MutableAnnotation {
+  private analyzeResistanceTransform(
+    nodeId: LapicFirNodeId,
+    resId: LapicFirNodeId
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const child = this.analyze(resId)
 
@@ -568,7 +655,10 @@ class AirAnalysisEngine {
     return ann
   }
 
-  private analyzePiecewiseAffineKernel(nodeId: LapicFirNodeId, childId: LapicFirNodeId): MutableAnnotation {
+  private analyzePiecewiseAffineKernel(
+    nodeId: LapicFirNodeId,
+    childId: LapicFirNodeId
+  ): MutableAnnotation {
     const ann = createMutableAnnotation(nodeId)
     const child = this.analyze(childId)
 
@@ -648,10 +738,14 @@ class AirAnalysisEngine {
 
 function flipMonotonicity(mono: LapicAirMonotonicity): LapicAirMonotonicity {
   switch (mono) {
-    case 'increasing': return 'decreasing'
-    case 'decreasing': return 'increasing'
-    case 'constant': return 'constant'
-    case 'unknown': return 'unknown'
+    case 'increasing':
+      return 'decreasing'
+    case 'decreasing':
+      return 'increasing'
+    case 'constant':
+      return 'constant'
+    case 'unknown':
+      return 'unknown'
   }
 }
 
@@ -670,7 +764,10 @@ function combineMonotonicity(
   }
 }
 
-function mergeMonotonicitiesAdditive(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+function mergeMonotonicitiesAdditive(
+  ann: MutableAnnotation,
+  children: MutableAnnotation[]
+): void {
   for (const child of children) {
     for (const [varId, mono] of child.monotonicityByVariable) {
       combineMonotonicity(ann.monotonicityByVariable, varId, mono)
@@ -678,7 +775,10 @@ function mergeMonotonicitiesAdditive(ann: MutableAnnotation, children: MutableAn
   }
 }
 
-function mergeMonotonicitiesPreserving(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+function mergeMonotonicitiesPreserving(
+  ann: MutableAnnotation,
+  children: MutableAnnotation[]
+): void {
   // min/max preserve monotonicity direction
   mergeMonotonicitiesAdditive(ann, children)
 }
@@ -689,14 +789,20 @@ function mergeMonotonicitiesPreserving(ann: MutableAnnotation, children: Mutable
 
 function flipCurvature(c: LapicAirCurvature): LapicAirCurvature {
   switch (c) {
-    case 'convex': return 'concave'
-    case 'concave': return 'convex'
-    case 'affine': return 'affine'
-    case 'unknown': return 'unknown'
+    case 'convex':
+      return 'concave'
+    case 'concave':
+      return 'convex'
+    case 'affine':
+      return 'affine'
+    case 'unknown':
+      return 'unknown'
   }
 }
 
-function mergeCurvaturesAdditive(children: MutableAnnotation[]): LapicAirCurvature {
+function mergeCurvaturesAdditive(
+  children: MutableAnnotation[]
+): LapicAirCurvature {
   if (children.length === 0) return 'affine'
   let result: LapicAirCurvature = children[0]!.curvature
   for (let i = 1; i < children.length; i++) {
@@ -705,7 +811,10 @@ function mergeCurvaturesAdditive(children: MutableAnnotation[]): LapicAirCurvatu
   return result
 }
 
-function combineCurvatures(a: LapicAirCurvature, b: LapicAirCurvature): LapicAirCurvature {
+function combineCurvatures(
+  a: LapicAirCurvature,
+  b: LapicAirCurvature
+): LapicAirCurvature {
   if (a === 'affine') return b
   if (b === 'affine') return a
   if (a === b) return a
@@ -716,7 +825,10 @@ function combineCurvatures(a: LapicAirCurvature, b: LapicAirCurvature): LapicAir
 // Dependency merge helpers
 // ---------------------------------------------------------------------------
 
-function mergeRequiredVariables(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+function mergeRequiredVariables(
+  ann: MutableAnnotation,
+  children: MutableAnnotation[]
+): void {
   for (const child of children) {
     for (const v of child.requiredVariables) {
       ann.requiredVariables.add(v)
@@ -724,7 +836,10 @@ function mergeRequiredVariables(ann: MutableAnnotation, children: MutableAnnotat
   }
 }
 
-function mergeBranchControlSets(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+function mergeBranchControlSets(
+  ann: MutableAnnotation,
+  children: MutableAnnotation[]
+): void {
   for (const child of children) {
     for (const b of child.branchControlSet) {
       ann.branchControlSet.add(b)
@@ -732,7 +847,10 @@ function mergeBranchControlSets(ann: MutableAnnotation, children: MutableAnnotat
   }
 }
 
-function mergeNonlinearInteractions(ann: MutableAnnotation, children: MutableAnnotation[]): void {
+function mergeNonlinearInteractions(
+  ann: MutableAnnotation,
+  children: MutableAnnotation[]
+): void {
   for (const child of children) {
     for (const k of child.nonlinearInteractions) {
       ann.nonlinearInteractions.add(k)
@@ -740,7 +858,10 @@ function mergeNonlinearInteractions(ann: MutableAnnotation, children: MutableAnn
   }
 }
 
-function copyDependencies(ann: MutableAnnotation, child: MutableAnnotation): void {
+function copyDependencies(
+  ann: MutableAnnotation,
+  child: MutableAnnotation
+): void {
   for (const v of child.requiredVariables) ann.requiredVariables.add(v)
   for (const b of child.branchControlSet) ann.branchControlSet.add(b)
   for (const k of child.nonlinearInteractions) ann.nonlinearInteractions.add(k)

@@ -1,18 +1,19 @@
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
+import type { LapicTopNTrackerSnapshot } from './checkpoint-state'
+import { createLapicTopNTrackerSnapshot } from './checkpoint-state'
 import type {
   LapicBoundedExactBestCandidate,
   LapicBoundedExactTopNTracker,
   LapicTopNInsertResult,
 } from './combination'
 import { createTopNTracker } from './combination'
-import type { LapicTopNTrackerSnapshot } from './checkpoint-state'
-import { createLapicTopNTrackerSnapshot } from './checkpoint-state'
 import type { LapicBoundedExactSolveOptions } from './types'
 
 /**
  * Extends the standard TopN tracker with checkpoint export/import.
  */
-export interface LapicResumableTopNTracker extends LapicBoundedExactTopNTracker {
+export interface LapicResumableTopNTracker
+  extends LapicBoundedExactTopNTracker {
   /** Serialize current ranked entries into a checkpoint-safe snapshot. */
   snapshot(): LapicTopNTrackerSnapshot
 
@@ -38,7 +39,9 @@ export function createResumableTopNTracker(
     insert(candidate: LapicBoundedExactBestCandidate): void {
       inner.insert(candidate)
     },
-    insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult {
+    insertWithEviction(
+      candidate: LapicBoundedExactBestCandidate
+    ): LapicTopNInsertResult {
       return inner.insertWithEviction(candidate)
     },
     isEmpty(): boolean {
@@ -79,7 +82,10 @@ export function restoreResumableTopNTracker(
   candidateIndex: ReadonlyMap<string, LapicCandidateDescriptor>,
   explicitComparator?: LapicBoundedExactSolveOptions['compareEvaluations']
 ): LapicResumableTopNTracker {
-  const tracker = createResumableTopNTracker(snapshotData.topN, explicitComparator)
+  const tracker = createResumableTopNTracker(
+    snapshotData.topN,
+    explicitComparator
+  )
 
   for (const entry of snapshotData.entries) {
     const candidates = entry.candidateIds.map((id) => {
@@ -106,7 +112,9 @@ export function restoreResumableTopNTracker(
  * across all domains in the problem. Used for checkpoint restoration.
  */
 export function buildCandidateIndex(
-  domains: readonly { readonly candidates: readonly LapicCandidateDescriptor[] }[]
+  domains: readonly {
+    readonly candidates: readonly LapicCandidateDescriptor[]
+  }[]
 ): Map<string, LapicCandidateDescriptor> {
   const index = new Map<string, LapicCandidateDescriptor>()
   for (const domain of domains) {

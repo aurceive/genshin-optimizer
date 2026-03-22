@@ -19,22 +19,32 @@ export function validateLapicFailureRecord(
   failure: LapicFailureRecord
 ): LapicValidationResult<LapicFailureRecord> {
   if (!isRecord(failure))
-    return createRuntimeFailure('Failure record must be a record.', ['failureRecord'])
+    return createRuntimeFailure('Failure record must be a record.', [
+      'failureRecord',
+    ])
 
   if (!isNonEmptyString(failure.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (
     !isNonEmptyString(failure.failureClass) ||
     !lapicFailureClasses.includes(failure.failureClass as LapicFailureClass)
   )
-    return createRuntimeFailure('Failure class must be supported.', ['failureClass'])
+    return createRuntimeFailure('Failure class must be supported.', [
+      'failureClass',
+    ])
 
   if (!isNonEmptyString(failure.message))
-    return createRuntimeFailure('Message must be a non-empty string.', ['message'])
+    return createRuntimeFailure('Message must be a non-empty string.', [
+      'message',
+    ])
 
   if (!Array.isArray(failure.diagnostics))
-    return createRuntimeFailure('Diagnostics must be an array.', ['diagnostics'])
+    return createRuntimeFailure('Diagnostics must be an array.', [
+      'diagnostics',
+    ])
 
   return createLapicSuccessResult(failure)
 }
@@ -43,10 +53,9 @@ export function validateLapicFailedSessionSummary(
   summary: LapicFailedSessionSummary
 ): LapicValidationResult<LapicFailedSessionSummary> {
   if (!isRecord(summary))
-    return createRuntimeFailure(
-      'Failed session summary must be a record.',
-      ['failedSessionSummary']
-    )
+    return createRuntimeFailure('Failed session summary must be a record.', [
+      'failedSessionSummary',
+    ])
 
   const sessionValidation = validateLapicSessionSummary(summary.summary)
   if (!sessionValidation.ok) return sessionValidation
@@ -69,7 +78,9 @@ export function validateLapicRecoveryEligibilityClassification(
     return createRuntimeFailure('Eligible must be boolean.', ['eligible'])
 
   if (!isNonEmptyString(classification.reason))
-    return createRuntimeFailure('Reason must be a non-empty string.', ['reason'])
+    return createRuntimeFailure('Reason must be a non-empty string.', [
+      'reason',
+    ])
 
   return createLapicSuccessResult(classification)
 }

@@ -22,22 +22,24 @@ export function validateLapicBenchmarkReport(
   report: LapicBenchmarkReport
 ): LapicValidationResult<LapicBenchmarkReport> {
   if (!isRecord(report))
-    return createDebugFailure('Benchmark report must be a record.', ['benchmarkReport'])
+    return createDebugFailure('Benchmark report must be a record.', [
+      'benchmarkReport',
+    ])
 
   if (!isNonEmptyString(report.benchmarkId))
-    return createDebugFailure('Benchmark id must be a non-empty string.', ['benchmarkId'])
+    return createDebugFailure('Benchmark id must be a non-empty string.', [
+      'benchmarkId',
+    ])
 
   if (!isNonEmptyString(report.environmentLabel))
-    return createDebugFailure(
-      'Environment label must be a non-empty string.',
-      ['environmentLabel']
-    )
+    return createDebugFailure('Environment label must be a non-empty string.', [
+      'environmentLabel',
+    ])
 
   if (!isBoolean(report.correctnessQualified))
-    return createDebugFailure(
-      'correctnessQualified must be boolean.',
-      ['correctnessQualified']
-    )
+    return createDebugFailure('correctnessQualified must be boolean.', [
+      'correctnessQualified',
+    ])
 
   return createLapicSuccessResult(report)
 }
@@ -52,13 +54,17 @@ export function validateLapicGoldenEnumerationHarnessConfiguration(
     )
 
   if (!isNonEmptyString(configuration.fixtureId))
-    return createDebugFailure('Fixture id must be a non-empty string.', ['fixtureId'])
+    return createDebugFailure('Fixture id must be a non-empty string.', [
+      'fixtureId',
+    ])
 
   if (
     !isNonNegativeInteger(configuration.expectedTopN) ||
     configuration.expectedTopN < 1
   )
-    return createDebugFailure('expectedTopN must be a positive integer.', ['expectedTopN'])
+    return createDebugFailure('expectedTopN must be a positive integer.', [
+      'expectedTopN',
+    ])
 
   return createLapicSuccessResult(configuration)
 }
@@ -73,10 +79,14 @@ export function validateLapicAdapterParityValidationSummary(
     )
 
   if (!isNonEmptyString(summary.adapterKind))
-    return createDebugFailure('Adapter kind must be a non-empty string.', ['adapterKind'])
+    return createDebugFailure('Adapter kind must be a non-empty string.', [
+      'adapterKind',
+    ])
 
   if (!isBoolean(summary.parityMaintained))
-    return createDebugFailure('parityMaintained must be boolean.', ['parityMaintained'])
+    return createDebugFailure('parityMaintained must be boolean.', [
+      'parityMaintained',
+    ])
 
   return createLapicSuccessResult(summary)
 }
@@ -85,16 +95,19 @@ export function validateLapicHarnessReportManifest(
   manifest: LapicHarnessReportManifest
 ): LapicValidationResult<LapicHarnessReportManifest> {
   if (!isRecord(manifest))
-    return createDebugFailure(
-      'Harness report manifest must be a record.',
-      ['harnessReportManifest']
-    )
+    return createDebugFailure('Harness report manifest must be a record.', [
+      'harnessReportManifest',
+    ])
 
   if (!isNonEmptyString(manifest.reportDigest))
-    return createDebugFailure('Report digest must be a non-empty string.', ['reportDigest'])
+    return createDebugFailure('Report digest must be a non-empty string.', [
+      'reportDigest',
+    ])
 
   if (!Array.isArray(manifest.relatedArtifacts))
-    return createDebugFailure('Related artifacts must be an array.', ['relatedArtifacts'])
+    return createDebugFailure('Related artifacts must be an array.', [
+      'relatedArtifacts',
+    ])
 
   for (const [index, artifactRef] of manifest.relatedArtifacts.entries()) {
     const validation = validateLapicArtifactRef(artifactRef)
@@ -123,10 +136,14 @@ export function validateLapicRegressionClassificationSummary(
     summary.classification !== 'performance' &&
     summary.classification !== 'correctness'
   )
-    return createDebugFailure('Regression classification must be supported.', ['classification'])
+    return createDebugFailure('Regression classification must be supported.', [
+      'classification',
+    ])
 
   if (!isNonEmptyString(summary.explanation))
-    return createDebugFailure('Explanation must be a non-empty string.', ['explanation'])
+    return createDebugFailure('Explanation must be a non-empty string.', [
+      'explanation',
+    ])
 
   return createLapicSuccessResult(summary)
 }
@@ -155,29 +172,28 @@ export function validateLapicSolveSliceHarnessReport(
   report: LapicSolveSliceHarnessReport
 ): LapicValidationResult<LapicSolveSliceHarnessReport> {
   if (!isRecord(report))
-    return createDebugFailure(
-      'Solve slice harness report must be a record.',
-      ['solveSliceHarnessReport']
-    )
+    return createDebugFailure('Solve slice harness report must be a record.', [
+      'solveSliceHarnessReport',
+    ])
 
   const harnessManifestValidation = validateLapicHarnessReportManifest(
     report.harnessManifest
   )
   if (!harnessManifestValidation.ok) return harnessManifestValidation
 
-  const publicationManifestValidation = validateLapicPublicationReadyReportManifest(
-    report.publicationManifest
-  )
+  const publicationManifestValidation =
+    validateLapicPublicationReadyReportManifest(report.publicationManifest)
   if (!publicationManifestValidation.ok) return publicationManifestValidation
 
   if (!Array.isArray(report.phaseSummaries))
-    return createDebugFailure('phaseSummaries must be an array.', ['phaseSummaries'])
+    return createDebugFailure('phaseSummaries must be an array.', [
+      'phaseSummaries',
+    ])
 
   if (!Array.isArray(report.thresholdLineage))
-    return createDebugFailure(
-      'thresholdLineage must be an array.',
-      ['thresholdLineage']
-    )
+    return createDebugFailure('thresholdLineage must be an array.', [
+      'thresholdLineage',
+    ])
 
   return createLapicSuccessResult(report)
 }

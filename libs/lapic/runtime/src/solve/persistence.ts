@@ -1,4 +1,7 @@
-import type { LapicArtifactKind, LapicArtifactRef } from '@genshin-optimizer/lapic/storage'
+import type {
+  LapicArtifactKind,
+  LapicArtifactRef,
+} from '@genshin-optimizer/lapic/storage'
 import {
   createLapicArtifactWriteRequest,
   createLapicStorageEnvelope,

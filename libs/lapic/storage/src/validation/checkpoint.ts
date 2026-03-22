@@ -10,25 +10,40 @@ import type {
   LapicClosureMaterializationRequest,
 } from '../types'
 import { validateArtifactRefArray } from './artifacts'
-import { createStorageFailure, isBoolean, isNonEmptyString, isRecord } from './internal'
+import {
+  createStorageFailure,
+  isBoolean,
+  isNonEmptyString,
+  isRecord,
+} from './internal'
 
 export function validateLapicCheckpointManifest(
   manifest: LapicCheckpointManifest
 ): LapicValidationResult<LapicCheckpointManifest> {
   if (!isRecord(manifest))
-    return createStorageFailure('Checkpoint manifest must be a record.', ['checkpointManifest'])
+    return createStorageFailure('Checkpoint manifest must be a record.', [
+      'checkpointManifest',
+    ])
 
   if (!isNonEmptyString(manifest.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   if (!Array.isArray(manifest.artifactRefs))
-    return createStorageFailure('Checkpoint artifact refs must be an array.', ['artifactRefs'])
+    return createStorageFailure('Checkpoint artifact refs must be an array.', [
+      'artifactRefs',
+    ])
 
-  const artifactValidation = validateArtifactRefArray(manifest.artifactRefs, ['artifactRefs'])
+  const artifactValidation = validateArtifactRefArray(manifest.artifactRefs, [
+    'artifactRefs',
+  ])
   if (!artifactValidation.ok) return artifactValidation
 
   if (!isNonEmptyString(manifest.closureDigest))
-    return createStorageFailure('Closure digest must be a non-empty string.', ['closureDigest'])
+    return createStorageFailure('Closure digest must be a non-empty string.', [
+      'closureDigest',
+    ])
 
   return createLapicSuccessResult(manifest)
 }
@@ -43,7 +58,9 @@ export function validateLapicCheckpointClosureInventory(
     )
 
   if (!isNonEmptyString(inventory.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   const requiredValidation = validateArtifactRefArray(
     inventory.requiredArtifacts,
@@ -57,7 +74,9 @@ export function validateLapicCheckpointClosureInventory(
   )
   if (!missingValidation.ok) return missingValidation
 
-  const requiredKeys = new Set(inventory.requiredArtifacts.map(createLapicArtifactRefKey))
+  const requiredKeys = new Set(
+    inventory.requiredArtifacts.map(createLapicArtifactRefKey)
+  )
   const missingOutsideClosure = inventory.missingArtifacts.filter(
     (artifactRef) => !requiredKeys.has(createLapicArtifactRefKey(artifactRef))
   )
@@ -81,7 +100,9 @@ export function validateLapicClosureMaterializationRequest(
     )
 
   if (!isNonEmptyString(request.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   return validateArtifactRefArray(request.artifactRefs, ['artifactRefs']).ok
     ? createLapicSuccessResult(request)
@@ -101,7 +122,9 @@ export function validateLapicCheckpointClosureVerificationResult(
     )
 
   if (!isNonEmptyString(result.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   if (!isBoolean(result.resumable))
     return createStorageFailure('Resumable must be a boolean.', ['resumable'])
@@ -109,8 +132,13 @@ export function validateLapicCheckpointClosureVerificationResult(
   if (!isBoolean(result.replayable))
     return createStorageFailure('Replayable must be a boolean.', ['replayable'])
 
-  if (!Array.isArray(result.diagnostics) || !result.diagnostics.every(isNonEmptyString))
-    return createStorageFailure('Diagnostics must contain non-empty strings.', ['diagnostics'])
+  if (
+    !Array.isArray(result.diagnostics) ||
+    !result.diagnostics.every(isNonEmptyString)
+  )
+    return createStorageFailure('Diagnostics must contain non-empty strings.', [
+      'diagnostics',
+    ])
 
   return createLapicSuccessResult(result)
 }
@@ -119,16 +147,19 @@ export function validateLapicClosureExportDescriptor(
   descriptor: LapicClosureExportDescriptor
 ): LapicValidationResult<LapicClosureExportDescriptor> {
   if (!isRecord(descriptor))
-    return createStorageFailure(
-      'Closure export descriptor must be a record.',
-      ['closureExportDescriptor']
-    )
+    return createStorageFailure('Closure export descriptor must be a record.', [
+      'closureExportDescriptor',
+    ])
 
   if (!isNonEmptyString(descriptor.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   if (!isNonEmptyString(descriptor.exportDigest))
-    return createStorageFailure('Export digest must be a non-empty string.', ['exportDigest'])
+    return createStorageFailure('Export digest must be a non-empty string.', [
+      'exportDigest',
+    ])
 
   return createLapicSuccessResult(descriptor)
 }
@@ -137,16 +168,19 @@ export function validateLapicClosureImportDescriptor(
   descriptor: LapicClosureImportDescriptor
 ): LapicValidationResult<LapicClosureImportDescriptor> {
   if (!isRecord(descriptor))
-    return createStorageFailure(
-      'Closure import descriptor must be a record.',
-      ['closureImportDescriptor']
-    )
+    return createStorageFailure('Closure import descriptor must be a record.', [
+      'closureImportDescriptor',
+    ])
 
   if (!isNonEmptyString(descriptor.checkpointId))
-    return createStorageFailure('Checkpoint id must be a non-empty string.', ['checkpointId'])
+    return createStorageFailure('Checkpoint id must be a non-empty string.', [
+      'checkpointId',
+    ])
 
   if (!isNonEmptyString(descriptor.importDigest))
-    return createStorageFailure('Import digest must be a non-empty string.', ['importDigest'])
+    return createStorageFailure('Import digest must be a non-empty string.', [
+      'importDigest',
+    ])
 
   return createLapicSuccessResult(descriptor)
 }

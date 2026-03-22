@@ -41,7 +41,10 @@ export interface GiLapicFirCompilationError {
 /** Discriminated outcome: success or failure with diagnostics. */
 export type GiLapicFirCompilationOutcome =
   | { readonly ok: true; readonly result: GiLapicFirCompilationResult }
-  | { readonly ok: false; readonly errors: readonly GiLapicFirCompilationError[] }
+  | {
+      readonly ok: false
+      readonly errors: readonly GiLapicFirCompilationError[]
+    }
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -58,7 +61,9 @@ export type GiLapicFirCompilationOutcome =
  * that have no F-IR equivalent (currently: `sum_frac`, threshold
  * with a non-constant comparison expression).
  */
-export function compileGiOptNodeToFir(root: OptNode): GiLapicFirCompilationOutcome {
+export function compileGiOptNodeToFir(
+  root: OptNode
+): GiLapicFirCompilationOutcome {
   const compiler = new OptNodeFirCompiler()
   const rootId = compiler.compile(root)
 
@@ -99,9 +104,7 @@ class OptNodeFirCompiler {
   private compileNode(node: OptNode): LapicFirNodeId {
     switch (node.operation) {
       case 'const':
-        return this.builder.constant(
-          (node as ConstantNode<number>).value
-        )
+        return this.builder.constant((node as ConstantNode<number>).value)
 
       case 'read':
         return this.compileRead(node)
@@ -138,7 +141,9 @@ class OptNodeFirCompiler {
       default:
         this.errors.push({
           kind: 'unsupported-operation',
-          operation: String((node as Record<string, unknown>).operation ?? 'unknown'),
+          operation: String(
+            (node as Record<string, unknown>).operation ?? 'unknown'
+          ),
           message: `Unknown OptNode operation`,
         })
         return this.builder.constant(0)

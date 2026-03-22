@@ -22,14 +22,14 @@
 
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
 import {
-  createLapicSuccessResult,
-  createLapicFailureResult,
   createLapicDiagnostic,
+  createLapicFailureResult,
+  createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
 import type {
-  LapicCertificate,
   LapicBoundPrunePayload,
   LapicBranchReachabilityPayload,
+  LapicCertificate,
   LapicDominancePayload,
   LapicFinalOptimalityPayload,
   LapicInfeasibilityPayload,
@@ -134,7 +134,10 @@ function replayBoundPruneCert(
   _config: LapicReplayExecutorConfig
 ): LapicReplayResult {
   const { payload } = cert
-  const evidenceDigests = [cert.evidenceDigest, payload.numericDiagnosticsDigest]
+  const evidenceDigests = [
+    cert.evidenceDigest,
+    payload.numericDiagnosticsDigest,
+  ]
   const arithmeticMode = cert.replayRecipe.arithmeticMode
 
   // Verify internal consistency: boundValue must parse as a finite number
@@ -154,7 +157,7 @@ function replayBoundPruneCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'BoundPruneCert missing thresholdDigest',
+      'BoundPruneCert missing thresholdDigest'
     )
   }
 
@@ -182,7 +185,7 @@ function replayBoundPruneCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'BoundPruneCert has dangerZoneRecord.triggered=true but was still emitted as a prune decision',
+      'BoundPruneCert has dangerZoneRecord.triggered=true but was still emitted as a prune decision'
     )
   }
 
@@ -191,7 +194,7 @@ function replayBoundPruneCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'BoundPruneCert missing boundSourceClass',
+      'BoundPruneCert missing boundSourceClass'
     )
   }
 
@@ -211,7 +214,7 @@ function replayDominanceCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Dominance certificate has identical dominating and dominated state: ${payload.dominatingStateId}`,
+      `Dominance certificate has identical dominating and dominated state: ${payload.dominatingStateId}`
     )
   }
 
@@ -220,14 +223,14 @@ function replayDominanceCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Dominating state ${payload.dominatingStateId} not in referencedStateIds`,
+      `Dominating state ${payload.dominatingStateId} not in referencedStateIds`
     )
   }
   if (!cert.referencedStateIds.includes(payload.dominatedStateId)) {
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Dominated state ${payload.dominatedStateId} not in referencedStateIds`,
+      `Dominated state ${payload.dominatedStateId} not in referencedStateIds`
     )
   }
 
@@ -236,7 +239,7 @@ function replayDominanceCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'DominanceCert missing comparisonDigest',
+      'DominanceCert missing comparisonDigest'
     )
   }
 
@@ -245,7 +248,7 @@ function replayDominanceCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'DominanceCert missing exactSignatureGroupKeyDigest',
+      'DominanceCert missing exactSignatureGroupKeyDigest'
     )
   }
 
@@ -265,7 +268,7 @@ function replayBranchReachabilityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Invalid selectedArm: '${payload.selectedArm}'`,
+      `Invalid selectedArm: '${payload.selectedArm}'`
     )
   }
 
@@ -274,7 +277,7 @@ function replayBranchReachabilityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'BranchReachabilityCert missing branchPredicateDigest',
+      'BranchReachabilityCert missing branchPredicateDigest'
     )
   }
 
@@ -283,14 +286,14 @@ function replayBranchReachabilityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'BranchReachabilityCert missing validityRegionId',
+      'BranchReachabilityCert missing validityRegionId'
     )
   }
   if (!cert.referencedRegionIds.includes(payload.validityRegionId)) {
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Validity region ${payload.validityRegionId} not in referencedRegionIds`,
+      `Validity region ${payload.validityRegionId} not in referencedRegionIds`
     )
   }
 
@@ -315,7 +318,7 @@ function replayBranchReachabilityCert(
           return mismatchedResult(
             arithmeticMode,
             evidenceDigests,
-            `Guard bounds [${lo}, ${hi}] are inverted (lo > hi)`,
+            `Guard bounds [${lo}, ${hi}] are inverted (lo > hi)`
           )
         }
       }
@@ -349,7 +352,7 @@ function replayFinalOptimalityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      `Winning state ${payload.winningStateId} not in referencedStateIds`,
+      `Winning state ${payload.winningStateId} not in referencedStateIds`
     )
   }
 
@@ -358,21 +361,21 @@ function replayFinalOptimalityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'FinalOptimalityCert missing finalThresholdDigest',
+      'FinalOptimalityCert missing finalThresholdDigest'
     )
   }
   if (!payload.finalIncumbentSetDigest) {
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'FinalOptimalityCert missing finalIncumbentSetDigest',
+      'FinalOptimalityCert missing finalIncumbentSetDigest'
     )
   }
   if (!payload.queueExhaustionSummaryDigest) {
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'FinalOptimalityCert missing queueExhaustionSummaryDigest',
+      'FinalOptimalityCert missing queueExhaustionSummaryDigest'
     )
   }
 
@@ -392,14 +395,14 @@ function replayInfeasibilityCert(
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'InfeasibilityCert has no infeasible constraint digests',
+      'InfeasibilityCert has no infeasible constraint digests'
     )
   }
   if (!payload.witnessDigest) {
     return mismatchedResult(
       arithmeticMode,
       evidenceDigests,
-      'InfeasibilityCert missing witnessDigest',
+      'InfeasibilityCert missing witnessDigest'
     )
   }
 
@@ -512,10 +515,9 @@ export function replayCertificateBatch(
     } else {
       results.set(
         cert.certId,
-        inconclusiveResult(
-          cert.replayRecipe?.arithmeticMode ?? 'unknown',
-          [cert.evidenceDigest]
-        )
+        inconclusiveResult(cert.replayRecipe?.arithmeticMode ?? 'unknown', [
+          cert.evidenceDigest,
+        ])
       )
     }
   }

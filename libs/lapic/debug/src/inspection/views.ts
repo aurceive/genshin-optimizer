@@ -1,6 +1,4 @@
-import {
-  createLapicCertificateSummary,
-} from '@genshin-optimizer/lapic/cert'
+import { createLapicCertificateSummary } from '@genshin-optimizer/lapic/cert'
 import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import { createLapicSuccessResult } from '@genshin-optimizer/lapic/core'
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
@@ -35,7 +33,9 @@ export function summarizeLapicTraceByPhase(
   query: LapicTraceQuery,
   progressEvents: readonly LapicProgressEvent[]
 ): readonly LapicPhaseSummary[] {
-  const filtered = progressEvents.filter((event) => event.sessionId === query.sessionId)
+  const filtered = progressEvents.filter(
+    (event) => event.sessionId === query.sessionId
+  )
   const phases = new Map<string, LapicProgressEvent[]>()
 
   filtered.forEach((event) => {
@@ -60,7 +60,8 @@ export function createLapicThresholdLineageFromCertificates(
     const summaryResult = createLapicCertificateSummary(certificate)
     if (!summaryResult.ok || !summaryResult.value.thresholdDigest) return
 
-    const certIds = thresholdToCertificates.get(summaryResult.value.thresholdDigest) ?? []
+    const certIds =
+      thresholdToCertificates.get(summaryResult.value.thresholdDigest) ?? []
     certIds.push(certificate.certId)
     thresholdToCertificates.set(summaryResult.value.thresholdDigest, certIds)
   })
@@ -77,7 +78,9 @@ export function summarizeLapicFailures(
   sessionId?: string
 ): LapicFailureTimelineView {
   return createLapicFailureTimelineView(
-    sessionId ? failures.filter((failure) => failure.sessionId === sessionId) : failures
+    sessionId
+      ? failures.filter((failure) => failure.sessionId === sessionId)
+      : failures
   )
 }
 
@@ -97,7 +100,9 @@ export async function inspectLapicArtifact(
     )
     return createLapicSuccessResult(summary)
   } catch {
-    return createDebugFailure('Referenced artifact could not be inspected.', ['artifactRef'])
+    return createDebugFailure('Referenced artifact could not be inspected.', [
+      'artifactRef',
+    ])
   }
 }
 

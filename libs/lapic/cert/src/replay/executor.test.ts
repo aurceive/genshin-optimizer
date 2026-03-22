@@ -1,7 +1,7 @@
 import type {
-  LapicCertificate,
   LapicBoundPrunePayload,
   LapicBranchReachabilityPayload,
+  LapicCertificate,
   LapicDominancePayload,
   LapicFinalOptimalityPayload,
   LapicInfeasibilityPayload,
@@ -46,8 +46,7 @@ function makeBoundPruneCert(
       thresholdDigest: overrides?.thresholdDigest ?? 'threshold:test:100',
       boundSourceClass: overrides?.boundSourceClass ?? 'relaxationDerived',
       boundValue: overrides?.boundValue ?? '50',
-      validityRegionId:
-        overrides?.validityRegionId ?? 'region:domain-0:test',
+      validityRegionId: overrides?.validityRegionId ?? 'region:domain-0:test',
       numericDiagnosticsDigest:
         overrides?.numericDiagnosticsDigest ?? 'numeric:test',
       dangerZoneRecord: overrides?.dangerZoneRecord ?? {
@@ -63,10 +62,8 @@ function makeDominanceCert(
     referencedStateIds?: string[]
   }
 ): LapicCertificate<LapicDominancePayload> {
-  const dominatingId =
-    overrides?.dominatingStateId ?? 'state-winner'
-  const dominatedId =
-    overrides?.dominatedStateId ?? 'state-loser'
+  const dominatingId = overrides?.dominatingStateId ?? 'state-winner'
+  const dominatedId = overrides?.dominatedStateId ?? 'state-loser'
 
   return {
     certId: 'cert:dominance:test:step-2',
@@ -75,8 +72,10 @@ function makeDominanceCert(
     problemId: 'test-problem',
     arithmeticPolicyId: 'fast-float',
     decisionClass: 'dominance-prune',
-    referencedStateIds:
-      overrides?.referencedStateIds ?? [dominatingId, dominatedId],
+    referencedStateIds: overrides?.referencedStateIds ?? [
+      dominatingId,
+      dominatedId,
+    ],
     referencedBlockIds: ['block-1'],
     referencedRegionIds: [],
     referencedRelaxIds: [],
@@ -117,8 +116,7 @@ function makeBranchReachabilityCert(
     referencedRegionIds?: string[]
   }
 ): LapicCertificate<LapicBranchReachabilityPayload> {
-  const regionId =
-    overrides?.validityRegionId ?? 'region:branch:test'
+  const regionId = overrides?.validityRegionId ?? 'region:branch:test'
   return {
     certId: 'cert:branch-reach:test:step-0',
     certKind: 'BranchReachabilityCert',
@@ -128,8 +126,7 @@ function makeBranchReachabilityCert(
     decisionClass: 'exact-prune',
     referencedStateIds: [],
     referencedBlockIds: [],
-    referencedRegionIds:
-      overrides?.referencedRegionIds ?? [regionId],
+    referencedRegionIds: overrides?.referencedRegionIds ?? [regionId],
     referencedRelaxIds: [],
     evidenceDigest: 'evidence:branch:test',
     replayRecipe: {
@@ -145,7 +142,8 @@ function makeBranchReachabilityCert(
     payload: {
       branchPredicateDigest:
         overrides?.branchPredicateDigest ?? 'branch:node1:guard:node2:test',
-      exactBoundsDigest: overrides?.exactBoundsDigest ?? 'bounds:[0,10]:nodeTest',
+      exactBoundsDigest:
+        overrides?.exactBoundsDigest ?? 'bounds:[0,10]:nodeTest',
       selectedArm: overrides?.selectedArm ?? 'left',
       validityRegionId: regionId,
     },
@@ -165,8 +163,7 @@ function makeFinalOptimalityCert(
     problemId: 'test-problem',
     arithmeticPolicyId: 'fast-float',
     decisionClass: 'optimality-proof',
-    referencedStateIds:
-      overrides?.referencedStateIds ?? [winnerId],
+    referencedStateIds: overrides?.referencedStateIds ?? [winnerId],
     referencedBlockIds: ['block-1'],
     referencedRegionIds: [],
     referencedRelaxIds: [],
@@ -227,15 +224,14 @@ function makeInfeasibilityCert(
     emittedAtStep: 1,
     validationStatus: 'validated',
     payload: {
-      evidenceSourceClass:
-        overrides?.evidenceSourceClass ?? 'exactSymbolic',
-      infeasibleConstraintDigests:
-        overrides?.infeasibleConstraintDigests ?? ['constraint-1'],
+      evidenceSourceClass: overrides?.evidenceSourceClass ?? 'exactSymbolic',
+      infeasibleConstraintDigests: overrides?.infeasibleConstraintDigests ?? [
+        'constraint-1',
+      ],
       witnessDigest: overrides?.witnessDigest ?? 'witness:test',
       affectedBlockIds: overrides?.affectedBlockIds ?? ['block-1'],
       replayPathRequirement:
-        overrides?.replayPathRequirement ??
-        'bounded-cartesian-exhaustion',
+        overrides?.replayPathRequirement ?? 'bounded-cartesian-exhaustion',
     },
   }
 }

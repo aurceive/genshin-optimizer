@@ -1,8 +1,8 @@
 import type {
-  LapicLinearModel,
   LapicLinearConstraint,
-  LapicLinearVariable,
+  LapicLinearModel,
   LapicLinearObjective,
+  LapicLinearVariable,
   LapicLpProvider,
 } from '@genshin-optimizer/lapic/core'
 import {
@@ -19,7 +19,12 @@ function makeVariable(
   lo: number,
   hi: number
 ): LapicLinearVariable {
-  return { variableIndex: index, name: `x${index}`, lowerBound: lo, upperBound: hi }
+  return {
+    variableIndex: index,
+    name: `x${index}`,
+    lowerBound: lo,
+    upperBound: hi,
+  }
 }
 
 function makeConstraint(
@@ -289,9 +294,7 @@ describe('createLapicHighsProvider', () => {
 
       expect(evidence.schemaKind).toBe('HighsEvidenceV1')
       expect(evidence.providerFamily).toBe('highs')
-      expect(evidence.providerProfileId).toBe(
-        'lapic-highs-deterministic-v1'
-      )
+      expect(evidence.providerProfileId).toBe('lapic-highs-deterministic-v1')
       expect(evidence.solveOutcome).toBe('solved')
       expect(evidence.objectiveValuePayload).toBe('10')
       expect(evidence.boundDirection).toBe('upper')
@@ -364,9 +367,7 @@ describe('createLapicHighsProvider', () => {
       const p = await createLapicHighsProvider({
         presolveMode: 'off',
       })
-      expect(p.deterministicMode.configRecordDigest).toContain(
-        'presolve-off'
-      )
+      expect(p.deterministicMode.configRecordDigest).toContain('presolve-off')
 
       const model = makeModel(
         [makeVariable(0, 0, 10)],
@@ -376,10 +377,7 @@ describe('createLapicHighsProvider', () => {
       const result = p.solve(model)
       expect(result.outcome).toBe('solved')
 
-      const evidence = p.serializeEvidence(result) as Record<
-        string,
-        unknown
-      >
+      const evidence = p.serializeEvidence(result) as Record<string, unknown>
       expect(evidence.presolveApplied).toBe(false)
     })
   })

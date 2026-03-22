@@ -4,7 +4,10 @@ import type {
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
 import { createGiLapicAdapterMetadata, uniqueStrings } from './metadata'
-import { createGiLapicAuxiliaryOutputs, createGiLapicCandidateDomains } from './projection'
+import {
+  createGiLapicAuxiliaryOutputs,
+  createGiLapicCandidateDomains,
+} from './projection'
 import type {
   GiLapicAdapterRequest,
   GiLapicCanonicalExport,
@@ -12,7 +15,10 @@ import type {
   GiLapicCanonicalExportInput,
   GiLapicCanonicalIdentity,
 } from './types'
-import { giLapicAdapterCapabilities, giLapicAdapterSchemaVersion } from './types'
+import {
+  giLapicAdapterCapabilities,
+  giLapicAdapterSchemaVersion,
+} from './types'
 import { giAdapterFailure, normalizeGiLapicAdapterRequest } from './validation'
 
 export function createGiLapicCanonicalIdentity(
@@ -52,7 +58,9 @@ export function createGiLapicProblemNormalizationInput(
       diagnostics: normalizedRequest.diagnostics,
     }
 
-  const itemDomains = createGiLapicCandidateDomains(normalizedRequest.value.giContext)
+  const itemDomains = createGiLapicCandidateDomains(
+    normalizedRequest.value.giContext
+  )
 
   return {
     ok: true,
@@ -90,7 +98,8 @@ export function buildGiLapicCanonicalExport(
       canonicalProblemDigest: input.problem.problemDigest,
       adapterVersion: giLapicAdapterSchemaVersion,
       sourceSnapshotDigest: input.sourceSnapshotDigest,
-      sourceSnapshotDigestSet: input.problem.adapterMetadata.sourceSnapshotDigests,
+      sourceSnapshotDigestSet:
+        input.problem.adapterMetadata.sourceSnapshotDigests,
       formulaCompilationMode:
         input.problem.adapterMetadata.metadata.formulaCompilationMode ??
         giLapicAdapterCapabilities.supportedFormulaCompilationModes[0],

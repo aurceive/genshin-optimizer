@@ -111,9 +111,7 @@ describe('A-IR analysis engine', () => {
 
   describe('neg nodes', () => {
     it('flips bounds and monotonicity', () => {
-      const { airGraph, rootId } = buildAndAnalyze((b) =>
-        b.neg(b.read('x'))
-      )
+      const { airGraph, rootId } = buildAndAnalyze((b) => b.neg(b.read('x')))
 
       const ann = airGraph.annotations.get(rootId)!
       expect(ann.monotonicityByVariable!.get('x')).toBe('decreasing')
@@ -165,9 +163,9 @@ describe('A-IR analysis engine', () => {
       const { airGraph, rootId } = buildAndAnalyze((b) =>
         b.thresholdSelect(
           b.constant(10), // guard = 10, always >= 5
-          5,              // threshold
+          5, // threshold
           b.constant(100), // then
-          b.constant(0)    // else
+          b.constant(0) // else
         )
       )
 
@@ -182,9 +180,9 @@ describe('A-IR analysis engine', () => {
       const { airGraph, rootId } = buildAndAnalyze((b) =>
         b.thresholdSelect(
           b.constant(3), // guard = 3, always < 5
-          5,              // threshold
+          5, // threshold
           b.constant(100), // then
-          b.constant(0)    // else
+          b.constant(0) // else
         )
       )
 
@@ -211,12 +209,7 @@ describe('A-IR analysis engine', () => {
 
     it('provides conservative bounds when both branches possible', () => {
       const { airGraph, rootId } = buildAndAnalyze((b) =>
-        b.thresholdSelect(
-          b.read('x'),
-          5,
-          b.constant(100),
-          b.constant(0)
-        )
+        b.thresholdSelect(b.read('x'), 5, b.constant(100), b.constant(0))
       )
 
       const ann = airGraph.annotations.get(rootId)!
@@ -324,12 +317,16 @@ describe('A-IR analysis engine', () => {
     it('detects multiple forced branches in a complex graph', () => {
       const { airGraph } = buildAndAnalyze((b) => {
         const branch1 = b.thresholdSelect(
-          b.constant(10), 5,
-          b.read('x'), b.constant(0)
+          b.constant(10),
+          5,
+          b.read('x'),
+          b.constant(0)
         )
         const branch2 = b.thresholdSelect(
-          b.constant(1), 5,
-          b.constant(100), b.read('y')
+          b.constant(1),
+          5,
+          b.constant(100),
+          b.read('y')
         )
         return b.add(branch1, branch2)
       })
@@ -342,10 +339,7 @@ describe('A-IR analysis engine', () => {
 
     it('includes region IDs in evidence', () => {
       const { airGraph } = buildAndAnalyze((b) =>
-        b.thresholdSelect(
-          b.constant(10), 5,
-          b.constant(100), b.constant(0)
-        )
+        b.thresholdSelect(b.constant(10), 5, b.constant(100), b.constant(0))
       )
 
       const forced = inferForcedBranches(airGraph)
@@ -367,10 +361,7 @@ describe('A-IR analysis engine', () => {
 
     it('validates a graph with threshold regions', () => {
       const { airGraph } = buildAndAnalyze((b) =>
-        b.thresholdSelect(
-          b.read('x'), 5,
-          b.read('y'), b.constant(0)
-        )
+        b.thresholdSelect(b.read('x'), 5, b.read('y'), b.constant(0))
       )
 
       const result = validateLapicAirGraph(airGraph)

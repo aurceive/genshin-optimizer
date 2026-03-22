@@ -1,8 +1,6 @@
 import { validateLapicCertificate } from '@genshin-optimizer/lapic/cert'
 import type { LapicArtifactRef } from '@genshin-optimizer/lapic/storage'
-import {
-  createLapicProgressEvent,
-} from '../builders'
+import { createLapicProgressEvent } from '../builders'
 import type {
   LapicActivePhase,
   LapicFailureClass,
@@ -43,7 +41,8 @@ import {
 export function createLapicInMemorySessionController(
   options: LapicInMemorySessionControllerOptions
 ): LapicInMemorySessionController {
-  const optionsValidation = validateLapicInMemorySessionControllerOptions(options)
+  const optionsValidation =
+    validateLapicInMemorySessionControllerOptions(options)
   if (!optionsValidation.ok)
     throw new Error(
       optionsValidation.diagnostics[0]?.message ??
@@ -84,10 +83,15 @@ export function createLapicInMemorySessionController(
       )
       const validation = validateLapicProgressEvent(progressEvent)
       if (!validation.ok)
-        throw new Error(validation.diagnostics[0]?.message ?? 'Invalid progress event.')
+        throw new Error(
+          validation.diagnostics[0]?.message ?? 'Invalid progress event.'
+        )
 
       context.activePhase = progressEvent.phase
-      if (context.internalState === 'created' || context.internalState === 'initializing')
+      if (
+        context.internalState === 'created' ||
+        context.internalState === 'initializing'
+      )
         context.internalState =
           progressEvent.phase === 'frontier-build'
             ? 'frontier-building'
@@ -141,7 +145,9 @@ export function createLapicInMemorySessionController(
     async inspectSessionState() {
       return {
         summary: currentSummary(context),
-        openArtifacts: [...context.openArtifacts.values()].map((artifact) => ({ ...artifact })),
+        openArtifacts: [...context.openArtifacts.values()].map((artifact) => ({
+          ...artifact,
+        })),
       }
     },
     async complete(nextFinalOptimality) {

@@ -119,7 +119,9 @@ describe('LapicWorkScheduler', () => {
 
     it('throws when failing non-dispatched item', () => {
       const scheduler = createLapicWorkScheduler()
-      expect(() => scheduler.fail('nonexistent')).toThrow('not in dispatched status')
+      expect(() => scheduler.fail('nonexistent')).toThrow(
+        'not in dispatched status'
+      )
     })
   })
 

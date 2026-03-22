@@ -8,18 +8,14 @@
  * to events, then call `.start()` to begin the solve.
  */
 
-import {
-  lapicRuntimeProtocolVersion,
-} from '../types'
-import type {
-  LapicSessionIdentity,
-} from '../types'
 import { createLapicInMemorySessionController } from '../session/controller'
+import { lapicRuntimeProtocolVersion } from '../types'
+import type { LapicSessionIdentity } from '../types'
 import type {
-  LapicSolveOrchestrationConfig,
-  LapicSolveOrchestration,
-  LapicOrchestrationState,
   LapicOrchestrationOutcome,
+  LapicOrchestrationState,
+  LapicSolveOrchestration,
+  LapicSolveOrchestrationConfig,
 } from './types'
 
 // ---------------------------------------------------------------------------
@@ -36,8 +32,7 @@ export function createSessionIdentity(
   config: LapicSolveOrchestrationConfig
 ): LapicSessionIdentity {
   const sessionId =
-    config.sessionId ??
-    `lapic-session-${Date.now()}-${++sessionSequence}`
+    config.sessionId ?? `lapic-session-${Date.now()}-${++sessionSequence}`
 
   return {
     sessionId,
@@ -135,9 +130,7 @@ export function createSolveOrchestration(
         return { state: 'completed', solveOutcome: outcome }
       } catch (error: unknown) {
         const errorObj =
-          error instanceof Error
-            ? error
-            : new Error(String(error))
+          error instanceof Error ? error : new Error(String(error))
 
         // If the controller is already in a terminal state
         // (e.g., solveFn called controller.fail()), don't

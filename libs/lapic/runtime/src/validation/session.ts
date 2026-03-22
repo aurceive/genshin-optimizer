@@ -39,22 +39,24 @@ export function validateLapicSessionIdentity(
   identity: LapicSessionIdentity
 ): LapicValidationResult<LapicSessionIdentity> {
   if (!isRecord(identity))
-    return createRuntimeFailure('Session identity must be a record.', ['sessionIdentity'])
+    return createRuntimeFailure('Session identity must be a record.', [
+      'sessionIdentity',
+    ])
 
   if (!isNonEmptyString(identity.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (!isNonEmptyString(identity.problemDigest))
-    return createRuntimeFailure(
-      'Problem digest must be a non-empty string.',
-      ['problemDigest']
-    )
+    return createRuntimeFailure('Problem digest must be a non-empty string.', [
+      'problemDigest',
+    ])
 
   if (!isNonEmptyString(identity.engineVersion))
-    return createRuntimeFailure(
-      'Engine version must be a non-empty string.',
-      ['engineVersion']
-    )
+    return createRuntimeFailure('Engine version must be a non-empty string.', [
+      'engineVersion',
+    ])
 
   if (!isNonEmptyString(identity.arithmeticPolicyId))
     return createRuntimeFailure(
@@ -81,7 +83,9 @@ export function validateLapicSessionSummary(
   summary: LapicSessionSummary
 ): LapicValidationResult<LapicSessionSummary> {
   if (!isRecord(summary))
-    return createRuntimeFailure('Session summary must be a record.', ['sessionSummary'])
+    return createRuntimeFailure('Session summary must be a record.', [
+      'sessionSummary',
+    ])
 
   const identityValidation = validateLapicSessionIdentity(summary.identity)
   if (!identityValidation.ok) return identityValidation
@@ -90,7 +94,9 @@ export function validateLapicSessionSummary(
     !isNonEmptyString(summary.solveState) ||
     !lapicSolveStates.includes(summary.solveState as LapicSolveState)
   )
-    return createRuntimeFailure('Solve state must be supported.', ['solveState'])
+    return createRuntimeFailure('Solve state must be supported.', [
+      'solveState',
+    ])
 
   if (
     summary.internalState !== undefined &&
@@ -121,13 +127,14 @@ export function validateLapicSolveRequest(
   request: LapicSolveRequest
 ): LapicValidationResult<LapicSolveRequest> {
   if (!isRecord(request))
-    return createRuntimeFailure('Solve request must be a record.', ['solveRequest'])
+    return createRuntimeFailure('Solve request must be a record.', [
+      'solveRequest',
+    ])
 
   if (!isNonEmptyString(request.problemDigest))
-    return createRuntimeFailure(
-      'Problem digest must be a non-empty string.',
-      ['problemDigest']
-    )
+    return createRuntimeFailure('Problem digest must be a non-empty string.', [
+      'problemDigest',
+    ])
 
   return createLapicSuccessResult(request)
 }
@@ -136,19 +143,17 @@ export function validateLapicSolveCompletionResult(
   result: LapicSolveCompletionResult
 ): LapicValidationResult<LapicSolveCompletionResult> {
   if (!isRecord(result))
-    return createRuntimeFailure(
-      'Solve completion result must be a record.',
-      ['solveCompletionResult']
-    )
+    return createRuntimeFailure('Solve completion result must be a record.', [
+      'solveCompletionResult',
+    ])
 
   const summaryValidation = validateLapicSessionSummary(result.summary)
   if (!summaryValidation.ok) return summaryValidation
 
   if (!Array.isArray(result.emittedCertificates))
-    return createRuntimeFailure(
-      'Emitted certificates must be an array.',
-      ['emittedCertificates']
-    )
+    return createRuntimeFailure('Emitted certificates must be an array.', [
+      'emittedCertificates',
+    ])
 
   return createLapicSuccessResult(result)
 }
@@ -157,10 +162,9 @@ export function validateLapicPauseRequestResult(
   result: LapicPauseRequestResult
 ): LapicValidationResult<LapicPauseRequestResult> {
   if (!isRecord(result))
-    return createRuntimeFailure(
-      'Pause request result must be a record.',
-      ['pauseRequestResult']
-    )
+    return createRuntimeFailure('Pause request result must be a record.', [
+      'pauseRequestResult',
+    ])
 
   if (!isBoolean(result.accepted))
     return createRuntimeFailure('Accepted must be boolean.', ['accepted'])
@@ -181,10 +185,9 @@ export function validateLapicCancelRequestResult(
   result: LapicCancelRequestResult
 ): LapicValidationResult<LapicCancelRequestResult> {
   if (!isRecord(result))
-    return createRuntimeFailure(
-      'Cancel request result must be a record.',
-      ['cancelRequestResult']
-    )
+    return createRuntimeFailure('Cancel request result must be a record.', [
+      'cancelRequestResult',
+    ])
 
   if (!isBoolean(result.accepted))
     return createRuntimeFailure('Accepted must be boolean.', ['accepted'])
@@ -196,27 +199,32 @@ export function validateLapicSessionInspectionResult(
   result: LapicSessionInspectionResult
 ): LapicValidationResult<LapicSessionInspectionResult> {
   if (!isRecord(result))
-    return createRuntimeFailure(
-      'Session inspection result must be a record.',
-      ['sessionInspectionResult']
-    )
+    return createRuntimeFailure('Session inspection result must be a record.', [
+      'sessionInspectionResult',
+    ])
 
   const summaryValidation = validateLapicSessionSummary(result.summary)
   if (!summaryValidation.ok) return summaryValidation
 
   return validateArtifactRefs(result.openArtifacts, ['openArtifacts']).ok
     ? createLapicSuccessResult(result)
-    : createRuntimeFailure('Open artifacts must be valid and unique.', ['openArtifacts'])
+    : createRuntimeFailure('Open artifacts must be valid and unique.', [
+        'openArtifacts',
+      ])
 }
 
 export function validateLapicProgressEvent(
   event: LapicProgressEvent
 ): LapicValidationResult<LapicProgressEvent> {
   if (!isRecord(event))
-    return createRuntimeFailure('Progress event must be a record.', ['progressEvent'])
+    return createRuntimeFailure('Progress event must be a record.', [
+      'progressEvent',
+    ])
 
   if (!isNonEmptyString(event.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (
     !isNonEmptyString(event.phase) ||
@@ -232,7 +240,8 @@ export function validateLapicProgressEvent(
 
   if (
     event.totalUnits !== undefined &&
-    (!isNonNegativeInteger(event.totalUnits) || event.totalUnits < event.completedUnits)
+    (!isNonNegativeInteger(event.totalUnits) ||
+      event.totalUnits < event.completedUnits)
   )
     return createRuntimeFailure(
       'Total units must be a non-negative integer >= completed units.',
@@ -249,7 +258,9 @@ export function validateLapicTraceEvent(
     return createRuntimeFailure('Trace event must be a record.', ['traceEvent'])
 
   if (!isNonEmptyString(event.sessionId))
-    return createRuntimeFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createRuntimeFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (
     event.tag !== 'Progress' &&
@@ -259,7 +270,9 @@ export function validateLapicTraceEvent(
     return createRuntimeFailure('Trace tag must be supported.', ['tag'])
 
   if (!isNonEmptyString(event.eventDigest))
-    return createRuntimeFailure('Event digest must be a non-empty string.', ['eventDigest'])
+    return createRuntimeFailure('Event digest must be a non-empty string.', [
+      'eventDigest',
+    ])
 
   return createLapicSuccessResult(event)
 }
@@ -268,22 +281,19 @@ export function validateLapicSubscriptionToken(
   token: LapicSubscriptionToken
 ): LapicValidationResult<LapicSubscriptionToken> {
   if (!isRecord(token))
-    return createRuntimeFailure(
-      'Subscription token must be a record.',
-      ['subscriptionToken']
-    )
+    return createRuntimeFailure('Subscription token must be a record.', [
+      'subscriptionToken',
+    ])
 
   if (!isNonEmptyString(token.subscriptionId))
-    return createRuntimeFailure(
-      'Subscription id must be a non-empty string.',
-      ['subscriptionId']
-    )
+    return createRuntimeFailure('Subscription id must be a non-empty string.', [
+      'subscriptionId',
+    ])
 
   if (typeof token.unsubscribe !== 'function')
-    return createRuntimeFailure(
-      'unsubscribe must be a function.',
-      ['unsubscribe']
-    )
+    return createRuntimeFailure('unsubscribe must be a function.', [
+      'unsubscribe',
+    ])
 
   return createLapicSuccessResult(token)
 }
@@ -298,16 +308,14 @@ export function validateLapicObservationalCounterSummary(
     )
 
   if (!isNonEmptyString(summary.counterId))
-    return createRuntimeFailure(
-      'Counter id must be a non-empty string.',
-      ['counterId']
-    )
+    return createRuntimeFailure('Counter id must be a non-empty string.', [
+      'counterId',
+    ])
 
   if (typeof summary.value !== 'number' || Number.isNaN(summary.value))
-    return createRuntimeFailure(
-      'Counter value must be a finite number.',
-      ['value']
-    )
+    return createRuntimeFailure('Counter value must be a finite number.', [
+      'value',
+    ])
 
   return createLapicSuccessResult(summary)
 }
@@ -325,7 +333,9 @@ export function validateLapicInMemorySessionControllerOptions(
   if (!identityValidation.ok) return identityValidation
 
   if (options.solveRequest) {
-    const solveRequestValidation = validateLapicSolveRequest(options.solveRequest)
+    const solveRequestValidation = validateLapicSolveRequest(
+      options.solveRequest
+    )
     if (!solveRequestValidation.ok) return solveRequestValidation
   }
 
@@ -335,7 +345,10 @@ export function validateLapicInMemorySessionControllerOptions(
       ['initialArtifacts']
     )
 
-  if (options.initialCertificates && !Array.isArray(options.initialCertificates))
+  if (
+    options.initialCertificates &&
+    !Array.isArray(options.initialCertificates)
+  )
     return createRuntimeFailure(
       'Initial certificates must be an array when present.',
       ['initialCertificates']
@@ -348,7 +361,11 @@ export function validateLapicInMemorySessionControllerOptions(
         return createLapicFailureResult(
           certificateValidation.diagnostics.map((diagnostic) => ({
             ...diagnostic,
-            path: ['initialCertificates', String(index), ...(diagnostic.path ?? [])],
+            path: [
+              'initialCertificates',
+              String(index),
+              ...(diagnostic.path ?? []),
+            ],
           }))
         )
     }

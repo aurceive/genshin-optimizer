@@ -36,7 +36,12 @@ function makeValidDomain(): LapicRelaxationValidityDomain {
 }
 
 function makeValidVariable(index = 0): LapicLinearVariable {
-  return { variableIndex: index, name: `x${index}`, lowerBound: 0, upperBound: 1 }
+  return {
+    variableIndex: index,
+    name: `x${index}`,
+    lowerBound: 0,
+    upperBound: 1,
+  }
 }
 
 function makeValidConstraint(): LapicLinearConstraint {
@@ -163,7 +168,11 @@ describe('validateLinearConstraint', () => {
   })
 
   it('rejects empty coefficients', () => {
-    const c = { ...makeValidConstraint(), coefficients: [], variableIndices: [] }
+    const c = {
+      ...makeValidConstraint(),
+      coefficients: [],
+      variableIndices: [],
+    }
     expect(validateLinearConstraint(c).ok).toBe(false)
   })
 
@@ -226,7 +235,9 @@ describe('validateLinearModel', () => {
     }
     const result = validateLinearModel(model)
     expect(result.ok).toBe(false)
-    expect(result.diagnostics[0]!.message).toContain('undefined variable index 99')
+    expect(result.diagnostics[0]!.message).toContain(
+      'undefined variable index 99'
+    )
   })
 
   it('rejects objective referencing undefined variable', () => {
@@ -241,7 +252,9 @@ describe('validateLinearModel', () => {
     }
     const result = validateLinearModel(model)
     expect(result.ok).toBe(false)
-    expect(result.diagnostics[0]!.message).toContain('undefined variable index 77')
+    expect(result.diagnostics[0]!.message).toContain(
+      'undefined variable index 77'
+    )
   })
 })
 

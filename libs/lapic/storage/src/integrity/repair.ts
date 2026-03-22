@@ -1,4 +1,7 @@
-import type { LapicIntegrityScanResult, LapicRepairRecommendationSummary } from '../types'
+import type {
+  LapicIntegrityScanResult,
+  LapicRepairRecommendationSummary,
+} from '../types'
 
 export function createLapicRepairRecommendationSummary(
   scan: LapicIntegrityScanResult
@@ -16,17 +19,23 @@ export function createLapicRepairRecommendationSummary(
     actions.add('Re-materialize missing artifacts from canonical sources.')
 
   if (scan.classifications.includes('checksum-mismatch')) {
-    actions.add('Re-encode corrupted artifacts and replace checksum-mismatched entries.')
+    actions.add(
+      'Re-encode corrupted artifacts and replace checksum-mismatched entries.'
+    )
     canRepairDeterministically = false
   }
 
   if (scan.classifications.includes('schema-mismatch')) {
-    actions.add('Migrate or regenerate artifacts with the expected storage schema.')
+    actions.add(
+      'Migrate or regenerate artifacts with the expected storage schema.'
+    )
     canRepairDeterministically = false
   }
 
   if (scan.classifications.includes('manifest-closure-failure'))
-    actions.add('Regenerate checkpoint manifests to restore closure completeness.')
+    actions.add(
+      'Regenerate checkpoint manifests to restore closure completeness.'
+    )
 
   return {
     canRepairDeterministically,

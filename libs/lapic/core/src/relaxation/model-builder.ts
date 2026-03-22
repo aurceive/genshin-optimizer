@@ -87,7 +87,12 @@ function allocVar(
   hi: number
 ): number {
   const idx = ctx.nextVarIdx++
-  ctx.variables.push({ variableIndex: idx, name, lowerBound: lo, upperBound: hi })
+  ctx.variables.push({
+    variableIndex: idx,
+    name,
+    lowerBound: lo,
+    upperBound: hi,
+  })
   return idx
 }
 
@@ -415,7 +420,9 @@ function compileSaturate(
  */
 function compileProduct(
   ctx: BuilderCtx,
-  node: LapicFirNode & { operator: 'mul' | 'bilinearKernel' | 'multilinearKernel' }
+  node: LapicFirNode & {
+    operator: 'mul' | 'bilinearKernel' | 'multilinearKernel'
+  }
 ): void {
   let childIds: readonly string[]
   if (node.operator === 'bilinearKernel') {
@@ -459,9 +466,7 @@ function compileProduct(
 
     const prodBounds = mccormickBounds(currentBound, bb)
     const isLast = i === childIds.length - 1
-    const name = isLast
-      ? `prod_${node.nodeId}`
-      : `prodaux_${node.nodeId}_${i}`
+    const name = isLast ? `prod_${node.nodeId}` : `prodaux_${node.nodeId}_${i}`
 
     const yIdx = allocVar(ctx, name, prodBounds.lo, prodBounds.hi)
 
@@ -478,12 +483,7 @@ function compileProduct(
 }
 
 function mccormickBounds(a: LapicInterval, b: LapicInterval): LapicInterval {
-  const products = [
-    a.lo * b.lo,
-    a.lo * b.hi,
-    a.hi * b.lo,
-    a.hi * b.hi,
-  ]
+  const products = [a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi]
   return {
     lo: Math.min(...products),
     hi: Math.max(...products),
@@ -619,7 +619,11 @@ function compilePiecewiseAffine(
   node: LapicFirNode & {
     operator: 'piecewiseAffineKernel'
     childId: string
-    segments: readonly { breakpoint: number; slope: number; intercept: number }[]
+    segments: readonly {
+      breakpoint: number
+      slope: number
+      intercept: number
+    }[]
   }
 ): void {
   const cb = nodeBound(ctx, node.childId)
@@ -629,7 +633,9 @@ function compilePiecewiseAffine(
   const points = [
     cb.lo,
     cb.hi,
-    ...node.segments.map((s) => s.breakpoint).filter((bp) => bp >= cb.lo && bp <= cb.hi),
+    ...node.segments
+      .map((s) => s.breakpoint)
+      .filter((bp) => bp >= cb.lo && bp <= cb.hi),
   ]
   const evalPwa = (x: number): number => {
     let seg = node.segments[0]!

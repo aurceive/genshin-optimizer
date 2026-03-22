@@ -25,19 +25,20 @@ export function validateLapicInspectionRequest(
   request: LapicInspectionRequest
 ): LapicValidationResult<LapicInspectionRequest> {
   if (!isRecord(request))
-    return createDebugFailure('Inspection request must be a record.', ['inspectionRequest'])
+    return createDebugFailure('Inspection request must be a record.', [
+      'inspectionRequest',
+    ])
 
   if (!isNonEmptyString(request.artifactRef?.artifactId))
-    return createDebugFailure(
-      'Artifact ref id must be a non-empty string.',
-      ['artifactRef', 'artifactId']
-    )
+    return createDebugFailure('Artifact ref id must be a non-empty string.', [
+      'artifactRef',
+      'artifactId',
+    ])
 
   if (!isBoolean(request.includePayloadSummary))
-    return createDebugFailure(
-      'includePayloadSummary must be boolean.',
-      ['includePayloadSummary']
-    )
+    return createDebugFailure('includePayloadSummary must be boolean.', [
+      'includePayloadSummary',
+    ])
 
   if (
     request.includePotentialViews !== undefined &&
@@ -55,7 +56,9 @@ export function validateLapicArtifactSummary(
   summary: LapicArtifactSummary
 ): LapicValidationResult<LapicArtifactSummary> {
   if (!isRecord(summary))
-    return createDebugFailure('Artifact summary must be a record.', ['artifactSummary'])
+    return createDebugFailure('Artifact summary must be a record.', [
+      'artifactSummary',
+    ])
 
   if (!isNonEmptyString(summary.artifactRef?.artifactId))
     return createDebugFailure(
@@ -64,10 +67,9 @@ export function validateLapicArtifactSummary(
     )
 
   if (!isNonEmptyString(summary.envelopeDigest))
-    return createDebugFailure(
-      'Envelope digest must be a non-empty string.',
-      ['envelopeDigest']
-    )
+    return createDebugFailure('Envelope digest must be a non-empty string.', [
+      'envelopeDigest',
+    ])
 
   if (
     summary.potentialSummaryDigests &&
@@ -86,10 +88,9 @@ export function validateLapicStateBlockInspectionView(
   view: LapicStateBlockInspectionView
 ): LapicValidationResult<LapicStateBlockInspectionView> {
   if (!isRecord(view))
-    return createDebugFailure(
-      'State block inspection view must be a record.',
-      ['stateBlockInspectionView']
-    )
+    return createDebugFailure('State block inspection view must be a record.', [
+      'stateBlockInspectionView',
+    ])
 
   const blockRefValidation = validateLapicArtifactRef(view.blockRef)
   if (!blockRefValidation.ok)
@@ -122,10 +123,9 @@ export function validateLapicCertificateInspectionView(
   view: LapicCertificateInspectionView
 ): LapicValidationResult<LapicCertificateInspectionView> {
   if (!isRecord(view))
-    return createDebugFailure(
-      'Certificate inspection view must be a record.',
-      ['certificateInspectionView']
-    )
+    return createDebugFailure('Certificate inspection view must be a record.', [
+      'certificateInspectionView',
+    ])
 
   if (!isRecord(view.certificate) || !isNonEmptyString(view.certificate.certId))
     return createDebugFailure(
@@ -148,15 +148,15 @@ export function validateLapicFrontierSkylineVisualizationExportDescriptor(
   const artifactRefValidation = validateLapicArtifactRef(descriptor.artifactRef)
   if (!artifactRefValidation.ok)
     return createDebugFailure(
-      artifactRefValidation.diagnostics[0]?.message ?? 'Artifact ref must be valid.',
+      artifactRefValidation.diagnostics[0]?.message ??
+        'Artifact ref must be valid.',
       ['artifactRef']
     )
 
   if (!isNonEmptyString(descriptor.exportDigest))
-    return createDebugFailure(
-      'Export digest must be a non-empty string.',
-      ['exportDigest']
-    )
+    return createDebugFailure('Export digest must be a non-empty string.', [
+      'exportDigest',
+    ])
 
   return createLapicSuccessResult(descriptor)
 }
@@ -186,13 +186,14 @@ export function validateLapicPotentialSummaryView(
   view: LapicPotentialSummaryView
 ): LapicValidationResult<LapicPotentialSummaryView> {
   if (!isRecord(view))
-    return createDebugFailure(
-      'Potential summary view must be a record.',
-      ['potentialSummaryView']
-    )
+    return createDebugFailure('Potential summary view must be a record.', [
+      'potentialSummaryView',
+    ])
 
   if (!isNonEmptyString(view.candidateId))
-    return createDebugFailure('Candidate id must be a non-empty string.', ['candidateId'])
+    return createDebugFailure('Candidate id must be a non-empty string.', [
+      'candidateId',
+    ])
 
   if (!Array.isArray(view.summaries))
     return createDebugFailure('Summaries must be an array.', ['summaries'])
@@ -229,10 +230,14 @@ export function validateLapicTraceQuery(
     return createDebugFailure('Trace query must be a record.', ['traceQuery'])
 
   if (!isNonEmptyString(query.sessionId))
-    return createDebugFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createDebugFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (!isBoolean(query.includeFailures))
-    return createDebugFailure('includeFailures must be boolean.', ['includeFailures'])
+    return createDebugFailure('includeFailures must be boolean.', [
+      'includeFailures',
+    ])
 
   return createLapicSuccessResult(query)
 }
@@ -241,16 +246,22 @@ export function validateLapicPhaseSummary(
   summary: LapicPhaseSummary
 ): LapicValidationResult<LapicPhaseSummary> {
   if (!isRecord(summary))
-    return createDebugFailure('Phase summary must be a record.', ['phaseSummary'])
+    return createDebugFailure('Phase summary must be a record.', [
+      'phaseSummary',
+    ])
 
   if (!isNonEmptyString(summary.sessionId))
-    return createDebugFailure('Session id must be a non-empty string.', ['sessionId'])
+    return createDebugFailure('Session id must be a non-empty string.', [
+      'sessionId',
+    ])
 
   if (!isNonEmptyString(summary.phase))
     return createDebugFailure('Phase must be a non-empty string.', ['phase'])
 
   if (!Array.isArray(summary.progressEvents))
-    return createDebugFailure('Progress events must be an array.', ['progressEvents'])
+    return createDebugFailure('Progress events must be an array.', [
+      'progressEvents',
+    ])
 
   return createLapicSuccessResult(summary)
 }
@@ -259,10 +270,9 @@ export function validateLapicFailureTimelineView(
   view: LapicFailureTimelineView
 ): LapicValidationResult<LapicFailureTimelineView> {
   if (!isRecord(view))
-    return createDebugFailure(
-      'Failure timeline view must be a record.',
-      ['failureTimelineView']
-    )
+    return createDebugFailure('Failure timeline view must be a record.', [
+      'failureTimelineView',
+    ])
 
   if (!Array.isArray(view.failures))
     return createDebugFailure('Failures must be an array.', ['failures'])

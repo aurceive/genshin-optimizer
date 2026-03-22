@@ -35,14 +35,14 @@ export function createBranchReachabilityCertificate(
   options: LapicBoundedExactSolveOptions,
   context: LapicBranchReachabilityCertificateContext
 ): LapicCertificate<LapicBranchReachabilityPayload> {
-  const branchPredicateDigest =
-    `branch:${context.branchNodeId}:guard:${context.guardNodeId}:${options.problem.problemDigest}`
+  const branchPredicateDigest = `branch:${context.branchNodeId}:guard:${context.guardNodeId}:${options.problem.problemDigest}`
   const exactBoundsDigest =
     context.guardLower !== undefined && context.guardUpper !== undefined
       ? `bounds:[${context.guardLower},${context.guardUpper}]:${context.guardNodeId}`
       : undefined
   // Map 'then'/'else' to the payload's 'left'/'right' convention
-  const selectedArm: 'left' | 'right' = context.forcedArm === 'then' ? 'left' : 'right'
+  const selectedArm: 'left' | 'right' =
+    context.forcedArm === 'then' ? 'left' : 'right'
 
   return {
     certId: `cert:branch-reach:${options.problem.problemDigest}:${context.branchNodeId}:step-${context.stepIndex}`,
@@ -260,10 +260,8 @@ export function createDominanceCertificate(
   options: LapicBoundedExactSolveOptions,
   context: LapicDominanceCertificateContext
 ): LapicCertificate<LapicDominancePayload> {
-  const comparisonDigest =
-    `dominance:${context.dominatingStateId}>${context.dominatedStateId}:${options.problem.problemDigest}`
-  const signatureDigest =
-    `sig-group:${context.signatureGroupKey}:${options.problem.problemDigest}`
+  const comparisonDigest = `dominance:${context.dominatingStateId}>${context.dominatedStateId}:${options.problem.problemDigest}`
+  const signatureDigest = `sig-group:${context.signatureGroupKey}:${options.problem.problemDigest}`
 
   return {
     certId: `cert:dominance:${options.problem.problemDigest}:step-${context.stepIndex}`,
@@ -293,14 +291,10 @@ export function createDominanceCertificate(
       dominatedStateId: context.dominatedStateId,
       comparisonDigest,
       exactSignatureGroupKeyDigest: signatureDigest,
-      compatibilityInclusionDigest:
-        `compat:${context.dominatingStateId}:${context.dominatedStateId}`,
-      monotoneProjectionDigest:
-        `monotone:${options.problem.objective.expressionDigest}`,
-      upperBoundProfileDigest:
-        `ub-profile:${context.dominatingEvidenceDigest}`,
-      strengthComparisonDigest:
-        `strength:${context.dominatingEvidenceDigest}>${context.dominatedEvidenceDigest}`,
+      compatibilityInclusionDigest: `compat:${context.dominatingStateId}:${context.dominatedStateId}`,
+      monotoneProjectionDigest: `monotone:${options.problem.objective.expressionDigest}`,
+      upperBoundProfileDigest: `ub-profile:${context.dominatingEvidenceDigest}`,
+      strengthComparisonDigest: `strength:${context.dominatingEvidenceDigest}>${context.dominatedEvidenceDigest}`,
     },
   }
 }

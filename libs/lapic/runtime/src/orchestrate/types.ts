@@ -16,13 +16,11 @@ import type {
   LapicArtifactStore,
   LapicClosureImportDescriptor,
 } from '@genshin-optimizer/lapic/storage'
+import type { LapicBoundedExactSolveOutcome } from '../solve/types'
 import type {
   LapicInMemorySessionController,
   LapicPublicSolveHandle,
 } from '../types'
-import type {
-  LapicBoundedExactSolveOutcome,
-} from '../solve/types'
 
 // ---------------------------------------------------------------------------
 // Orchestration config

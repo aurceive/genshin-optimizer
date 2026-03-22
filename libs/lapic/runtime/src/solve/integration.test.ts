@@ -12,8 +12,8 @@ import {
   type LapicCandidateDescriptor,
   type LapicCanonicalProblem,
   type LapicFirGraph,
-  type LapicFirVariableId,
   LapicFirGraphBuilder,
+  type LapicFirVariableId,
   createLapicSuccessResult,
   evaluateLapicFirScalar,
   runLapicGoldenHarness,
@@ -27,9 +27,9 @@ import {
   createLapicSessionIdentity,
   createLapicSolveRequest,
 } from '../builders'
-import { createLapicInMemorySessionController } from '../session'
 import { createLapicFirBoundProvider } from '../fir-bound/provider'
 import type { LapicFirDomainVariableMap } from '../fir-bound/types'
+import { createLapicInMemorySessionController } from '../session'
 import { executeLapicBoundedExactSolve } from './index'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,11 @@ function candidate(
 
 function createProblem(config: {
   slotIds: string[]
-  domains: Array<{ domainId: string; slotId: string; candidates: LapicCandidateDescriptor[] }>
+  domains: Array<{
+    domainId: string
+    slotId: string
+    candidates: LapicCandidateDescriptor[]
+  }>
   topN?: number
 }): LapicCanonicalProblem {
   return {
@@ -85,7 +89,8 @@ function createProblem(config: {
       slotId,
       slotRole: `artifact-${slotId}`,
       participationMode: 'optimizedBuild',
-      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!.domainId,
+      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!
+        .domainId,
       equipmentOwnershipModel: 'hard-reserved-inventory',
       contributesToObjective: true,
       contributesToConstraints: true,
@@ -176,7 +181,9 @@ function createFirEvaluator(
   const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
   let callCount = 0
 
-  const evaluator = (combination: { candidates: readonly LapicCandidateDescriptor[] }) => {
+  const evaluator = (combination: {
+    candidates: readonly LapicCandidateDescriptor[]
+  }) => {
     callCount++
     const env = new Map<LapicFirVariableId, number>()
     if (globalConstants) {
@@ -257,7 +264,11 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
       ],
       topN: 1,
@@ -346,7 +357,11 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
       ],
       topN: 3,
@@ -414,7 +429,11 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume', 'sands'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
         { domainId: 'gi:sands', slotId: 'sands', candidates: sandsCandidates },
       ],
@@ -476,7 +495,7 @@ describe('F-IR end-to-end integration', () => {
     const maps = [
       domainMap('gi:flower', [
         ['f1', { atkFlat: 100, critRate: 0.05 }],
-        ['f2', { atkFlat: 200, critRate: 0.10 }],
+        ['f2', { atkFlat: 200, critRate: 0.1 }],
         ['f3', { atkFlat: 150, critRate: 0.15 }],
       ]),
       domainMap('gi:circlet', [
@@ -493,8 +512,16 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'circlet'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
-        { domainId: 'gi:circlet', slotId: 'circlet', candidates: circletCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
+        {
+          domainId: 'gi:circlet',
+          slotId: 'circlet',
+          candidates: circletCandidates,
+        },
       ],
       topN: 1,
     })
@@ -526,9 +553,27 @@ describe('F-IR end-to-end integration', () => {
         {
           domainId: 'gi:flower',
           candidates: [
-            { candidateId: 'f1', variables: new Map([['atkFlat', 100], ['critRate', 0.05]]) },
-            { candidateId: 'f2', variables: new Map([['atkFlat', 200], ['critRate', 0.10]]) },
-            { candidateId: 'f3', variables: new Map([['atkFlat', 150], ['critRate', 0.15]]) },
+            {
+              candidateId: 'f1',
+              variables: new Map([
+                ['atkFlat', 100],
+                ['critRate', 0.05],
+              ]),
+            },
+            {
+              candidateId: 'f2',
+              variables: new Map([
+                ['atkFlat', 200],
+                ['critRate', 0.1],
+              ]),
+            },
+            {
+              candidateId: 'f3',
+              variables: new Map([
+                ['atkFlat', 150],
+                ['critRate', 0.15],
+              ]),
+            },
           ],
         },
         {
@@ -574,7 +619,11 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
       ],
       topN: 1,
@@ -631,7 +680,11 @@ describe('F-IR end-to-end integration', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
       ],
       topN: 3,

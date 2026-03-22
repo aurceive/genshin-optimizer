@@ -1,20 +1,20 @@
 import {
   type LapicFirGraph,
+  LapicFirGraphBuilder,
   type LapicFirVariableId,
   type LapicLinearModel,
   type LapicLpProvider,
   type LapicLpSolveResult,
-  LapicFirGraphBuilder,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
-import type { LapicBoundedExactPartialCombination } from '../solve/types'
-import type { LapicFirDomainVariableMap } from '../fir-bound/types'
 import { createLapicFirBoundProvider } from '../fir-bound/provider'
-import { createLapicLpBoundProvider } from './provider'
+import type { LapicFirDomainVariableMap } from '../fir-bound/types'
+import type { LapicBoundedExactPartialCombination } from '../solve/types'
 import {
   createLapicCascadeBoundProvider,
   createLapicIntervalThenLpCascade,
 } from './cascade'
+import { createLapicLpBoundProvider } from './provider'
 import type { LapicCascadeBoundEvaluator } from './types'
 
 // ---------------------------------------------------------------------------
@@ -157,11 +157,17 @@ function createMockLpProvider(
     numericallyQuestionable: boolean
     objectiveOverride: string | undefined
   }>
-): LapicLpProvider & { readonly solveCallCount: number; readonly lastModel: LapicLinearModel | undefined } {
+): LapicLpProvider & {
+  readonly solveCallCount: number
+  readonly lastModel: LapicLinearModel | undefined
+} {
   let solveCallCount = 0
   let lastModel: LapicLinearModel | undefined
 
-  const provider: LapicLpProvider & { readonly solveCallCount: number; readonly lastModel: LapicLinearModel | undefined } = {
+  const provider: LapicLpProvider & {
+    readonly solveCallCount: number
+    readonly lastModel: LapicLinearModel | undefined
+  } = {
     deterministicMode: {
       profileId: 'test-mock',
       configRecordDigest: 'mock-config-digest',
@@ -200,11 +206,13 @@ function createMockLpProvider(
         const varIdx = model.objective.variableIndices[i]!
         const variable = model.variables[varIdx]!
         if (coeff >= 0) {
-          objectiveValue += coeff * (Number.isFinite(variable.upperBound)
-            ? variable.upperBound : 1e6)
+          objectiveValue +=
+            coeff *
+            (Number.isFinite(variable.upperBound) ? variable.upperBound : 1e6)
         } else {
-          objectiveValue += coeff * (Number.isFinite(variable.lowerBound)
-            ? variable.lowerBound : -1e6)
+          objectiveValue +=
+            coeff *
+            (Number.isFinite(variable.lowerBound) ? variable.lowerBound : -1e6)
         }
       }
 
@@ -220,8 +228,12 @@ function createMockLpProvider(
     serializeEvidence(result: LapicLpSolveResult) {
       return { evidenceDigest: result.evidenceDigest, provider: 'mock' }
     },
-    get solveCallCount() { return solveCallCount },
-    get lastModel() { return lastModel },
+    get solveCallCount() {
+      return solveCallCount
+    },
+    get lastModel() {
+      return lastModel
+    },
   }
 
   return provider
@@ -574,9 +586,7 @@ describe('createLapicLpBoundProvider', () => {
         globalConstants: globals,
       })
 
-      const bound = provider(
-        partial(['A'], [candidateDescriptor('a1', 'A')])
-      )
+      const bound = provider(partial(['A'], [candidateDescriptor('a1', 'A')]))
       expect(bound).toBeDefined()
       // x=1, c=10, sum = 11
       // LP bound should be ≥ 11

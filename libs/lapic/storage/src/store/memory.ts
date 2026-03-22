@@ -30,7 +30,9 @@ export function createLapicMemoryArtifactStore(
     const validation = validateLapicArtifactWriteRequest(request)
     if (!validation.ok) {
       const details = validation.diagnostics.map((d) => d.message).join('; ')
-      throw new Error(`Invalid memory store write request: ${details || 'unknown validation failure'}`)
+      throw new Error(
+        `Invalid memory store write request: ${details || 'unknown validation failure'}`
+      )
     }
 
     const artifactRef = createLapicArtifactRefFromWriteRequest(request)
@@ -49,18 +51,24 @@ export function createLapicMemoryArtifactStore(
       const validation = validateLapicArtifactReadRequest(request)
       if (!validation.ok) {
         const details = validation.diagnostics.map((d) => d.message).join('; ')
-        throw new Error(`Invalid artifact read request: ${details || 'unknown validation failure'}`)
+        throw new Error(
+          `Invalid artifact read request: ${details || 'unknown validation failure'}`
+        )
       }
 
       const entry = entries.get(request.artifactRef.artifactId)
       if (!entry)
-        throw new Error(`Artifact not found in memory store: ${request.artifactRef.artifactId}`)
+        throw new Error(
+          `Artifact not found in memory store: ${request.artifactRef.artifactId}`
+        )
 
       if (
         entry.artifactRef.artifactKind !== request.artifactRef.artifactKind ||
         entry.artifactRef.contentHash !== request.artifactRef.contentHash
       )
-        throw new Error(`Artifact reference mismatch for ${request.artifactRef.artifactId}`)
+        throw new Error(
+          `Artifact reference mismatch for ${request.artifactRef.artifactId}`
+        )
 
       return {
         envelope: createLapicStorageEnvelope(entry.envelope),
@@ -76,7 +84,9 @@ export function createLapicMemoryArtifactStore(
       }
     },
     listArtifactRefs() {
-      return [...entries.values()].map((entry) => createLapicArtifactRef(entry.artifactRef))
+      return [...entries.values()].map((entry) =>
+        createLapicArtifactRef(entry.artifactRef)
+      )
     },
     snapshot() {
       return [...entries.values()].map((entry) => ({

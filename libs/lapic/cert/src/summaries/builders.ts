@@ -3,7 +3,11 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicDigest, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicDigest,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import type {
   LapicCertificate,
   LapicCertificateSummary,
@@ -35,7 +39,12 @@ export function validateLapicThresholdSensitiveDecisionMetadata(
 
   if (!metadata.thresholdDigest)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'thresholdDigest must not be empty.', ['thresholdDigest'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'thresholdDigest must not be empty.',
+        ['thresholdDigest']
+      )
     )
 
   if (diagnostics.length) return createLapicFailureResult(diagnostics)
@@ -111,7 +120,8 @@ export function createLapicThresholdSensitiveDecisionCounters(
     const validation = validateLapicCertificate(certificate)
     if (!validation.ok) return validation
 
-    const metadataResult = createLapicThresholdSensitiveDecisionMetadataFromCertificate(certificate)
+    const metadataResult =
+      createLapicThresholdSensitiveDecisionMetadataFromCertificate(certificate)
     if (!metadataResult.ok) return metadataResult
     if (!metadataResult.value) continue
 

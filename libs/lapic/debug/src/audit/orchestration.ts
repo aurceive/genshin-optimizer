@@ -1,6 +1,4 @@
-import {
-  createLapicCertificateSummary,
-} from '@genshin-optimizer/lapic/cert'
+import { createLapicCertificateSummary } from '@genshin-optimizer/lapic/cert'
 import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import {
   createLapicCheckpointClosureInventory,
@@ -44,7 +42,8 @@ export function createLapicPotentialAuditSummary(
       participationMode === 'governed-bonus'
     )
       rankingRelevantCertificateCount += 1
-    else if (participationMode === 'auxiliary-only') auxiliaryOnlyOutputCount += 1
+    else if (participationMode === 'auxiliary-only')
+      auxiliaryOnlyOutputCount += 1
   })
 
   return {
@@ -59,7 +58,9 @@ export async function createLapicCheckpointClosureAuditReport(
   verification: LapicCheckpointClosureVerificationResult,
   artifactRefs: readonly LapicArtifactRef[]
 ): Promise<LapicCheckpointClosureAuditReport> {
-  const integrityScan = await scanLapicArtifactIntegrity(store, { artifactRefs })
+  const integrityScan = await scanLapicArtifactIntegrity(store, {
+    artifactRefs,
+  })
 
   return {
     closure: createLapicCheckpointClosureAuditSummary(verification),
@@ -75,7 +76,9 @@ export async function createLapicAuditReport(
   certificates: readonly LapicCertificate[],
   artifactRefs: readonly LapicArtifactRef[]
 ): Promise<LapicAuditReport> {
-  const integrityScan = await scanLapicArtifactIntegrity(store, { artifactRefs })
+  const integrityScan = await scanLapicArtifactIntegrity(store, {
+    artifactRefs,
+  })
   let replayCoverage: LapicAuditReport['replayCoverage']
   let potentialAuditSummary: LapicPotentialAuditSummary | undefined
 

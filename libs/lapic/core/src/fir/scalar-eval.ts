@@ -7,7 +7,12 @@
  * Variables not in `env` evaluate to `NaN` (signals a missing binding).
  */
 
-import type { LapicFirGraph, LapicFirNode, LapicFirNodeId, LapicFirVariableId } from './types'
+import type {
+  LapicFirGraph,
+  LapicFirNode,
+  LapicFirNodeId,
+  LapicFirVariableId,
+} from './types'
 import { lapicFirNodeChildIds } from './types'
 
 // ---------------------------------------------------------------------------
@@ -91,10 +96,7 @@ function evaluateNodeScalar(
       return env.get(node.variableId) ?? NaN
 
     case 'add':
-      return node.childIds.reduce(
-        (sum, id) => sum + childValue(values, id),
-        0
-      )
+      return node.childIds.reduce((sum, id) => sum + childValue(values, id), 0)
 
     case 'mul':
       return node.childIds.reduce(
@@ -112,9 +114,12 @@ function evaluateNodeScalar(
       return -childValue(values, node.childId)
 
     case 'affineForm':
-      return node.bias + node.terms.reduce(
-        (sum, t) => sum + t.coeff * childValue(values, t.childId),
-        0
+      return (
+        node.bias +
+        node.terms.reduce(
+          (sum, t) => sum + t.coeff * childValue(values, t.childId),
+          0
+        )
       )
 
     case 'thresholdSelect': {
@@ -147,7 +152,9 @@ function evaluateNodeScalar(
 
     default: {
       const _exhaustive: never = node
-      throw new Error(`Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`)
+      throw new Error(
+        `Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`
+      )
     }
   }
 }
@@ -181,7 +188,11 @@ function resistanceTransformScalar(res: number): number {
  */
 function piecewiseAffineScalar(
   x: number,
-  segments: readonly { readonly breakpoint: number; readonly slope: number; readonly intercept: number }[]
+  segments: readonly {
+    readonly breakpoint: number
+    readonly slope: number
+    readonly intercept: number
+  }[]
 ): number {
   let seg = segments[0]!
   for (let i = 1; i < segments.length; i++) {

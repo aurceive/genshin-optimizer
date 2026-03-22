@@ -1,6 +1,4 @@
-import {
-  createLapicFailureResult,
-} from '@genshin-optimizer/lapic/core'
+import { createLapicFailureResult } from '@genshin-optimizer/lapic/core'
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
 import {
   isBoolean,

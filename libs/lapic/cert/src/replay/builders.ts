@@ -1,7 +1,8 @@
-import {
-  createLapicSuccessResult,
+import { createLapicSuccessResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDigest,
+  LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDigest, LapicValidationResult } from '@genshin-optimizer/lapic/core'
 import type {
   LapicCertificate,
   LapicCertificateReplayCoverageSummary,
@@ -13,7 +14,9 @@ import { validateLapicReplayResult } from './validation'
 
 export function createLapicReplayCoverageSummary(
   certificates: readonly LapicCertificate[],
-  replayResultsByCertificateId: Readonly<Record<string, LapicReplayResult | undefined>>
+  replayResultsByCertificateId: Readonly<
+    Record<string, LapicReplayResult | undefined>
+  >
 ): LapicValidationResult<LapicCertificateReplayCoverageSummary> {
   const replayedCertificateIds: string[] = []
   const missingCertificateIds: string[] = []

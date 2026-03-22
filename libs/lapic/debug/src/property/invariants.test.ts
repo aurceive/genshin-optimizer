@@ -24,9 +24,8 @@ const SEED = 42
 describe('property: deterministic JSON', () => {
   it('idempotent serialization for arbitrary objects', () => {
     fc.assert(
-      fc.property(
-        fc.jsonValue(),
-        (val) => propDeterministicJsonIdempotent(val)
+      fc.property(fc.jsonValue(), (val) =>
+        propDeterministicJsonIdempotent(val)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -34,9 +33,8 @@ describe('property: deterministic JSON', () => {
 
   it('idempotent serialization for frontier blocks', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propDeterministicJsonIdempotent(block)
+      fc.property(arbFrontierBlock(), (block) =>
+        propDeterministicJsonIdempotent(block)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -44,9 +42,8 @@ describe('property: deterministic JSON', () => {
 
   it('idempotent serialization for storage envelopes', () => {
     fc.assert(
-      fc.property(
-        arbStorageEnvelope(),
-        (env) => propDeterministicJsonIdempotent(env)
+      fc.property(arbStorageEnvelope(), (env) =>
+        propDeterministicJsonIdempotent(env)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -56,9 +53,8 @@ describe('property: deterministic JSON', () => {
 describe('property: frontier block JSON codec', () => {
   it('round-trip is lossless (byte-identical)', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propFrontierBlockCodecRoundTrip(block)
+      fc.property(arbFrontierBlock(), (block) =>
+        propFrontierBlockCodecRoundTrip(block)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -66,9 +62,8 @@ describe('property: frontier block JSON codec', () => {
 
   it('rowCount preserved after round-trip', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propFrontierBlockRowCountPreserved(block)
+      fc.property(arbFrontierBlock(), (block) =>
+        propFrontierBlockRowCountPreserved(block)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -78,9 +73,8 @@ describe('property: frontier block JSON codec', () => {
 describe('property: frontier index JSON codec', () => {
   it('round-trip is lossless (byte-identical)', () => {
     fc.assert(
-      fc.property(
-        arbFrontierIndex(),
-        (index) => propFrontierIndexCodecRoundTrip(index)
+      fc.property(arbFrontierIndex(), (index) =>
+        propFrontierIndexCodecRoundTrip(index)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -90,29 +84,22 @@ describe('property: frontier index JSON codec', () => {
 describe('property: columnar layout', () => {
   it('row → columnar → row is lossless', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propColumnarRoundTrip(block)
-      ),
+      fc.property(arbFrontierBlock(), (block) => propColumnarRoundTrip(block)),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
   })
 
   it('columnar sets layoutKind to "columnar"', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propColumnarLayoutKind(block)
-      ),
+      fc.property(arbFrontierBlock(), (block) => propColumnarLayoutKind(block)),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
   })
 
   it('all column arrays have length === rowCount', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propColumnarColumnLengths(block)
+      fc.property(arbFrontierBlock(), (block) =>
+        propColumnarColumnLengths(block)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -122,9 +109,8 @@ describe('property: columnar layout', () => {
 describe('property: builder clone determinism', () => {
   it('frontier block clone equals original', () => {
     fc.assert(
-      fc.property(
-        arbFrontierBlock(),
-        (block) => propFrontierBlockCloneDeterminism(block)
+      fc.property(arbFrontierBlock(), (block) =>
+        propFrontierBlockCloneDeterminism(block)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -132,9 +118,8 @@ describe('property: builder clone determinism', () => {
 
   it('frontier index clone equals original', () => {
     fc.assert(
-      fc.property(
-        arbFrontierIndex(),
-        (index) => propFrontierIndexCloneDeterminism(index)
+      fc.property(arbFrontierIndex(), (index) =>
+        propFrontierIndexCloneDeterminism(index)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )
@@ -142,9 +127,8 @@ describe('property: builder clone determinism', () => {
 
   it('storage envelope clone equals original', () => {
     fc.assert(
-      fc.property(
-        arbStorageEnvelope(),
-        (env) => propEnvelopeCloneDeterminism(env)
+      fc.property(arbStorageEnvelope(), (env) =>
+        propEnvelopeCloneDeterminism(env)
       ),
       { numRuns: PROPERTY_RUNS, seed: SEED }
     )

@@ -1,8 +1,8 @@
 import { LapicFirGraphBuilder } from '../fir/builders'
 import { evaluateLapicFirIntervals } from '../fir/interval-eval'
 import { evaluateLapicFirScalar } from '../fir/scalar-eval'
-import type { LapicInterval } from '../interval/types'
 import type { LapicFirVariableId } from '../fir/types'
+import type { LapicInterval } from '../interval/types'
 import { buildLinearModelFromFir } from './model-builder'
 import { validateLinearModel } from './validation'
 
@@ -100,7 +100,9 @@ describe('buildLinearModelFromFir', () => {
       expect(result.model.variables).toHaveLength(2)
       expect(result.model.constraints).toHaveLength(1)
       // y bounds should be [-15, -5]
-      const yVar = result.model.variables.find((v) => v.name.startsWith('neg_'))!
+      const yVar = result.model.variables.find((v) =>
+        v.name.startsWith('neg_')
+      )!
       expect(yVar.lowerBound).toBe(-15)
       expect(yVar.upperBound).toBe(-5)
       expect(result.relaxedNodeIds.size).toBe(0)
@@ -189,7 +191,9 @@ describe('buildLinearModelFromFir', () => {
       expect(result.model.constraints).toHaveLength(2)
       expect(result.relaxedNodeIds.has(graph.rootId)).toBe(true)
       // y upper bound should be min(200, 100) = 100
-      const yVar = result.model.variables.find((v) => v.name.startsWith('sat_'))!
+      const yVar = result.model.variables.find((v) =>
+        v.name.startsWith('sat_')
+      )!
       expect(yVar.upperBound).toBe(100)
       expect(validateLinearModel(result.model).ok).toBe(true)
     })
@@ -321,9 +325,8 @@ describe('buildLinearModelFromFir', () => {
       // Verify LP upper bound is admissible by comparing against
       // interval evaluation (LP bound should be ≤ interval bound)
       const intervalResult = evaluateLapicFirIntervals(graph, vb)
-      const lpRootVar = result.model.variables[
-        result.nodeVariableIndex.get(graph.rootId)!
-      ]!
+      const lpRootVar =
+        result.model.variables[result.nodeVariableIndex.get(graph.rootId)!]!
       expect(lpRootVar.upperBound).toBeLessThanOrEqual(
         intervalResult.rootBound.hi
       )

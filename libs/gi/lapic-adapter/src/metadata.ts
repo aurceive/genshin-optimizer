@@ -1,10 +1,21 @@
-import type { LapicAdapterMetadata, LapicDigest } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicAdapterMetadata,
+  LapicDigest,
+} from '@genshin-optimizer/lapic/core'
 import type { GiLapicMigrationState } from './governance'
-import type { GiLapicAdapterCapabilities, GiLapicAdapterRequest, GiLapicSourceSnapshotDescriptor } from './types'
-import { giLapicAdapterCapabilities, giLapicAdapterSchemaVersion } from './types'
+import type {
+  GiLapicAdapterCapabilities,
+  GiLapicAdapterRequest,
+  GiLapicSourceSnapshotDescriptor,
+} from './types'
+import {
+  giLapicAdapterCapabilities,
+  giLapicAdapterSchemaVersion,
+} from './types'
 
 /** Current production migration state for the GI adapter. */
-export const GI_LAPIC_CURRENT_MIGRATION_STATE: GiLapicMigrationState = 'legacyValidated'
+export const GI_LAPIC_CURRENT_MIGRATION_STATE: GiLapicMigrationState =
+  'legacyValidated'
 
 export function uniqueStrings(values: readonly string[]): readonly string[] {
   return [...new Set(values)]
@@ -52,7 +63,8 @@ function createGiDeclaredUnsupportedFeatures(
 
   if (
     request.normalizationInput.potentialConfiguration &&
-    request.normalizationInput.potentialConfiguration.solveMode !== 'current-only'
+    request.normalizationInput.potentialConfiguration.solveMode !==
+      'current-only'
   )
     declaredUnsupportedFeatures.push(
       `requested-potential-solve-mode:${request.normalizationInput.potentialConfiguration.solveMode}`
@@ -105,8 +117,10 @@ export function createGiLapicAdapterMetadata(
         giLapicAdapterCapabilities.supportedCandidateDomainClasses.join(','),
       legacyCompatibilityPath:
         giLapicAdapterCapabilities.supportedLegacyCompatibilityPaths[0],
-      replayReconstructionHints: createGiReplayReconstructionHints(request).join(','),
-      filterTransformationLog: createGiFilterTransformationLog(request).join(','),
+      replayReconstructionHints:
+        createGiReplayReconstructionHints(request).join(','),
+      filterTransformationLog:
+        createGiFilterTransformationLog(request).join(','),
     },
   }
 }

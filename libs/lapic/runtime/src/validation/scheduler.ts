@@ -18,13 +18,13 @@ import type {
   LapicWorkerPartition,
   LapicWorkerPartitionPlan,
 } from '../worker/partitioner'
-import { validateLapicWorkUnitEnvelope } from './worker'
 import {
   createRuntimeFailure,
   isNonEmptyString,
   isNonNegativeInteger,
   isRecord,
 } from './internal'
+import { validateLapicWorkUnitEnvelope } from './worker'
 
 // ---------------------------------------------------------------------------
 // Allowed values
@@ -51,7 +51,10 @@ export const lapicSchedulerEventKinds = [
  * Valid state transitions for scheduled work items.
  * Key = current status, Value = set of allowed next statuses.
  */
-const validTransitions: Record<LapicScheduledWorkStatus, readonly LapicScheduledWorkStatus[]> = {
+const validTransitions: Record<
+  LapicScheduledWorkStatus,
+  readonly LapicScheduledWorkStatus[]
+> = {
   queued: ['dispatched', 'cancelled'],
   dispatched: ['completed', 'failed', 'cancelled'],
   completed: [],
@@ -67,24 +70,28 @@ export function validateLapicScheduledWorkItem(
   item: LapicScheduledWorkItem
 ): LapicValidationResult<LapicScheduledWorkItem> {
   if (!isRecord(item))
-    return createRuntimeFailure(
-      'Scheduled work item must be a record.',
-      ['scheduledWorkItem']
-    )
+    return createRuntimeFailure('Scheduled work item must be a record.', [
+      'scheduledWorkItem',
+    ])
 
   const envelopeValidation = validateLapicWorkUnitEnvelope(item.workUnit)
   if (!envelopeValidation.ok) return envelopeValidation
 
   if (
     !isNonEmptyString(item.status) ||
-    !lapicScheduledWorkStatuses.includes(item.status as LapicScheduledWorkStatus)
+    !lapicScheduledWorkStatuses.includes(
+      item.status as LapicScheduledWorkStatus
+    )
   )
     return createRuntimeFailure(
       'Scheduled work status must be a supported value.',
       ['status']
     )
 
-  if (!isNonNegativeInteger(item.enqueuedAtSequence) || item.enqueuedAtSequence < 1)
+  if (
+    !isNonNegativeInteger(item.enqueuedAtSequence) ||
+    item.enqueuedAtSequence < 1
+  )
     return createRuntimeFailure(
       'Enqueued sequence must be a positive integer.',
       ['enqueuedAtSequence']
@@ -140,10 +147,9 @@ export function validateLapicSchedulerEvent(
   event: LapicSchedulerEvent
 ): LapicValidationResult<LapicSchedulerEvent> {
   if (!isRecord(event))
-    return createRuntimeFailure(
-      'Scheduler event must be a record.',
-      ['schedulerEvent']
-    )
+    return createRuntimeFailure('Scheduler event must be a record.', [
+      'schedulerEvent',
+    ])
 
   if (
     !isNonEmptyString(event.kind) ||
@@ -155,16 +161,14 @@ export function validateLapicSchedulerEvent(
     )
 
   if (!isNonEmptyString(event.workUnitId))
-    return createRuntimeFailure(
-      'Work unit id must be a non-empty string.',
-      ['workUnitId']
-    )
+    return createRuntimeFailure('Work unit id must be a non-empty string.', [
+      'workUnitId',
+    ])
 
   if (!isNonNegativeInteger(event.sequence) || event.sequence < 1)
-    return createRuntimeFailure(
-      'Event sequence must be a positive integer.',
-      ['sequence']
-    )
+    return createRuntimeFailure('Event sequence must be a positive integer.', [
+      'sequence',
+    ])
 
   return createLapicSuccessResult(event)
 }
@@ -173,10 +177,9 @@ export function validateLapicSchedulerStatistics(
   stats: LapicSchedulerStatistics
 ): LapicValidationResult<LapicSchedulerStatistics> {
   if (!isRecord(stats))
-    return createRuntimeFailure(
-      'Scheduler statistics must be a record.',
-      ['schedulerStatistics']
-    )
+    return createRuntimeFailure('Scheduler statistics must be a record.', [
+      'schedulerStatistics',
+    ])
 
   const fields: Array<[keyof LapicSchedulerStatistics, string]> = [
     ['totalEnqueued', 'Total enqueued'],
@@ -190,10 +193,9 @@ export function validateLapicSchedulerStatistics(
 
   for (const [field, label] of fields) {
     if (!isNonNegativeInteger(stats[field]))
-      return createRuntimeFailure(
-        `${label} must be a non-negative integer.`,
-        [field]
-      )
+      return createRuntimeFailure(`${label} must be a non-negative integer.`, [
+        field,
+      ])
   }
 
   // Logical invariants
@@ -203,7 +205,10 @@ export function validateLapicSchedulerStatistics(
       ['totalDispatched']
     )
 
-  if (stats.totalCompleted + stats.totalFailed + stats.totalCancelled > stats.totalEnqueued)
+  if (
+    stats.totalCompleted + stats.totalFailed + stats.totalCancelled >
+    stats.totalEnqueued
+  )
     return createRuntimeFailure(
       'Sum of terminal states cannot exceed total enqueued.',
       ['totalCompleted']
@@ -218,7 +223,10 @@ export function validateLapicSchedulerStatistics(
 export function validateLapicSchedulerStateTransition(
   from: LapicScheduledWorkStatus,
   to: LapicScheduledWorkStatus
-): LapicValidationResult<{ from: LapicScheduledWorkStatus; to: LapicScheduledWorkStatus }> {
+): LapicValidationResult<{
+  from: LapicScheduledWorkStatus
+  to: LapicScheduledWorkStatus
+}> {
   if (
     !lapicScheduledWorkStatuses.includes(from) ||
     !lapicScheduledWorkStatuses.includes(to)
@@ -245,10 +253,9 @@ export function validateLapicSchedulerEventSequence(
   events: readonly LapicSchedulerEvent[]
 ): LapicValidationResult<readonly LapicSchedulerEvent[]> {
   if (!Array.isArray(events))
-    return createRuntimeFailure(
-      'Event sequence must be an array.',
-      ['eventSequence']
-    )
+    return createRuntimeFailure('Event sequence must be an array.', [
+      'eventSequence',
+    ])
 
   for (let i = 0; i < events.length; i++) {
     const eventValidation = validateLapicSchedulerEvent(events[i]!)
@@ -271,10 +278,9 @@ export function validateLapicWorkerPartition(
   partition: LapicWorkerPartition
 ): LapicValidationResult<LapicWorkerPartition> {
   if (!isRecord(partition))
-    return createRuntimeFailure(
-      'Worker partition must be a record.',
-      ['workerPartition']
-    )
+    return createRuntimeFailure('Worker partition must be a record.', [
+      'workerPartition',
+    ])
 
   if (!isNonNegativeInteger(partition.partitionIndex))
     return createRuntimeFailure(
@@ -288,13 +294,19 @@ export function validateLapicWorkerPartition(
       ['startFlatIndex']
     )
 
-  if (!isNonNegativeInteger(partition.endFlatIndex) || partition.endFlatIndex <= partition.startFlatIndex)
+  if (
+    !isNonNegativeInteger(partition.endFlatIndex) ||
+    partition.endFlatIndex <= partition.startFlatIndex
+  )
     return createRuntimeFailure(
       'End flat index must be greater than start flat index.',
       ['endFlatIndex']
     )
 
-  if (partition.combinationCount !== partition.endFlatIndex - partition.startFlatIndex)
+  if (
+    partition.combinationCount !==
+    partition.endFlatIndex - partition.startFlatIndex
+  )
     return createRuntimeFailure(
       'Combination count must equal endFlatIndex - startFlatIndex.',
       ['combinationCount']
@@ -310,10 +322,9 @@ export function validateLapicWorkerPartitionPlan(
   plan: LapicWorkerPartitionPlan
 ): LapicValidationResult<LapicWorkerPartitionPlan> {
   if (!isRecord(plan))
-    return createRuntimeFailure(
-      'Worker partition plan must be a record.',
-      ['workerPartitionPlan']
-    )
+    return createRuntimeFailure('Worker partition plan must be a record.', [
+      'workerPartitionPlan',
+    ])
 
   if (!isNonNegativeInteger(plan.workerCount))
     return createRuntimeFailure(
@@ -328,16 +339,12 @@ export function validateLapicWorkerPartitionPlan(
     )
 
   if (!Array.isArray(plan.partitions))
-    return createRuntimeFailure(
-      'Partitions must be an array.',
-      ['partitions']
-    )
+    return createRuntimeFailure('Partitions must be an array.', ['partitions'])
 
   if (plan.partitions.length !== plan.workerCount)
-    return createRuntimeFailure(
-      'Partition count must equal worker count.',
-      ['partitions']
-    )
+    return createRuntimeFailure('Partition count must equal worker count.', [
+      'partitions',
+    ])
 
   let expectedStart = 0
   let totalCovered = 0

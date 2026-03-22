@@ -11,13 +11,13 @@
  */
 
 import {
-  executeLapicBoundedExactSolve,
   createSolveOrchestration,
+  executeLapicBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
-  LapicSolveOrchestration,
   LapicBoundedExactSolveOutcome,
   LapicInMemorySessionController,
+  LapicSolveOrchestration,
 } from '@genshin-optimizer/lapic/runtime'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import {
@@ -167,18 +167,12 @@ export function createGiLapicSolveOrchestration(
         artifactStore,
         firGraph,
         evaluateCombination(combination) {
-          return config.evaluateCombination(
-            combination,
-            canonicalExport.value
-          )
+          return config.evaluateCombination(combination, canonicalExport.value)
         },
         compareEvaluations: config.compareEvaluations,
         isCombinationFeasible: config.isCombinationFeasible
           ? (combination) =>
-              config.isCombinationFeasible!(
-                combination,
-                canonicalExport.value
-              )
+              config.isCombinationFeasible!(combination, canonicalExport.value)
           : undefined,
         maxCombinationCount: config.maxCombinationCount,
         computeUpperBound,

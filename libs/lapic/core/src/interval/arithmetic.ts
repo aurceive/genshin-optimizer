@@ -20,13 +20,19 @@ import {
 // ---------------------------------------------------------------------------
 
 /** [a,b] + [c,d] = [a+c, b+d] */
-export function lapicIntervalAdd(a: LapicInterval, b: LapicInterval): LapicInterval {
-  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b)) return LAPIC_INTERVAL_EMPTY
+export function lapicIntervalAdd(
+  a: LapicInterval,
+  b: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b))
+    return LAPIC_INTERVAL_EMPTY
   return lapicInterval(a.lo + b.lo, a.hi + b.hi)
 }
 
 /** Sum of N intervals. */
-export function lapicIntervalSum(intervals: readonly LapicInterval[]): LapicInterval {
+export function lapicIntervalSum(
+  intervals: readonly LapicInterval[]
+): LapicInterval {
   let lo = 0
   let hi = 0
   for (const iv of intervals) {
@@ -38,8 +44,12 @@ export function lapicIntervalSum(intervals: readonly LapicInterval[]): LapicInte
 }
 
 /** [a,b] − [c,d] = [a−d, b−c] */
-export function lapicIntervalSub(a: LapicInterval, b: LapicInterval): LapicInterval {
-  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b)) return LAPIC_INTERVAL_EMPTY
+export function lapicIntervalSub(
+  a: LapicInterval,
+  b: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b))
+    return LAPIC_INTERVAL_EMPTY
   return lapicInterval(a.lo - b.hi, a.hi - b.lo)
 }
 
@@ -60,20 +70,23 @@ export function lapicIntervalScale(c: number, a: LapicInterval): LapicInterval {
  * [a,b] × [c,d]:
  * min/max of {a·c, a·d, b·c, b·d}
  */
-export function lapicIntervalMul(a: LapicInterval, b: LapicInterval): LapicInterval {
-  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b)) return LAPIC_INTERVAL_EMPTY
+export function lapicIntervalMul(
+  a: LapicInterval,
+  b: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b))
+    return LAPIC_INTERVAL_EMPTY
   const p1 = a.lo * b.lo
   const p2 = a.lo * b.hi
   const p3 = a.hi * b.lo
   const p4 = a.hi * b.hi
-  return lapicInterval(
-    Math.min(p1, p2, p3, p4),
-    Math.max(p1, p2, p3, p4)
-  )
+  return lapicInterval(Math.min(p1, p2, p3, p4), Math.max(p1, p2, p3, p4))
 }
 
 /** Product of N intervals. */
-export function lapicIntervalProduct(intervals: readonly LapicInterval[]): LapicInterval {
+export function lapicIntervalProduct(
+  intervals: readonly LapicInterval[]
+): LapicInterval {
   if (intervals.length === 0) return lapicIntervalPoint(1)
   let result = intervals[0]!
   for (let i = 1; i < intervals.length; i++) {
@@ -87,13 +100,19 @@ export function lapicIntervalProduct(intervals: readonly LapicInterval[]): Lapic
 // ---------------------------------------------------------------------------
 
 /** min([a,b], [c,d]) = [min(a,c), min(b,d)] */
-export function lapicIntervalMin(a: LapicInterval, b: LapicInterval): LapicInterval {
-  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b)) return LAPIC_INTERVAL_EMPTY
+export function lapicIntervalMin(
+  a: LapicInterval,
+  b: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b))
+    return LAPIC_INTERVAL_EMPTY
   return lapicInterval(Math.min(a.lo, b.lo), Math.min(a.hi, b.hi))
 }
 
 /** min of N intervals. */
-export function lapicIntervalMinN(intervals: readonly LapicInterval[]): LapicInterval {
+export function lapicIntervalMinN(
+  intervals: readonly LapicInterval[]
+): LapicInterval {
   if (intervals.length === 0) return LAPIC_INTERVAL_EMPTY
   let lo = intervals[0]!.lo
   let hi = intervals[0]!.hi
@@ -107,13 +126,19 @@ export function lapicIntervalMinN(intervals: readonly LapicInterval[]): LapicInt
 }
 
 /** max([a,b], [c,d]) = [max(a,c), max(b,d)] */
-export function lapicIntervalMax(a: LapicInterval, b: LapicInterval): LapicInterval {
-  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b)) return LAPIC_INTERVAL_EMPTY
+export function lapicIntervalMax(
+  a: LapicInterval,
+  b: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(a) || lapicIntervalIsEmpty(b))
+    return LAPIC_INTERVAL_EMPTY
   return lapicInterval(Math.max(a.lo, b.lo), Math.max(a.hi, b.hi))
 }
 
 /** max of N intervals. */
-export function lapicIntervalMaxN(intervals: readonly LapicInterval[]): LapicInterval {
+export function lapicIntervalMaxN(
+  intervals: readonly LapicInterval[]
+): LapicInterval {
   if (intervals.length === 0) return LAPIC_INTERVAL_EMPTY
   let lo = intervals[0]!.lo
   let hi = intervals[0]!.hi
@@ -181,7 +206,9 @@ function resistancePointEval(res: number): number {
  * The function is monotonically decreasing everywhere, so the enclosure
  * is simply [f(hi), f(lo)].
  */
-export function lapicIntervalResistanceTransform(iv: LapicInterval): LapicInterval {
+export function lapicIntervalResistanceTransform(
+  iv: LapicInterval
+): LapicInterval {
   if (lapicIntervalIsEmpty(iv)) return LAPIC_INTERVAL_EMPTY
   const fLo = resistancePointEval(iv.lo)
   const fHi = resistancePointEval(iv.hi)
@@ -199,7 +226,11 @@ export function lapicIntervalResistanceTransform(iv: LapicInterval): LapicInterv
  */
 function piecewiseAffinePointEval(
   x: number,
-  segments: readonly { readonly breakpoint: number; readonly slope: number; readonly intercept: number }[]
+  segments: readonly {
+    readonly breakpoint: number
+    readonly slope: number
+    readonly intercept: number
+  }[]
 ): number {
   let seg = segments[0]!
   for (let i = 1; i < segments.length; i++) {
@@ -220,9 +251,14 @@ function piecewiseAffinePointEval(
  */
 export function lapicIntervalPiecewiseAffine(
   iv: LapicInterval,
-  segments: readonly { readonly breakpoint: number; readonly slope: number; readonly intercept: number }[]
+  segments: readonly {
+    readonly breakpoint: number
+    readonly slope: number
+    readonly intercept: number
+  }[]
 ): LapicInterval {
-  if (lapicIntervalIsEmpty(iv) || segments.length === 0) return LAPIC_INTERVAL_EMPTY
+  if (lapicIntervalIsEmpty(iv) || segments.length === 0)
+    return LAPIC_INTERVAL_EMPTY
 
   let lo = Infinity
   let hi = -Infinity

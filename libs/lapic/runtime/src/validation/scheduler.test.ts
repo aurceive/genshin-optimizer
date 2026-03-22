@@ -1,8 +1,12 @@
-import type { LapicPriorityDescriptor, LapicWorkUnitEnvelope } from '../types'
-import type { LapicScheduledWorkItem, LapicSchedulerEvent, LapicSchedulerStatistics } from '../scheduler/types'
 import { createLapicWorkScheduler } from '../scheduler/scheduler'
-import { createWorkerPartitionPlan } from '../worker/partitioner'
+import type {
+  LapicScheduledWorkItem,
+  LapicSchedulerEvent,
+  LapicSchedulerStatistics,
+} from '../scheduler/types'
 import type { LapicFrontierJoinPlan } from '../solve/join-plan'
+import type { LapicPriorityDescriptor, LapicWorkUnitEnvelope } from '../types'
+import { createWorkerPartitionPlan } from '../worker/partitioner'
 import {
   validateLapicScheduledWorkItem,
   validateLapicSchedulerEvent,
@@ -27,7 +31,10 @@ function priority(upperBound = '500'): LapicPriorityDescriptor {
   }
 }
 
-function workUnit(id: string, p?: LapicPriorityDescriptor): LapicWorkUnitEnvelope {
+function workUnit(
+  id: string,
+  p?: LapicPriorityDescriptor
+): LapicWorkUnitEnvelope {
   return {
     workUnitId: id,
     kind: 'JoinFrontierBlocks',
@@ -254,53 +261,99 @@ describe('validateLapicSchedulerStatistics', () => {
 
 describe('validateLapicSchedulerStateTransition', () => {
   it('accepts queued → dispatched', () => {
-    expect(validateLapicSchedulerStateTransition('queued', 'dispatched').ok).toBe(true)
+    expect(
+      validateLapicSchedulerStateTransition('queued', 'dispatched').ok
+    ).toBe(true)
   })
 
   it('accepts queued → cancelled', () => {
-    expect(validateLapicSchedulerStateTransition('queued', 'cancelled').ok).toBe(true)
+    expect(
+      validateLapicSchedulerStateTransition('queued', 'cancelled').ok
+    ).toBe(true)
   })
 
   it('accepts dispatched → completed', () => {
-    expect(validateLapicSchedulerStateTransition('dispatched', 'completed').ok).toBe(true)
+    expect(
+      validateLapicSchedulerStateTransition('dispatched', 'completed').ok
+    ).toBe(true)
   })
 
   it('accepts dispatched → failed', () => {
-    expect(validateLapicSchedulerStateTransition('dispatched', 'failed').ok).toBe(true)
+    expect(
+      validateLapicSchedulerStateTransition('dispatched', 'failed').ok
+    ).toBe(true)
   })
 
   it('accepts dispatched → cancelled', () => {
-    expect(validateLapicSchedulerStateTransition('dispatched', 'cancelled').ok).toBe(true)
+    expect(
+      validateLapicSchedulerStateTransition('dispatched', 'cancelled').ok
+    ).toBe(true)
   })
 
   it('rejects queued → completed (must dispatch first)', () => {
-    expect(validateLapicSchedulerStateTransition('queued', 'completed').ok).toBe(false)
+    expect(
+      validateLapicSchedulerStateTransition('queued', 'completed').ok
+    ).toBe(false)
   })
 
   it('rejects completed → dispatched (terminal state)', () => {
-    expect(validateLapicSchedulerStateTransition('completed', 'dispatched').ok).toBe(false)
+    expect(
+      validateLapicSchedulerStateTransition('completed', 'dispatched').ok
+    ).toBe(false)
   })
 
   it('rejects failed → queued (terminal state)', () => {
-    expect(validateLapicSchedulerStateTransition('failed', 'queued').ok).toBe(false)
+    expect(validateLapicSchedulerStateTransition('failed', 'queued').ok).toBe(
+      false
+    )
   })
 })
 
 describe('validateLapicSchedulerEventSequence', () => {
   it('accepts monotonically increasing sequence', () => {
     const events: LapicSchedulerEvent[] = [
-      { kind: 'enqueued', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 1 },
-      { kind: 'dispatched', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 2 },
-      { kind: 'completed', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 3 },
+      {
+        kind: 'enqueued',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 1,
+      },
+      {
+        kind: 'dispatched',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 2,
+      },
+      {
+        kind: 'completed',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 3,
+      },
     ]
     expect(validateLapicSchedulerEventSequence(events).ok).toBe(true)
   })
 
   it('rejects non-monotonic sequence', () => {
     const events: LapicSchedulerEvent[] = [
-      { kind: 'enqueued', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 1 },
-      { kind: 'dispatched', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 3 },
-      { kind: 'completed', workUnitId: 'w1', workUnitKind: 'JoinFrontierBlocks', sequence: 2 },
+      {
+        kind: 'enqueued',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 1,
+      },
+      {
+        kind: 'dispatched',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 3,
+      },
+      {
+        kind: 'completed',
+        workUnitId: 'w1',
+        workUnitKind: 'JoinFrontierBlocks',
+        sequence: 2,
+      },
     ]
     expect(validateLapicSchedulerEventSequence(events).ok).toBe(false)
   })
@@ -343,41 +396,51 @@ describe('validateLapicSchedulerEventSequence integration with real scheduler', 
 
 describe('validateLapicWorkerPartition', () => {
   it('accepts a valid partition', () => {
-    expect(validateLapicWorkerPartition({
-      partitionIndex: 0,
-      startFlatIndex: 0,
-      endFlatIndex: 10,
-      combinationCount: 10,
-    }).ok).toBe(true)
+    expect(
+      validateLapicWorkerPartition({
+        partitionIndex: 0,
+        startFlatIndex: 0,
+        endFlatIndex: 10,
+        combinationCount: 10,
+      }).ok
+    ).toBe(true)
   })
 
   it('rejects when combinationCount mismatches range', () => {
-    expect(validateLapicWorkerPartition({
-      partitionIndex: 0,
-      startFlatIndex: 0,
-      endFlatIndex: 10,
-      combinationCount: 5,
-    }).ok).toBe(false)
+    expect(
+      validateLapicWorkerPartition({
+        partitionIndex: 0,
+        startFlatIndex: 0,
+        endFlatIndex: 10,
+        combinationCount: 5,
+      }).ok
+    ).toBe(false)
   })
 
   it('rejects when endFlatIndex <= startFlatIndex', () => {
-    expect(validateLapicWorkerPartition({
-      partitionIndex: 0,
-      startFlatIndex: 10,
-      endFlatIndex: 5,
-      combinationCount: -5,
-    }).ok).toBe(false)
+    expect(
+      validateLapicWorkerPartition({
+        partitionIndex: 0,
+        startFlatIndex: 10,
+        endFlatIndex: 5,
+        combinationCount: -5,
+      }).ok
+    ).toBe(false)
   })
 })
 
 describe('validateLapicWorkerPartitionPlan', () => {
   it('validates a plan produced by createWorkerPartitionPlan', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), { workerCount: 3 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([3, 4]), {
+      workerCount: 3,
+    })
     expect(validateLapicWorkerPartitionPlan(plan).ok).toBe(true)
   })
 
   it('validates a single-worker plan', () => {
-    const plan = createWorkerPartitionPlan(makeJoinPlan([5, 2]), { workerCount: 1 })
+    const plan = createWorkerPartitionPlan(makeJoinPlan([5, 2]), {
+      workerCount: 1,
+    })
     expect(validateLapicWorkerPartitionPlan(plan).ok).toBe(true)
   })
 
@@ -386,8 +449,18 @@ describe('validateLapicWorkerPartitionPlan', () => {
       workerCount: 2,
       totalCombinationCount: 10,
       partitions: [
-        { partitionIndex: 0, startFlatIndex: 0, endFlatIndex: 4, combinationCount: 4 },
-        { partitionIndex: 1, startFlatIndex: 6, endFlatIndex: 10, combinationCount: 4 },
+        {
+          partitionIndex: 0,
+          startFlatIndex: 0,
+          endFlatIndex: 4,
+          combinationCount: 4,
+        },
+        {
+          partitionIndex: 1,
+          startFlatIndex: 6,
+          endFlatIndex: 10,
+          combinationCount: 4,
+        },
       ],
     }
     expect(validateLapicWorkerPartitionPlan(plan).ok).toBe(false)
@@ -398,7 +471,12 @@ describe('validateLapicWorkerPartitionPlan', () => {
       workerCount: 3,
       totalCombinationCount: 10,
       partitions: [
-        { partitionIndex: 0, startFlatIndex: 0, endFlatIndex: 10, combinationCount: 10 },
+        {
+          partitionIndex: 0,
+          startFlatIndex: 0,
+          endFlatIndex: 10,
+          combinationCount: 10,
+        },
       ],
     }
     expect(validateLapicWorkerPartitionPlan(plan).ok).toBe(false)

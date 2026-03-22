@@ -14,15 +14,15 @@
  */
 
 import {
-  buildLinearModelFromFir,
   type LapicLpProvider,
   type LapicLpSolveResult,
+  buildLinearModelFromFir,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicBoundedExactUpperBoundEvaluator } from '../solve/types'
 import {
   createLapicFirPartialIntervalEnv,
   precomputeDomainEnvelopes,
 } from '../fir-bound/env-factory'
+import type { LapicBoundedExactUpperBoundEvaluator } from '../solve/types'
 import type { LapicLpBoundProviderConfig } from './types'
 
 /**
@@ -86,13 +86,13 @@ export function createLapicLpBoundProvider(
       partial.assignedCandidates,
       domainVariableMaps,
       domainEnvelopes,
-      globalConstants,
+      globalConstants
     )
 
     // 2. Compile F-IR → LinearModel with current variable bounds
     const modelDigest = makeModelDigest(
       digestPrefix,
-      partial.assignedCandidates,
+      partial.assignedCandidates
     )
     const { model } = buildLinearModelFromFir(graph, intervalEnv, modelDigest)
 

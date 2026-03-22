@@ -19,24 +19,39 @@ import {
   validateArtifactKind,
 } from './internal'
 
-export const validateLapicStorageEnvelope: LapicStorageValidator = (envelope) => {
+export const validateLapicStorageEnvelope: LapicStorageValidator = (
+  envelope
+) => {
   if (!isRecord(envelope))
-    return createStorageFailure('Storage envelope must be a record.', ['storageEnvelope'])
+    return createStorageFailure('Storage envelope must be a record.', [
+      'storageEnvelope',
+    ])
 
-  const kindValidation = validateArtifactKind(envelope.artifactKind, ['artifactKind'])
+  const kindValidation = validateArtifactKind(envelope.artifactKind, [
+    'artifactKind',
+  ])
   if (!kindValidation.ok) return kindValidation
 
   if (!isNonEmptyString(envelope.schemaVersion))
-    return createStorageFailure('Schema version must be a non-empty string.', ['schemaVersion'])
+    return createStorageFailure('Schema version must be a non-empty string.', [
+      'schemaVersion',
+    ])
 
   if (!isLapicPayloadEncoding(envelope.payloadEncoding))
-    return createStorageFailure('Payload encoding must be supported.', ['payloadEncoding'])
+    return createStorageFailure('Payload encoding must be supported.', [
+      'payloadEncoding',
+    ])
 
   if (!isNonNegativeInteger(envelope.payloadLength))
-    return createStorageFailure('Payload length must be a non-negative integer.', ['payloadLength'])
+    return createStorageFailure(
+      'Payload length must be a non-negative integer.',
+      ['payloadLength']
+    )
 
   if (!isNonEmptyString(envelope.contentHash))
-    return createStorageFailure('Content hash must be a non-empty string.', ['contentHash'])
+    return createStorageFailure('Content hash must be a non-empty string.', [
+      'contentHash',
+    ])
 
   const checksumValidation = validateLapicChecksumMetadata(envelope.checksum)
   if (!checksumValidation.ok)
@@ -48,7 +63,9 @@ export const validateLapicStorageEnvelope: LapicStorageValidator = (envelope) =>
     )
 
   if (!isLapicCompressionCodec(envelope.compressionCodec))
-    return createStorageFailure('Compression codec must be supported.', ['compressionCodec'])
+    return createStorageFailure('Compression codec must be supported.', [
+      'compressionCodec',
+    ])
 
   if (!isNonEmptyString(envelope.creationEngineVersion))
     return createStorageFailure(
@@ -78,13 +95,20 @@ export function validateLapicChecksumMetadata(
   checksum: LapicChecksumMetadata
 ): LapicValidationResult<LapicChecksumMetadata> {
   if (!isRecord(checksum))
-    return createStorageFailure('Checksum metadata must be a record.', ['checksum'])
+    return createStorageFailure('Checksum metadata must be a record.', [
+      'checksum',
+    ])
 
   if (!isNonEmptyString(checksum.algorithm))
-    return createStorageFailure('Checksum algorithm must be a non-empty string.', ['algorithm'])
+    return createStorageFailure(
+      'Checksum algorithm must be a non-empty string.',
+      ['algorithm']
+    )
 
   if (!isNonEmptyString(checksum.checksum))
-    return createStorageFailure('Checksum value must be a non-empty string.', ['checksum'])
+    return createStorageFailure('Checksum value must be a non-empty string.', [
+      'checksum',
+    ])
 
   return createLapicSuccessResult(checksum)
 }

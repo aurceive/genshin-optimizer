@@ -9,12 +9,12 @@
  * - Operator-specific constraints (e.g. segments sorted, add ≥ 2 children)
  */
 
-import type { LapicDiagnostic, LapicValidationResult } from '../types'
 import {
   createLapicDiagnostic,
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '../diagnostics'
+import type { LapicDiagnostic, LapicValidationResult } from '../types'
 import type { LapicFirGraph, LapicFirNode } from './types'
 import { lapicFirNodeChildIds } from './types'
 
@@ -171,7 +171,9 @@ function validateOperatorConstraints(
         )
       } else {
         for (let i = 1; i < node.segments.length; i++) {
-          if (node.segments[i]!.breakpoint <= node.segments[i - 1]!.breakpoint) {
+          if (
+            node.segments[i]!.breakpoint <= node.segments[i - 1]!.breakpoint
+          ) {
             diags.push(
               createLapicDiagnostic(
                 'error',

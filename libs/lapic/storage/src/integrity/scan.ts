@@ -1,4 +1,8 @@
-import { createLapicArtifactRef, createLapicArtifactRefKey, createLapicIntegrityScanResult } from '../builders'
+import {
+  createLapicArtifactRef,
+  createLapicArtifactRefKey,
+  createLapicIntegrityScanResult,
+} from '../builders'
 import type {
   LapicArtifactIntegrityScanRequest,
   LapicArtifactStore,
@@ -12,7 +16,10 @@ export async function scanLapicArtifactIntegrity(
   request: LapicArtifactIntegrityScanRequest
 ): Promise<LapicIntegrityScanResult> {
   const classifications = new Set<LapicCorruptionClassification>()
-  const affectedArtifacts = new Map<string, ReturnType<typeof createLapicArtifactRef>>()
+  const affectedArtifacts = new Map<
+    string,
+    ReturnType<typeof createLapicArtifactRef>
+  >()
 
   for (const artifactRef of request.artifactRefs) {
     try {
@@ -51,5 +58,8 @@ export async function scanLapicArtifactIntegrity(
     }
   }
 
-  return createLapicIntegrityScanResult([...classifications], [...affectedArtifacts.values()])
+  return createLapicIntegrityScanResult(
+    [...classifications],
+    [...affectedArtifacts.values()]
+  )
 }

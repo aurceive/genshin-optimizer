@@ -1,9 +1,5 @@
-import {
-  createLapicMemoryArtifactStore,
-} from '@genshin-optimizer/lapic/storage'
-import type {
-  LapicBoundedExactSolveOutcome,
-} from '../solve/types'
+import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
+import type { LapicBoundedExactSolveOutcome } from '../solve/types'
 import type {
   LapicInMemorySessionController,
   LapicProgressEvent,

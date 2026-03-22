@@ -1,5 +1,9 @@
 import type { MainStatKey } from '@genshin-optimizer/gi/consts'
-import type { ArtSetExclusion, ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
+import type {
+  ArtSetExclusion,
+  ICachedArtifact,
+  OptConfig,
+} from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 import type {
   LapicAdapterMetadata,
@@ -185,7 +189,9 @@ export const giLapicAdapterSkeleton: GiLapicAdapterSkeletonMarker = {
   schemaVersion: giLapicAdapterSchemaVersion,
 }
 
-const giSupportedPotentialSolveModes = ['current-only'] as const satisfies readonly LapicPotentialSolveMode[]
+const giSupportedPotentialSolveModes = [
+  'current-only',
+] as const satisfies readonly LapicPotentialSolveMode[]
 const giSupportedGraphOutputKinds = ['gi-plot-base'] as const
 const giSupportedFormulaCompilationModes = ['gi-legacy-compatibility'] as const
 const giSupportedCandidateDomainClasses = ['artifact-inventory'] as const

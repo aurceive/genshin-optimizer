@@ -212,14 +212,12 @@ const DEFAULT_PROVIDER_VERSION = 'highs-wasm-1.8.0'
 export async function createLapicHighsProvider(
   config?: LapicHighsProviderConfig
 ): Promise<LapicLpProvider> {
-  const providerVersion =
-    config?.providerVersion ?? DEFAULT_PROVIDER_VERSION
+  const providerVersion = config?.providerVersion ?? DEFAULT_PROVIDER_VERSION
   const iterationLimit = config?.iterationLimit ?? 100_000
   const presolveMode = config?.presolveMode ?? 'on'
   const primalTol = config?.primalFeasibilityTolerance ?? 1e-7
   const dualTol = config?.dualFeasibilityTolerance ?? 1e-7
-  const platformFingerprint =
-    config?.platformFingerprint ?? 'wasm-generic'
+  const platformFingerprint = config?.platformFingerprint ?? 'wasm-generic'
 
   // Dynamic import to keep the module usable in environments
   // where the highs WASM binary may not be available.
@@ -269,7 +267,8 @@ export async function createLapicHighsProvider(
         // HiGHS can throw on parse errors or internal failures
         return {
           outcome: 'interrupted',
-          boundDirection: model.objective.sense === 'maximize' ? 'upper' : 'lower',
+          boundDirection:
+            model.objective.sense === 'maximize' ? 'upper' : 'lower',
           evidenceDigest: `highs-error:${model.modelDigest}:inv-${invocationId}`,
           iterationCount: 0,
           numericallyQuestionable: true,
@@ -286,14 +285,11 @@ export async function createLapicHighsProvider(
       const numericallyQuestionable =
         outcome === 'solved' && !Number.isFinite(objWithOffset)
 
-      const evidenceDigest =
-        `highs:${model.modelDigest}:inv-${invocationId}:${outcome}`
+      const evidenceDigest = `highs:${model.modelDigest}:inv-${invocationId}:${outcome}`
 
       const basisAvailable =
         outcome === 'solved' &&
-        Object.values(solution.Columns).some(
-          (c) => c.Status !== undefined
-        )
+        Object.values(solution.Columns).some((c) => c.Status !== undefined)
 
       const result: LapicLpSolveResult = {
         outcome,
@@ -319,8 +315,7 @@ export async function createLapicHighsProvider(
     serializeEvidence(result: LapicLpSolveResult): unknown {
       const sol = (result as any)._highsSolution
       const basisAvailable = (result as any)._basisAvailable ?? false
-      const modelDigest =
-        (result as any)._modelDigest ?? 'unknown'
+      const modelDigest = (result as any)._modelDigest ?? 'unknown'
       const invId = (result as any)._invocationId ?? 0
 
       // Produce HighsEvidenceV1-shaped evidence
@@ -335,7 +330,8 @@ export async function createLapicHighsProvider(
         linearModelDigest: modelDigest,
         relaxationDigest: `relaxation:${modelDigest}`,
         solveInvocationId: `inv-${invId}`,
-        objectiveSense: result.boundDirection === 'upper' ? 'maximize' : 'minimize',
+        objectiveSense:
+          result.boundDirection === 'upper' ? 'maximize' : 'minimize',
         solveOutcome: result.outcome,
         primalStatus: result.outcome === 'solved' ? 'feasible' : 'unknown',
         dualStatus: result.outcome === 'solved' ? 'feasible' : 'unknown',

@@ -1,8 +1,8 @@
 import {
+  LapicFirGraphBuilder,
   type LapicLinearModel,
   type LapicLpProvider,
   type LapicLpSolveResult,
-  LapicFirGraphBuilder,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicGoldenDomain } from '../fir/golden-harness'
 import { runLapicLpGoldenHarness } from './golden-harness'
@@ -29,11 +29,13 @@ function createAdmissibleMockProvider(): LapicLpProvider {
         const varIdx = model.objective.variableIndices[i]!
         const variable = model.variables[varIdx]!
         if (coeff >= 0) {
-          objectiveValue += coeff * (Number.isFinite(variable.upperBound)
-            ? variable.upperBound : 1e6)
+          objectiveValue +=
+            coeff *
+            (Number.isFinite(variable.upperBound) ? variable.upperBound : 1e6)
         } else {
-          objectiveValue += coeff * (Number.isFinite(variable.lowerBound)
-            ? variable.lowerBound : -1e6)
+          objectiveValue +=
+            coeff *
+            (Number.isFinite(variable.lowerBound) ? variable.lowerBound : -1e6)
         }
       }
       return {

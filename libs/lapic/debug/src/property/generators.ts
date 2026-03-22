@@ -1,4 +1,3 @@
-import fc from 'fast-check'
 import type {
   LapicCandidateId,
   LapicDigest,
@@ -16,6 +15,7 @@ import type {
   LapicPayloadEncoding,
   LapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
+import fc from 'fast-check'
 
 // ---------------------------------------------------------------------------
 // Primitive arbitraries
@@ -38,7 +38,12 @@ export function arbCandidateId(): fc.Arbitrary<LapicCandidateId> {
 
 /** Adapter semantic mode string. */
 export function arbAdapterSemanticMode(): fc.Arbitrary<string> {
-  return fc.constantFrom('gi-team-dps', 'gi-solo-dps', 'sr-team-dps', 'zzz-team-dps')
+  return fc.constantFrom(
+    'gi-team-dps',
+    'gi-solo-dps',
+    'sr-team-dps',
+    'zzz-team-dps'
+  )
 }
 
 /** Occupied slot bitmask (3-bit). */
@@ -108,10 +113,13 @@ export function arbFrontierBlock(
 export function arbFrontierGroupSummary(): fc.Arbitrary<LapicFrontierGroupSummary> {
   return fc.record({
     groupDigest: arbDigest(),
-    blockIds: fc.array(arbDigest().map((d) => `block-${d.slice(0, 12)}`), {
-      minLength: 1,
-      maxLength: 5,
-    }),
+    blockIds: fc.array(
+      arbDigest().map((d) => `block-${d.slice(0, 12)}`),
+      {
+        minLength: 1,
+        maxLength: 5,
+      }
+    ),
     slotIds: fc.array(arbSlotId(), { minLength: 1, maxLength: 4 }),
     rowDigests: fc.array(arbDigest(), { minLength: 1, maxLength: 10 }),
     rowCount: fc.integer({ min: 1, max: 100 }),
@@ -131,10 +139,13 @@ export function arbFrontierGroupSummary(): fc.Arbitrary<LapicFrontierGroupSummar
 export function arbFrontierIndex(): fc.Arbitrary<LapicFrontierIndex> {
   return fc.record({
     indexId: arbDigest().map((d) => `index-${d.slice(0, 12)}`),
-    blockIds: fc.array(arbDigest().map((d) => `block-${d.slice(0, 12)}`), {
-      minLength: 0,
-      maxLength: 8,
-    }),
+    blockIds: fc.array(
+      arbDigest().map((d) => `block-${d.slice(0, 12)}`),
+      {
+        minLength: 0,
+        maxLength: 8,
+      }
+    ),
     compatibilityDigest: arbDigest(),
     exactSignatureGroups: fc.array(arbFrontierGroupSummary(), {
       minLength: 0,

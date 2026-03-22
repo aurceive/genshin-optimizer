@@ -8,7 +8,10 @@ import {
   createInProcessCoordinatedSolve,
   mergeWorkerResults,
 } from './coordinator'
-import type { LapicWorkerResultMessage, LapicWorkerResultEntry } from './transport'
+import type {
+  LapicWorkerResultEntry,
+  LapicWorkerResultMessage,
+} from './transport'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,7 +70,8 @@ function createProblem(config: {
       slotId,
       slotRole: `artifact-${slotId}`,
       participationMode: 'optimizedBuild',
-      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!.domainId,
+      occupantDomainId: config.domains.find((d) => d.slotId === slotId)!
+        .domainId,
       equipmentOwnershipModel: 'hard-reserved-inventory',
       contributesToObjective: true,
       contributesToConstraints: true,
@@ -131,7 +135,11 @@ function makeJoinPlan(
         additiveFeatureDigest: `feature-${i}-${j}`,
         categoricalSignatureDigest: `cat-${i}-${j}`,
       },
-      candidate: candidate(`cand-${i}-${j}`, `domain-${i}`, problem.teamLayout.slotIds[i]!),
+      candidate: candidate(
+        `cand-${i}-${j}`,
+        `domain-${i}`,
+        problem.teamLayout.slotIds[i]!
+      ),
     })),
   }))
   return {
@@ -144,9 +152,9 @@ function makeJoinPlan(
  * A simple evaluator: the objective value is the sum of candidate numeric indices.
  * E.g., cand-0-2 + cand-1-3 → 2 + 3 = 5, formatted as "0005.0000".
  */
-function numericEvaluator(
-  combination: { candidates: readonly LapicCandidateDescriptor[] }
-) {
+function numericEvaluator(combination: {
+  candidates: readonly LapicCandidateDescriptor[]
+}) {
   let sum = 0
   for (const c of combination.candidates) {
     const parts = c.candidateId.split('-')
@@ -172,8 +180,16 @@ describe('mergeWorkerResults', () => {
         sessionId: 's1',
         partitionIndex: 0,
         topCandidates: [
-          { stateId: 'A', candidates: [], evaluation: { objectiveValue: '10', evidenceDigest: 'a' } },
-          { stateId: 'B', candidates: [], evaluation: { objectiveValue: '08', evidenceDigest: 'b' } },
+          {
+            stateId: 'A',
+            candidates: [],
+            evaluation: { objectiveValue: '10', evidenceDigest: 'a' },
+          },
+          {
+            stateId: 'B',
+            candidates: [],
+            evaluation: { objectiveValue: '08', evidenceDigest: 'b' },
+          },
         ],
         evaluatedCount: 5,
         visitedCount: 10,
@@ -183,8 +199,16 @@ describe('mergeWorkerResults', () => {
         sessionId: 's1',
         partitionIndex: 1,
         topCandidates: [
-          { stateId: 'C', candidates: [], evaluation: { objectiveValue: '12', evidenceDigest: 'c' } },
-          { stateId: 'A', candidates: [], evaluation: { objectiveValue: '10', evidenceDigest: 'a' } },
+          {
+            stateId: 'C',
+            candidates: [],
+            evaluation: { objectiveValue: '12', evidenceDigest: 'c' },
+          },
+          {
+            stateId: 'A',
+            candidates: [],
+            evaluation: { objectiveValue: '10', evidenceDigest: 'a' },
+          },
         ],
         evaluatedCount: 5,
         visitedCount: 10,
@@ -227,11 +251,14 @@ describe('createInProcessCoordinatedSolve', () => {
     expect(result.workerCount).toBe(1)
     expect(result.topCandidates).toHaveLength(3)
     // Best combo: cand-0-3 + cand-1-3 = 6
-    expect(result.topCandidates[0]!.evaluation.objectiveValue).toBe('0000006.0000')
+    expect(result.topCandidates[0]!.evaluation.objectiveValue).toBe(
+      '0000006.0000'
+    )
   })
 
   it('produces identical results with different worker counts (determinism invariant)', async () => {
-    const results: typeof undefined[] & { topCandidates?: readonly LapicWorkerResultEntry[] }[] = []
+    const results: (typeof undefined)[] &
+      { topCandidates?: readonly LapicWorkerResultEntry[] }[] = []
 
     for (const wc of [1, 2, 3, 4, 8, 16]) {
       const result = await createInProcessCoordinatedSolve({
@@ -250,7 +277,9 @@ describe('createInProcessCoordinatedSolve', () => {
       const current = results[i] as any
       expect(current.topCandidates).toHaveLength(reference.topCandidates.length)
       for (let j = 0; j < reference.topCandidates.length; j++) {
-        expect(current.topCandidates[j].stateId).toBe(reference.topCandidates[j].stateId)
+        expect(current.topCandidates[j].stateId).toBe(
+          reference.topCandidates[j].stateId
+        )
         expect(current.topCandidates[j].evaluation.objectiveValue).toBe(
           reference.topCandidates[j].evaluation.objectiveValue
         )
@@ -310,7 +339,10 @@ describe('createInProcessCoordinatedSolve', () => {
       evaluateCombination: numericEvaluator,
       isCombinationFeasible: (combo) => {
         // Only allow combinations where first candidate index is even
-        const idx = parseInt(combo.candidates[0]!.candidateId.split('-')[2]!, 10)
+        const idx = parseInt(
+          combo.candidates[0]!.candidateId.split('-')[2]!,
+          10
+        )
         return idx % 2 === 0
       },
       partitionConfig: { workerCount: 3 },
@@ -320,7 +352,9 @@ describe('createInProcessCoordinatedSolve', () => {
     // Only cand-0-0 and cand-0-2 pass feasibility → 2 × 4 = 8 evaluated
     expect(result.totalEvaluatedCount).toBe(8)
     // Top entry: cand-0-2 + cand-1-3 = 5
-    expect(result.topCandidates[0]!.evaluation.objectiveValue).toBe('0000005.0000')
+    expect(result.topCandidates[0]!.evaluation.objectiveValue).toBe(
+      '0000005.0000'
+    )
   })
 
   it('produces stable results across 3×3×3 domain with various worker counts', async () => {
@@ -332,7 +366,11 @@ describe('createInProcessCoordinatedSolve', () => {
         candidate(`c-${i}-${j}`, `d-${i}`, slotId)
       ),
     }))
-    const problem3 = createProblem({ slotIds: slotIds3, domains: domains3, topN: 5 })
+    const problem3 = createProblem({
+      slotIds: slotIds3,
+      domains: domains3,
+      topN: 5,
+    })
     const joinPlan3 = makeJoinPlan(problem3, [3, 3, 3])
 
     const singleWorker = await createInProcessCoordinatedSolve({
@@ -352,9 +390,13 @@ describe('createInProcessCoordinatedSolve', () => {
         topN: 5,
       })
 
-      expect(result.topCandidates).toHaveLength(singleWorker.topCandidates.length)
+      expect(result.topCandidates).toHaveLength(
+        singleWorker.topCandidates.length
+      )
       for (let j = 0; j < singleWorker.topCandidates.length; j++) {
-        expect(result.topCandidates[j]!.stateId).toBe(singleWorker.topCandidates[j]!.stateId)
+        expect(result.topCandidates[j]!.stateId).toBe(
+          singleWorker.topCandidates[j]!.stateId
+        )
         expect(result.topCandidates[j]!.evaluation.objectiveValue).toBe(
           singleWorker.topCandidates[j]!.evaluation.objectiveValue
         )

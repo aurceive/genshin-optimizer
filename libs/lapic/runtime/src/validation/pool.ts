@@ -6,18 +6,19 @@
  * - `LapicWorkerHandle` — interface shape validation
  */
 
-import {
-  createLapicSuccessResult,
-} from '@genshin-optimizer/lapic/core'
+import { createLapicSuccessResult } from '@genshin-optimizer/lapic/core'
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
-import type { LapicPoolTransportConfig, LapicWorkerHandle } from '../worker/pool'
+import type { LapicWorkerBackendKind } from '../types'
+import type {
+  LapicPoolTransportConfig,
+  LapicWorkerHandle,
+} from '../worker/pool'
 import {
   createRuntimeFailure,
   isNonEmptyString,
   isRecord,
   lapicWorkerBackendKinds,
 } from './internal'
-import type { LapicWorkerBackendKind } from '../types'
 
 // ---------------------------------------------------------------------------
 // Worker handle validation
@@ -82,10 +83,9 @@ export function validateLapicPoolTransportConfig(
   config: LapicPoolTransportConfig
 ): LapicValidationResult<LapicPoolTransportConfig> {
   if (!isRecord(config))
-    return createRuntimeFailure(
-      'Pool transport config must be a record.',
-      ['poolTransportConfig']
-    )
+    return createRuntimeFailure('Pool transport config must be a record.', [
+      'poolTransportConfig',
+    ])
 
   if (!Array.isArray(config.handles) || config.handles.length === 0)
     return createRuntimeFailure(
@@ -95,10 +95,11 @@ export function validateLapicPoolTransportConfig(
 
   // Validate each handle
   for (let i = 0; i < config.handles.length; i++) {
-    const handleValidation = validateLapicWorkerHandle(
-      config.handles[i]!,
-      ['poolTransportConfig', 'handles', String(i)]
-    )
+    const handleValidation = validateLapicWorkerHandle(config.handles[i]!, [
+      'poolTransportConfig',
+      'handles',
+      String(i),
+    ])
     if (!handleValidation.ok) return handleValidation
   }
 
@@ -115,7 +116,9 @@ export function validateLapicPoolTransportConfig(
 
   if (
     !isNonEmptyString(config.backendKind) ||
-    !lapicWorkerBackendKinds.includes(config.backendKind as LapicWorkerBackendKind)
+    !lapicWorkerBackendKinds.includes(
+      config.backendKind as LapicWorkerBackendKind
+    )
   )
     return createRuntimeFailure(
       `Backend kind must be one of: ${lapicWorkerBackendKinds.join(', ')}.`,

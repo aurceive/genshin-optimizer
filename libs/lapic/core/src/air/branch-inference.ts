@@ -52,12 +52,16 @@ export interface LapicForcedBranchEvidence {
  * (one feasible, one infeasible). Each such pair produces a
  * forced-branch evidence record.
  */
-export function inferForcedBranches(airGraph: LapicAirGraph): readonly LapicForcedBranchEvidence[] {
+export function inferForcedBranches(
+  airGraph: LapicAirGraph
+): readonly LapicForcedBranchEvidence[] {
   const results: LapicForcedBranchEvidence[] = []
 
   // Group regions by parent for efficient scanning
   const parentRegions = airGraph.regions.filter(
-    (r) => r.childRegionIds.length === 2 && r.regionId.startsWith('region:threshold:')
+    (r) =>
+      r.childRegionIds.length === 2 &&
+      r.regionId.startsWith('region:threshold:')
   )
 
   for (const parent of parentRegions) {
@@ -77,11 +81,17 @@ export function inferForcedBranches(airGraph: LapicAirGraph): readonly LapicForc
     let feasibleChild: LapicAirRegion
     let infeasibleChild: LapicAirRegion
 
-    if (thenChild.feasibilityStatus === 'feasible' && elseChild.feasibilityStatus === 'infeasible') {
+    if (
+      thenChild.feasibilityStatus === 'feasible' &&
+      elseChild.feasibilityStatus === 'infeasible'
+    ) {
       forcedArm = 'then'
       feasibleChild = thenChild
       infeasibleChild = elseChild
-    } else if (elseChild.feasibilityStatus === 'feasible' && thenChild.feasibilityStatus === 'infeasible') {
+    } else if (
+      elseChild.feasibilityStatus === 'feasible' &&
+      thenChild.feasibilityStatus === 'infeasible'
+    ) {
       forcedArm = 'else'
       feasibleChild = elseChild
       infeasibleChild = thenChild

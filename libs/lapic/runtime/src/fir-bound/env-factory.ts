@@ -3,7 +3,10 @@ import type {
   LapicFirVariableId,
   LapicInterval,
 } from '@genshin-optimizer/lapic/core'
-import { lapicInterval, lapicIntervalPoint } from '@genshin-optimizer/lapic/core'
+import {
+  lapicInterval,
+  lapicIntervalPoint,
+} from '@genshin-optimizer/lapic/core'
 import type { LapicFirDomainVariableMap } from './types'
 
 /**
@@ -24,7 +27,10 @@ export type LapicFirDomainEnvelopes = ReadonlyMap<
 export function precomputeDomainEnvelopes(
   domainVariableMaps: readonly LapicFirDomainVariableMap[]
 ): LapicFirDomainEnvelopes {
-  const result = new Map<string, ReadonlyMap<LapicFirVariableId, LapicInterval>>()
+  const result = new Map<
+    string,
+    ReadonlyMap<LapicFirVariableId, LapicInterval>
+  >()
 
   for (const dvm of domainVariableMaps) {
     const envelopes = new Map<LapicFirVariableId, LapicInterval>()
@@ -78,9 +84,7 @@ export function createLapicFirPartialIntervalEnv(
 
   // 2. Collect assigned domain IDs
   const assignedDomainIds = new Set<string>()
-  const domainMapById = new Map(
-    domainVariableMaps.map((d) => [d.domainId, d])
-  )
+  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
 
   // 3. Assigned candidates → point intervals
   for (const candidate of assignedCandidates) {

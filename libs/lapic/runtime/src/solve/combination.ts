@@ -20,7 +20,9 @@ export interface LapicBoundedExactBestCandidate {
 
 export interface LapicBoundedExactTopNTracker {
   insert(candidate: LapicBoundedExactBestCandidate): void
-  insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult
+  insertWithEviction(
+    candidate: LapicBoundedExactBestCandidate
+  ): LapicTopNInsertResult
   isEmpty(): boolean
   isFull(): boolean
   results(): readonly LapicBoundedExactBestCandidate[]
@@ -65,7 +67,9 @@ export function createTopNTracker(
       entries.splice(insertionIndex, 0, candidate)
       if (entries.length > topN) entries.pop()
     },
-    insertWithEviction(candidate: LapicBoundedExactBestCandidate): LapicTopNInsertResult {
+    insertWithEviction(
+      candidate: LapicBoundedExactBestCandidate
+    ): LapicTopNInsertResult {
       let insertionIndex = entries.length
       for (let i = 0; i < entries.length; i += 1) {
         if (compare(candidate, entries[i]!) > 0) {
@@ -120,8 +124,14 @@ export function compareEvaluations(
 ): LapicDeterministicOrderingRelation {
   if (explicitComparator) return explicitComparator(left, right)
 
-  const leftOrderingKey = [...(left.orderingKey ?? [left.objectiveValue]), leftStateId]
-  const rightOrderingKey = [...(right.orderingKey ?? [right.objectiveValue]), rightStateId]
+  const leftOrderingKey = [
+    ...(left.orderingKey ?? [left.objectiveValue]),
+    leftStateId,
+  ]
+  const rightOrderingKey = [
+    ...(right.orderingKey ?? [right.objectiveValue]),
+    rightStateId,
+  ]
   return compareStringArrays(leftOrderingKey, rightOrderingKey)
 }
 
@@ -149,10 +159,10 @@ export function validateSolveOptions(
   orderedCandidates: readonly (readonly LapicCandidateDescriptor[])[]
 ): LapicValidationResult<number> {
   if (options.problem.topN < 1)
-    return failure(
-      'The bounded in-process solve slice requires topN >= 1.',
-      ['problem', 'topN']
-    )
+    return failure('The bounded in-process solve slice requires topN >= 1.', [
+      'problem',
+      'topN',
+    ])
 
   if (
     options.problem.potentialConfiguration &&
@@ -169,7 +179,9 @@ export function validateSolveOptions(
       ['problem', 'itemDomains']
     )
 
-  const emptyDomainIndex = orderedCandidates.findIndex((candidates) => !candidates.length)
+  const emptyDomainIndex = orderedCandidates.findIndex(
+    (candidates) => !candidates.length
+  )
   if (emptyDomainIndex >= 0)
     return failure(
       'The bounded in-process solve slice requires all participating domains to be non-empty.',
@@ -193,7 +205,10 @@ export function validateSolveOptions(
   return createLapicSuccessResult(combinationCount)
 }
 
-function failure(message: string, path?: readonly string[]): LapicValidationResult<never> {
+function failure(
+  message: string,
+  path?: readonly string[]
+): LapicValidationResult<never> {
   return createLapicFailureResult([
     createLapicDiagnostic('error', 'SchemaViolation', message, path),
   ])

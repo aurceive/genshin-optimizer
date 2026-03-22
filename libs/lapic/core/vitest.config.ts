@@ -9,13 +9,13 @@ export default defineConfig({
   test: {
     name: 'lapic-core',
     globals: true,
-    cache:{ dir: '../../../node_modules/.vitest' },
+    cache: { dir: '../../../node_modules/.vitest' },
     environment: 'node',
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../../coverage/libs/lapic/core',
-      provider: 'v8'
-    }
-  }
+      provider: 'v8',
+    },
+  },
 })

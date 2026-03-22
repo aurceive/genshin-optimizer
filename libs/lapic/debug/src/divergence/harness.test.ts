@@ -4,16 +4,16 @@ import {
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
 import {
-  createLapicArtifactWriteRequest,
-  createLapicMemoryArtifactStore,
-  createLapicStorageEnvelope,
-} from '@genshin-optimizer/lapic/storage'
-import {
   createLapicInMemorySessionController,
   createLapicSessionIdentity,
   createLapicSolveRequest,
   executeLapicBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
+import {
+  createLapicArtifactWriteRequest,
+  createLapicMemoryArtifactStore,
+  createLapicStorageEnvelope,
+} from '@genshin-optimizer/lapic/storage'
 import { runLapicDivergenceHarness } from './harness'
 
 // ---------------------------------------------------------------------------
@@ -209,7 +209,11 @@ describe('checkpoint resume divergence harness', () => {
     const problem = createProblem({
       slotIds: ['flower', 'plume'],
       domains: [
-        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCandidates },
+        {
+          domainId: 'gi:flower',
+          slotId: 'flower',
+          candidates: flowerCandidates,
+        },
         { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCandidates },
       ],
       topN: 1,

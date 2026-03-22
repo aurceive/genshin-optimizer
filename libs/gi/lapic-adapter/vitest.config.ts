@@ -15,7 +15,7 @@ export default defineConfig({
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../../coverage/libs/gi/lapic-adapter',
-      provider: 'v8'
-    }
-  }
+      provider: 'v8',
+    },
+  },
 })

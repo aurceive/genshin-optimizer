@@ -6,9 +6,7 @@ import type {
   LapicTeamProvenance,
 } from '@genshin-optimizer/lapic/core'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
-import {
-  createGiLapicSolveOrchestration,
-} from './orchestrate'
+import { createGiLapicSolveOrchestration } from './orchestrate'
 import type { GiLapicSolveOrchestrationConfig } from './orchestrate'
 import type { GiLapicCanonicalIdentity } from './types'
 
@@ -238,7 +236,9 @@ describe('createGiLapicSolveOrchestration', () => {
     expect(orch.canonicalExport).toBeDefined()
     expect(orch.canonicalExport!.adapterKind).toBe('gi')
     expect(orch.canonicalExport!.problem).toBeDefined()
-    expect(orch.canonicalExport!.canonicalProblemDigest).toBe('test-problem-digest')
+    expect(orch.canonicalExport!.canonicalProblemDigest).toBe(
+      'test-problem-digest'
+    )
   })
 
   it('persists canonical-problem artifact to store', async () => {

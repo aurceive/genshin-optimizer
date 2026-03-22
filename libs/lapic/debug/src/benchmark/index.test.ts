@@ -5,9 +5,7 @@ import {
   createLapicSolveRequest,
   executeLapicBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
-import {
-  createLapicMemoryArtifactStore,
-} from '@genshin-optimizer/lapic/storage'
+import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
 import { createLapicHarnessReportManifest } from '../audit/builders'
 import {
   createLapicAdapterParityValidationSummary,
@@ -268,7 +266,9 @@ describe('lapic debug benchmark', () => {
       controller,
       artifactStore,
       evaluateCombination({ candidates }) {
-        const score = candidates.map((candidate) => candidate.candidateId).join('|')
+        const score = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
         return {
           ok: true,
           value: {
@@ -295,15 +295,13 @@ describe('lapic debug benchmark', () => {
 
     expect(validateLapicSolveSliceHarnessReport(harnessReport).ok).toBe(true)
     expect(harnessReport.auditReport.integrityScan?.ok).toBe(true)
-    expect(harnessReport.phaseSummaries.map((summary) => summary.phase)).toEqual([
-      'frontier-build',
-      'join',
-      'resolve-residual',
-    ])
+    expect(
+      harnessReport.phaseSummaries.map((summary) => summary.phase)
+    ).toEqual(['frontier-build', 'join', 'resolve-residual'])
     expect(harnessReport.thresholdLineage).toHaveLength(1)
-    expect(harnessReport.publicationManifest.finalOptimality?.winnerStateId).toBe(
-      'state:problem-digest:flower:flower-a|plume:plume-a'
-    )
+    expect(
+      harnessReport.publicationManifest.finalOptimality?.winnerStateId
+    ).toBe('state:problem-digest:flower:flower-a|plume:plume-a')
     expect(harnessReport.harnessManifest.relatedArtifacts).toHaveLength(4)
   })
 })

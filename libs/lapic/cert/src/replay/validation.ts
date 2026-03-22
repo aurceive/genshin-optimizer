@@ -3,7 +3,10 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import type {
   LapicEvidenceBundleManifest,
   LapicReplayEnvironmentDescriptor,
@@ -79,7 +82,12 @@ export function validateLapicEvidenceBundleManifest(
 
   if (!manifest.evidenceDigests.length)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'evidenceDigests must not be empty.', ['evidenceDigests'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'evidenceDigests must not be empty.',
+        ['evidenceDigests']
+      )
     )
 
   if (!manifest.thresholdSnapshotDigest)
@@ -104,7 +112,12 @@ export function validateLapicReplayEnvironmentDescriptor(
 
   if (!environment.engineVersion)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'engineVersion must not be empty.', ['engineVersion'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'engineVersion must not be empty.',
+        ['engineVersion']
+      )
     )
 
   if (!environment.arithmeticPolicyId)
@@ -129,11 +142,19 @@ export function validateLapicReplayRequest(
 
   if (!request.problemId)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'problemId must not be empty.', ['problemId'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'problemId must not be empty.',
+        ['problemId']
+      )
     )
 
-  const environmentValidation = validateLapicReplayEnvironmentDescriptor(request.environment)
-  if (!environmentValidation.ok) diagnostics.push(...environmentValidation.diagnostics)
+  const environmentValidation = validateLapicReplayEnvironmentDescriptor(
+    request.environment
+  )
+  if (!environmentValidation.ok)
+    diagnostics.push(...environmentValidation.diagnostics)
 
   if (request.mode === 'single-certificate' && !request.certificateIds?.length)
     diagnostics.push(

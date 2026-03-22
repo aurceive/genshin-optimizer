@@ -9,10 +9,6 @@
  * bound cascade described in relaxation-and-certificates.md.
  */
 
-import type { LapicFirGraph, LapicFirNode, LapicFirNodeId, LapicFirVariableId } from './types'
-import { lapicFirNodeChildIds } from './types'
-import type { LapicInterval } from '../interval/types'
-import { LAPIC_INTERVAL_EMPTY, lapicIntervalPoint } from '../interval/types'
 import {
   lapicIntervalAdd,
   lapicIntervalAffine,
@@ -25,6 +21,15 @@ import {
   lapicIntervalSaturate,
   lapicIntervalThresholdSelect,
 } from '../interval/arithmetic'
+import type { LapicInterval } from '../interval/types'
+import { LAPIC_INTERVAL_EMPTY, lapicIntervalPoint } from '../interval/types'
+import type {
+  LapicFirGraph,
+  LapicFirNode,
+  LapicFirNodeId,
+  LapicFirVariableId,
+} from './types'
+import { lapicFirNodeChildIds } from './types'
 
 // ---------------------------------------------------------------------------
 // Evaluation environment
@@ -111,20 +116,28 @@ function evaluateNode(
     case 'add':
       return lapicIntervalAdd(
         childBound(bounds, node.childIds[0]!),
-        node.childIds.slice(1).reduce(
-          (acc, id) => lapicIntervalAdd(acc, childBound(bounds, id)),
-          lapicIntervalPoint(0)
-        )
+        node.childIds
+          .slice(1)
+          .reduce(
+            (acc, id) => lapicIntervalAdd(acc, childBound(bounds, id)),
+            lapicIntervalPoint(0)
+          )
       )
 
     case 'mul':
-      return lapicIntervalProduct(node.childIds.map((id) => childBound(bounds, id)))
+      return lapicIntervalProduct(
+        node.childIds.map((id) => childBound(bounds, id))
+      )
 
     case 'min':
-      return lapicIntervalMinN(node.childIds.map((id) => childBound(bounds, id)))
+      return lapicIntervalMinN(
+        node.childIds.map((id) => childBound(bounds, id))
+      )
 
     case 'max':
-      return lapicIntervalMaxN(node.childIds.map((id) => childBound(bounds, id)))
+      return lapicIntervalMaxN(
+        node.childIds.map((id) => childBound(bounds, id))
+      )
 
     case 'neg':
       return lapicIntervalNeg(childBound(bounds, node.childId))
@@ -132,7 +145,10 @@ function evaluateNode(
     case 'affineForm':
       return lapicIntervalAffine(
         node.bias,
-        node.terms.map((t) => ({ coeff: t.coeff, interval: childBound(bounds, t.childId) }))
+        node.terms.map((t) => ({
+          coeff: t.coeff,
+          interval: childBound(bounds, t.childId),
+        }))
       )
 
     case 'thresholdSelect':
@@ -159,14 +175,18 @@ function evaluateNode(
       ])
 
     case 'multilinearKernel':
-      return lapicIntervalProduct(node.childIds.map((id) => childBound(bounds, id)))
+      return lapicIntervalProduct(
+        node.childIds.map((id) => childBound(bounds, id))
+      )
 
     case 'saturatingKernel':
       return lapicIntervalSaturate(childBound(bounds, node.childId), node.cap)
 
     default: {
       const _exhaustive: never = node
-      throw new Error(`Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`)
+      throw new Error(
+        `Unhandled F-IR operator: ${(_exhaustive as LapicFirNode).operator}`
+      )
     }
   }
 }

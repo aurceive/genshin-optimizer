@@ -131,9 +131,7 @@ export function validateHighsEvidenceV1(
   if (evidence.providerFamily !== 'highs')
     return fail(`providerFamily must be 'highs'`)
   if (evidence.providerProfileId !== 'lapic-highs-deterministic-v1')
-    return fail(
-      `providerProfileId must be 'lapic-highs-deterministic-v1'`
-    )
+    return fail(`providerProfileId must be 'lapic-highs-deterministic-v1'`)
   if (typeof evidence.providerVersion !== 'string')
     return fail('providerVersion must be a string')
   if (typeof evidence.buildFingerprint !== 'string')
@@ -150,13 +148,14 @@ export function validateHighsEvidenceV1(
     return fail('solveInvocationId must be a string')
 
   // Solve outcome
-  if (evidence.objectiveSense !== 'minimize' && evidence.objectiveSense !== 'maximize')
+  if (
+    evidence.objectiveSense !== 'minimize' &&
+    evidence.objectiveSense !== 'maximize'
+  )
     return fail(`objectiveSense must be 'minimize' or 'maximize'`)
   const validOutcomes = ['solved', 'infeasible', 'unbounded', 'interrupted']
   if (!validOutcomes.includes(evidence.solveOutcome))
-    return fail(
-      `solveOutcome must be one of: ${validOutcomes.join(', ')}`
-    )
+    return fail(`solveOutcome must be one of: ${validOutcomes.join(', ')}`)
   if (typeof evidence.primalStatus !== 'string')
     return fail('primalStatus must be a string')
   if (typeof evidence.dualStatus !== 'string')
@@ -169,11 +168,17 @@ export function validateHighsEvidenceV1(
     return fail('objectiveValuePayload must be a string')
 
   // Bound direction
-  if (evidence.boundDirection !== 'lower' && evidence.boundDirection !== 'upper')
+  if (
+    evidence.boundDirection !== 'lower' &&
+    evidence.boundDirection !== 'upper'
+  )
     return fail(`boundDirection must be 'lower' or 'upper'`)
 
   // Solver metrics
-  if (typeof evidence.iterationCount !== 'number' || evidence.iterationCount < 0)
+  if (
+    typeof evidence.iterationCount !== 'number' ||
+    evidence.iterationCount < 0
+  )
     return fail('iterationCount must be a non-negative number')
   if (typeof evidence.presolveApplied !== 'boolean')
     return fail('presolveApplied must be a boolean')

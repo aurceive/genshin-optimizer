@@ -10,7 +10,9 @@ export function createLapicActorUniquenessClaimOrderingKey(
   return [claim.family, claim.actorId, claim.claimedBySlotId].join('|')
 }
 
-export function createLapicResourceClaimOrderingKey(claim: LapicResourceClaim): string {
+export function createLapicResourceClaimOrderingKey(
+  claim: LapicResourceClaim
+): string {
   return [
     claim.reservationClass,
     claim.resourceKind,

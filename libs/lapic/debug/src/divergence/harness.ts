@@ -5,9 +5,6 @@ import type {
   LapicDigest,
 } from '@genshin-optimizer/lapic/core'
 import type {
-  LapicArtifactStore,
-} from '@genshin-optimizer/lapic/storage'
-import type {
   LapicInMemorySessionController,
   LapicInMemorySessionControllerOptions,
   LapicSolveCompletionResult,
@@ -22,6 +19,7 @@ import type {
   LapicSolveCheckpointState,
   LapicTopNTrackerEntry,
 } from '@genshin-optimizer/lapic/runtime'
+import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -222,7 +220,7 @@ function compareResults(
   if (!topNMatch) {
     diagnostics.push(
       `Top-N diverged: continuous has ${contTopN.length} entries, ` +
-      `resumed has ${resTopN.length} entries.`
+        `resumed has ${resTopN.length} entries.`
     )
     for (const entry of contTopN) {
       if (!resTopN.find((e) => e.stateId === entry.stateId)) {
@@ -249,7 +247,7 @@ function compareResults(
   if (!finalOptimalityMatch) {
     diagnostics.push(
       `Final optimality diverged: continuous winner=${contOpt?.winningStateId ?? 'none'}, ` +
-      `resumed winner=${resOpt?.winningStateId ?? 'none'}`
+        `resumed winner=${resOpt?.winningStateId ?? 'none'}`
     )
   }
 
@@ -291,10 +289,12 @@ function extractTopNEntries(
       stateId: completion.finalOptimality.winningStateId,
       candidateIds: [],
       evaluation: {
-        objectiveValue: completion.finalOptimality.optimalityGap === '0'
-          ? completion.finalOptimality.winningStateId
-          : '0',
-        evidenceDigest: completion.finalOptimality.finalIncumbentSetDigest ?? 'final',
+        objectiveValue:
+          completion.finalOptimality.optimalityGap === '0'
+            ? completion.finalOptimality.winningStateId
+            : '0',
+        evidenceDigest:
+          completion.finalOptimality.finalIncumbentSetDigest ?? 'final',
       },
     })
   }

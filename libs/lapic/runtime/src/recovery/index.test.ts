@@ -19,7 +19,10 @@ function createSessionIdentityFixture() {
 describe('lapic runtime recovery', () => {
   it('classifies worker failure as recoverable and storage failure as non-recoverable', () => {
     const workerRecovery = createLapicRuntimeRecoveryEligibility({
-      summary: createLapicSessionSummary(createSessionIdentityFixture(), 'failed'),
+      summary: createLapicSessionSummary(
+        createSessionIdentityFixture(),
+        'failed'
+      ),
       failure: createLapicFailureRecord(
         'session-id',
         'workerFailure',
@@ -27,7 +30,10 @@ describe('lapic runtime recovery', () => {
       ),
     })
     const storageRecovery = createLapicRuntimeRecoveryEligibility({
-      summary: createLapicSessionSummary(createSessionIdentityFixture(), 'failed'),
+      summary: createLapicSessionSummary(
+        createSessionIdentityFixture(),
+        'failed'
+      ),
       failure: createLapicFailureRecord(
         'session-id',
         'storageIntegrityFailure',

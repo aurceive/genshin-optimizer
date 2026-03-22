@@ -1,13 +1,9 @@
 import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
-import {
-  createGiLapicOrchestrationConfigFromUi,
-} from './config-factory'
+import { createGiLapicOrchestrationConfigFromUi } from './config-factory'
 import type { GiLapicConfigFactoryInput } from './config-factory'
-import type {
-  GiLapicBoundedCurrentOnlyCombinationEvaluator,
-} from './types'
+import type { GiLapicBoundedCurrentOnlyCombinationEvaluator } from './types'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -111,20 +107,18 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
     const config = createGiLapicOrchestrationConfigFromUi(
       createMinimalInput({ excludedArtifactIds: ['a1', 'a2'] })
     )
-    expect(config.request.giContext!.inventorySnapshot.excludedArtifactIds).toEqual([
-      'a1',
-      'a2',
-    ])
+    expect(
+      config.request.giContext!.inventorySnapshot.excludedArtifactIds
+    ).toEqual(['a1', 'a2'])
   })
 
   it('respects excluded locations', () => {
     const config = createGiLapicOrchestrationConfigFromUi(
       createMinimalInput({ excludedLocations: ['Amber', 'Lisa'] })
     )
-    expect(config.request.giContext!.inventorySnapshot.excludedLocations).toEqual([
-      'Amber',
-      'Lisa',
-    ])
+    expect(
+      config.request.giContext!.inventorySnapshot.excludedLocations
+    ).toEqual(['Amber', 'Lisa'])
   })
 
   it('builds optimization request with correct defaults', () => {
@@ -166,7 +160,9 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
     const config = createGiLapicOrchestrationConfigFromUi(
       createMinimalInput({ artSetExclusion: exclusion })
     )
-    expect(config.request.giContext!.optimizationRequest.exclusion).toBe(exclusion)
+    expect(config.request.giContext!.optimizationRequest.exclusion).toBe(
+      exclusion
+    )
   })
 
   it('passes mainStatKeys to optimization request', () => {
@@ -225,7 +221,8 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
 
   it('auto-generates artifact snapshot digest', () => {
     const config = createGiLapicOrchestrationConfigFromUi(createMinimalInput())
-    const digest = config.request.giContext!.sourceSnapshots.artifactSnapshotDigest
+    const digest =
+      config.request.giContext!.sourceSnapshots.artifactSnapshotDigest
     expect(digest).toMatch(/^gi-artifact-snapshot:/)
   })
 

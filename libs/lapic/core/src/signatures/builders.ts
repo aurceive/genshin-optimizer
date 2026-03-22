@@ -32,7 +32,8 @@ export function createLapicCompatibilitySignature(
     aggregateCounts: signature.aggregateCounts,
     remainingAggregateObligations: signature.remainingAggregateObligations,
     providedCapabilityFacts: signature.providedCapabilityFacts,
-    remainingRequiredCapabilityFacts: signature.remainingRequiredCapabilityFacts,
+    remainingRequiredCapabilityFacts:
+      signature.remainingRequiredCapabilityFacts,
     branchCompatibilityToggles: signature.branchCompatibilityToggles,
     frameAxisIdentity: signature.frameAxisIdentity,
     adapterSemanticMode: signature.adapterSemanticMode,
@@ -140,7 +141,10 @@ export function validateLapicCompatibilitySignature(
       )
     )
 
-  if (!Number.isInteger(signature.occupiedSlotMask) || signature.occupiedSlotMask < 0)
+  if (
+    !Number.isInteger(signature.occupiedSlotMask) ||
+    signature.occupiedSlotMask < 0
+  )
     diagnostics.push(
       createLapicDiagnostic(
         'error',
@@ -219,10 +223,12 @@ export function validateLapicCompatibilitySignature(
         )
       )
   })
-
   ;[
     ['providedCapabilityFacts', signature.providedCapabilityFacts],
-    ['remainingRequiredCapabilityFacts', signature.remainingRequiredCapabilityFacts],
+    [
+      'remainingRequiredCapabilityFacts',
+      signature.remainingRequiredCapabilityFacts,
+    ],
   ].forEach(([collectionName, facts]) => {
     facts.forEach((fact, index) => {
       if (!fact.capabilityId)

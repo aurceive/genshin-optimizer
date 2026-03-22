@@ -3,7 +3,10 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
-import type { LapicDiagnostic, LapicValidationResult } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicDiagnostic,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import type {
   LapicBoundPrunePayload,
   LapicBranchReachabilityPayload,
@@ -20,7 +23,12 @@ export function validateLapicPotentialDecisionBasis(
 
   if (!decisionBasis.solveMode)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'solveMode must not be empty.', ['solveMode'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'solveMode must not be empty.',
+        ['solveMode']
+      )
     )
 
   if (!decisionBasis.participationMode)
@@ -68,7 +76,12 @@ export function validateLapicBranchReachabilityPayload(
 
   if (!payload.validityRegionId)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'validityRegionId must not be empty.', ['validityRegionId'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'validityRegionId must not be empty.',
+        ['validityRegionId']
+      )
     )
 
   if (!payload.exactBoundsDigest && !payload.contradictionWitnessDigest)
@@ -93,7 +106,12 @@ export function validateLapicInfeasibilityPayload(
 
   if (!payload.witnessDigest)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'witnessDigest must not be empty.', ['witnessDigest'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'witnessDigest must not be empty.',
+        ['witnessDigest']
+      )
     )
 
   if (!payload.replayPathRequirement)
@@ -128,17 +146,32 @@ export function validateLapicBoundPrunePayload(
 
   if (!payload.thresholdDigest)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'thresholdDigest must not be empty.', ['thresholdDigest'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'thresholdDigest must not be empty.',
+        ['thresholdDigest']
+      )
     )
 
   if (!payload.boundValue)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'boundValue must not be empty.', ['boundValue'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'boundValue must not be empty.',
+        ['boundValue']
+      )
     )
 
   if (!payload.validityRegionId)
     diagnostics.push(
-      createLapicDiagnostic('error', 'SchemaViolation', 'validityRegionId must not be empty.', ['validityRegionId'])
+      createLapicDiagnostic(
+        'error',
+        'SchemaViolation',
+        'validityRegionId must not be empty.',
+        ['validityRegionId']
+      )
     )
 
   if (!payload.numericDiagnosticsDigest)
@@ -156,10 +189,14 @@ export function validateLapicBoundPrunePayload(
     !validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis).ok
   )
     diagnostics.push(
-      ...validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis).diagnostics
+      ...validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis)
+        .diagnostics
     )
 
-  if (payload.dangerZoneRecord.triggered && !payload.dangerZoneRecord.explanation)
+  if (
+    payload.dangerZoneRecord.triggered &&
+    !payload.dangerZoneRecord.explanation
+  )
     diagnostics.push(
       createLapicDiagnostic(
         'error',
@@ -178,7 +215,6 @@ export function validateLapicDominancePayload(
   payload: LapicDominancePayload
 ): LapicValidationResult<LapicDominancePayload> {
   const diagnostics: LapicDiagnostic[] = []
-
   ;[
     ['dominatingStateId', payload.dominatingStateId],
     ['dominatedStateId', payload.dominatedStateId],
@@ -209,7 +245,6 @@ export function validateLapicFinalOptimalityPayload(
   payload: LapicFinalOptimalityPayload
 ): LapicValidationResult<LapicFinalOptimalityPayload> {
   const diagnostics: LapicDiagnostic[] = []
-
   ;[
     ['winningStateId', payload.winningStateId],
     ['optimalityGap', payload.optimalityGap],
@@ -244,7 +279,8 @@ export function validateLapicFinalOptimalityPayload(
   if (
     payload.potentialDecisionBasis &&
     payload.rankingParticipationMode &&
-    payload.potentialDecisionBasis.participationMode !== payload.rankingParticipationMode
+    payload.potentialDecisionBasis.participationMode !==
+      payload.rankingParticipationMode
   )
     diagnostics.push(
       createLapicDiagnostic(
@@ -260,7 +296,8 @@ export function validateLapicFinalOptimalityPayload(
     !validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis).ok
   )
     diagnostics.push(
-      ...validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis).diagnostics
+      ...validateLapicPotentialDecisionBasis(payload.potentialDecisionBasis)
+        .diagnostics
     )
 
   if (diagnostics.length) return createLapicFailureResult(diagnostics)

@@ -1,14 +1,17 @@
 import {
   type LapicFirGraph,
+  LapicFirGraphBuilder,
   type LapicFirVariableId,
   type LapicInterval,
-  LapicFirGraphBuilder,
   lapicInterval,
   lapicIntervalPoint,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
 import type { LapicBoundedExactPartialCombination } from '../solve/types'
-import { createLapicFirPartialIntervalEnv, precomputeDomainEnvelopes } from './env-factory'
+import {
+  createLapicFirPartialIntervalEnv,
+  precomputeDomainEnvelopes,
+} from './env-factory'
 import { createLapicFirBoundProvider } from './provider'
 import type { LapicFirDomainVariableMap } from './types'
 
@@ -50,7 +53,9 @@ function createMinimalProblem(domainIds: string[]) {
       slotCount: domainIds.length,
       slotIds: domainIds,
       slotRoleTaxonomy: ['test'],
-      slotRequirements: Object.fromEntries(domainIds.map((d) => [d, 'required'])),
+      slotRequirements: Object.fromEntries(
+        domainIds.map((d) => [d, 'required'])
+      ),
       slotOrderSemantics: 'semantic',
       frameAxisKind: 'none',
     },
@@ -518,7 +523,7 @@ describe('createLapicFirBoundProvider', () => {
       const maps = [
         domainMap('flower', [
           ['f1', { atk: 100, crit_rate: 0.05 }],
-          ['f2', { atk: 200, crit_rate: 0.10 }],
+          ['f2', { atk: 200, crit_rate: 0.1 }],
           ['f3', { atk: 150, crit_rate: 0.15 }],
         ]),
       ]

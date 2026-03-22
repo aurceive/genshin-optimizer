@@ -3,7 +3,10 @@ import {
   lapicIntervalIsEmpty,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicBoundedExactUpperBoundEvaluator } from '../solve/types'
-import { createLapicFirPartialIntervalEnv, precomputeDomainEnvelopes } from './env-factory'
+import {
+  createLapicFirPartialIntervalEnv,
+  precomputeDomainEnvelopes,
+} from './env-factory'
 import type { LapicFirBoundProviderConfig } from './types'
 
 /**

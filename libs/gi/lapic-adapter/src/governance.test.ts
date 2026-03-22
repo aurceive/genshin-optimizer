@@ -26,27 +26,45 @@ describe('GI lapic governance', () => {
     })
 
     it('allows legacyValidated → dualValidated', () => {
-      expect(isValidMigrationStateTransition('legacyValidated', 'dualValidated')).toBe(true)
+      expect(
+        isValidMigrationStateTransition('legacyValidated', 'dualValidated')
+      ).toBe(true)
     })
 
     it('allows dualValidated → canonicalDefault', () => {
-      expect(isValidMigrationStateTransition('dualValidated', 'canonicalDefault')).toBe(true)
+      expect(
+        isValidMigrationStateTransition('dualValidated', 'canonicalDefault')
+      ).toBe(true)
     })
 
     it('allows canonicalDefault → legacyRetired', () => {
-      expect(isValidMigrationStateTransition('canonicalDefault', 'legacyRetired')).toBe(true)
+      expect(
+        isValidMigrationStateTransition('canonicalDefault', 'legacyRetired')
+      ).toBe(true)
     })
 
     it('rejects skipping states', () => {
-      expect(isValidMigrationStateTransition('legacyValidated', 'canonicalDefault')).toBe(false)
-      expect(isValidMigrationStateTransition('legacyValidated', 'legacyRetired')).toBe(false)
-      expect(isValidMigrationStateTransition('dualValidated', 'legacyRetired')).toBe(false)
+      expect(
+        isValidMigrationStateTransition('legacyValidated', 'canonicalDefault')
+      ).toBe(false)
+      expect(
+        isValidMigrationStateTransition('legacyValidated', 'legacyRetired')
+      ).toBe(false)
+      expect(
+        isValidMigrationStateTransition('dualValidated', 'legacyRetired')
+      ).toBe(false)
     })
 
     it('rejects backward transitions', () => {
-      expect(isValidMigrationStateTransition('dualValidated', 'legacyValidated')).toBe(false)
-      expect(isValidMigrationStateTransition('canonicalDefault', 'dualValidated')).toBe(false)
-      expect(isValidMigrationStateTransition('legacyRetired', 'canonicalDefault')).toBe(false)
+      expect(
+        isValidMigrationStateTransition('dualValidated', 'legacyValidated')
+      ).toBe(false)
+      expect(
+        isValidMigrationStateTransition('canonicalDefault', 'dualValidated')
+      ).toBe(false)
+      expect(
+        isValidMigrationStateTransition('legacyRetired', 'canonicalDefault')
+      ).toBe(false)
     })
 
     it('rejects self-transitions', () => {
@@ -57,7 +75,9 @@ describe('GI lapic governance', () => {
 
     it('rejects transitions from terminal state', () => {
       for (const state of GI_LAPIC_MIGRATION_STATES) {
-        expect(isValidMigrationStateTransition('legacyRetired', state)).toBe(false)
+        expect(isValidMigrationStateTransition('legacyRetired', state)).toBe(
+          false
+        )
       }
     })
   })
@@ -80,7 +100,9 @@ describe('GI lapic governance', () => {
     })
 
     it('retires snapshots only with explicit corpus retirement', () => {
-      expect(giLapicSnapshotPolicy.retirementPolicy).toBe('explicit-corpus-retirement')
+      expect(giLapicSnapshotPolicy.retirementPolicy).toBe(
+        'explicit-corpus-retirement'
+      )
     })
   })
 
@@ -90,7 +112,9 @@ describe('GI lapic governance', () => {
 
   describe('validation corpus', () => {
     it('validates the legacyValidated corpus definition', () => {
-      const result = validateGiLapicValidationCorpus(giLapicLegacyValidatedCorpus)
+      const result = validateGiLapicValidationCorpus(
+        giLapicLegacyValidatedCorpus
+      )
       expect(result.ok).toBe(true)
     })
 
@@ -105,7 +129,9 @@ describe('GI lapic governance', () => {
 
     it('corpus contains test cases for each required validation family', () => {
       const families = new Set(
-        giLapicLegacyValidatedCorpus.testCaseDescriptors.map((tc) => tc.validationFamily)
+        giLapicLegacyValidatedCorpus.testCaseDescriptors.map(
+          (tc) => tc.validationFamily
+        )
       )
       expect(families.has('golden-enumeration')).toBe(true)
       expect(families.has('property-based')).toBe(true)
@@ -158,7 +184,9 @@ describe('GI lapic governance', () => {
       expect(giLapicLegacyValidatedMilestoneGate.requiredCorpusId).toBe(
         giLapicLegacyValidatedCorpus.corpusId
       )
-      expect(giLapicLegacyValidatedMilestoneGate.migrationState).toBe('legacyValidated')
+      expect(giLapicLegacyValidatedMilestoneGate.migrationState).toBe(
+        'legacyValidated'
+      )
     })
 
     it('passes when all criteria are satisfied', () => {
