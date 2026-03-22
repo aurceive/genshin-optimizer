@@ -10,3 +10,13 @@ export {
   createLapicReplayCoverageSummary,
   summarizeLapicReplayMismatch,
 } from './builders'
+
+export {
+  replayCertificate,
+  replayCertificateBatch,
+  summarizeReplayBatchVerdicts,
+} from './executor'
+export type {
+  LapicReplayEvidenceLookup,
+  LapicReplayExecutorConfig,
+} from './executor'
