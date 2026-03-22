@@ -34,3 +34,11 @@ export {
   type LapicLpModelBuildResult,
   type LapicLpVariableBounds,
 } from './model-builder'
+
+export {
+  runLapicLpGoldenHarness,
+  type LapicLpGoldenHarnessConfig,
+  type LapicLpGoldenHarnessResult,
+  type LapicLpGoldenViolation,
+  type LapicLpTightnessRecord,
+} from './golden-harness'
