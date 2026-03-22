@@ -1,6 +1,38 @@
-export * from './types'
-export * from './executor'
-export * from './checkpoint-state'
-export * from './resumable-tracker'
-export * from './pruning'
-export * from './danger-zone'
+// ---------------------------------------------------------------------------
+// Public solve API surface
+//
+// Only types and functions that external consumers need are exported here.
+// Internal modules (combination, frontier, certificate, join-plan,
+// persistence, pruning) are used by the executor but not part of the
+// package's public contract.  Internal tests import them directly from
+// their implementation files.
+// ---------------------------------------------------------------------------
+
+export type {
+  LapicBoundedExactCandidateCombination,
+  LapicBoundedExactCombinationEvaluation,
+  LapicBoundedExactCombinationEvaluator,
+  LapicBoundedExactEvaluationComparator,
+  LapicBoundedExactFeasibilityEvaluator,
+  LapicBoundedExactPartialBound,
+  LapicBoundedExactPartialCombination,
+  LapicBoundedExactSolveExecutor,
+  LapicBoundedExactSolveOptions,
+  LapicBoundedExactSolveOutcome,
+  LapicBoundedExactSolvePauseResult,
+  LapicBoundedExactUpperBoundEvaluator,
+} from './types'
+
+export { executeLapicBoundedExactSolve } from './executor'
+
+export type {
+  LapicSolveCheckpointState,
+  LapicSolveCursorPosition,
+  LapicTopNTrackerEntry,
+  LapicTopNTrackerSnapshot,
+} from './checkpoint-state'
+
+export type { LapicDangerZoneConfig } from './danger-zone'
+export { defaultLapicDangerZoneConfig } from './danger-zone'
+
+export type { LapicPruningStatisticsSnapshot } from './pruning'
