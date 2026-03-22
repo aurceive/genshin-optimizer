@@ -28,3 +28,9 @@ export {
   validateValidityDomain,
   validateVariableBasis,
 } from './validation'
+
+export {
+  buildLinearModelFromFir,
+  type LapicLpModelBuildResult,
+  type LapicLpVariableBounds,
+} from './model-builder'
