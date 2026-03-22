@@ -5,7 +5,6 @@ import {
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
 import type {
   LapicChecksumMetadata,
-  LapicStorageEnvelope,
   LapicStorageValidator,
 } from '../types'
 import {

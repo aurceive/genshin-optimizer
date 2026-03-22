@@ -114,8 +114,12 @@ export function inferForcedBranches(
       branchNodeId,
       guardNodeId,
       forcedArm,
-      guardLower: guardAnnotation?.exactLower,
-      guardUpper: guardAnnotation?.exactUpper,
+      ...(guardAnnotation?.exactLower !== undefined
+        ? { guardLower: guardAnnotation.exactLower }
+        : {}),
+      ...(guardAnnotation?.exactUpper !== undefined
+        ? { guardUpper: guardAnnotation.exactUpper }
+        : {}),
       parentRegionId: parent.regionId,
       feasibleRegionId: feasibleChild.regionId,
       infeasibleRegionId: infeasibleChild.regionId,

@@ -81,7 +81,9 @@ export function createSolveOrchestration(
     identity,
     solveRequest: {
       problemDigest: config.problemDigest,
-      checkpointImport: config.checkpointImport,
+      ...(config.checkpointImport !== undefined
+        ? { checkpointImport: config.checkpointImport }
+        : {}),
     },
     artifactStore: config.artifactStore,
   })

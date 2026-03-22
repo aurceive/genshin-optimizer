@@ -21,7 +21,6 @@ import {
 import type {
   LapicArtifactRef,
   LapicArtifactStore,
-  LapicArtifactWriteRequest,
   LapicBackendCapabilityDescriptor,
   LapicStorageEnvelope,
 } from '../types'

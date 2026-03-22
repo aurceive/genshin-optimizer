@@ -1,4 +1,5 @@
 import type {
+  LapicDiagnostic,
   LapicDigest,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
@@ -198,48 +199,64 @@ export function validateGiLapicValidationCorpus(
   if (typeof corpus !== 'object' || corpus === null)
     return {
       ok: false,
-      errors: [{ path: [], message: 'Corpus must be an object' }],
+      diagnostics: [
+        {
+          severity: 'error',
+          code: 'InvalidInput',
+          message: 'Corpus must be an object',
+        },
+      ],
     }
 
   const c = corpus as Record<string, unknown>
 
-  const errors: { path: readonly string[]; message: string }[] = []
+  const diagnostics: LapicDiagnostic[] = []
 
-  if (typeof c.corpusId !== 'string' || c.corpusId.length === 0)
-    errors.push({
-      path: ['corpusId'],
+  if (typeof c['corpusId'] !== 'string' || c['corpusId'].length === 0)
+    diagnostics.push({
+      severity: 'error',
+      code: 'InvalidInput',
       message: 'corpusId must be a non-empty string',
+      path: ['corpusId'],
     })
 
-  if (typeof c.adapterVersion !== 'string')
-    errors.push({
-      path: ['adapterVersion'],
+  if (typeof c['adapterVersion'] !== 'string')
+    diagnostics.push({
+      severity: 'error',
+      code: 'InvalidInput',
       message: 'adapterVersion must be a string',
+      path: ['adapterVersion'],
     })
 
   if (
     !GI_LAPIC_MIGRATION_STATES.includes(
-      c.migrationState as GiLapicMigrationState
+      c['migrationState'] as GiLapicMigrationState
     )
   )
-    errors.push({
-      path: ['migrationState'],
+    diagnostics.push({
+      severity: 'error',
+      code: 'InvalidInput',
       message: `migrationState must be one of: ${GI_LAPIC_MIGRATION_STATES.join(', ')}`,
+      path: ['migrationState'],
     })
 
-  if (!Array.isArray(c.frozenSnapshotDigests))
-    errors.push({
-      path: ['frozenSnapshotDigests'],
+  if (!Array.isArray(c['frozenSnapshotDigests']))
+    diagnostics.push({
+      severity: 'error',
+      code: 'InvalidInput',
       message: 'frozenSnapshotDigests must be an array',
+      path: ['frozenSnapshotDigests'],
     })
 
-  if (!Array.isArray(c.testCaseDescriptors))
-    errors.push({
-      path: ['testCaseDescriptors'],
+  if (!Array.isArray(c['testCaseDescriptors']))
+    diagnostics.push({
+      severity: 'error',
+      code: 'InvalidInput',
       message: 'testCaseDescriptors must be an array',
+      path: ['testCaseDescriptors'],
     })
 
-  if (errors.length > 0) return { ok: false, errors }
+  if (diagnostics.length > 0) return { ok: false, diagnostics }
 
   return {
     ok: true,

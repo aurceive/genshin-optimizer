@@ -7,7 +7,6 @@ import {
   type LapicLpSolveResult,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
-import { createLapicFirBoundProvider } from '../fir-bound/provider'
 import type { LapicFirDomainVariableMap } from '../fir-bound/types'
 import type { LapicBoundedExactPartialCombination } from '../solve/types'
 import {

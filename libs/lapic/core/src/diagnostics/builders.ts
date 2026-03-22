@@ -17,8 +17,8 @@ export function createLapicDiagnostic(
     severity,
     code,
     message,
-    path,
-    details,
+    ...(path !== undefined ? { path } : {}),
+    ...(details !== undefined ? { details } : {}),
   }
 }
 

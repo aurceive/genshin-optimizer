@@ -1,12 +1,9 @@
 import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import type {
-  LapicCandidateDescriptor,
   LapicCanonicalProblem,
-  LapicDigest,
 } from '@genshin-optimizer/lapic/core'
 import type {
   LapicInMemorySessionController,
-  LapicInMemorySessionControllerOptions,
   LapicSolveCompletionResult,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
@@ -113,9 +110,15 @@ async function runContinuousSolve(
     controller,
     artifactStore: store,
     evaluateCombination: config.evaluateCombination,
-    compareEvaluations: config.compareEvaluations,
-    isCombinationFeasible: config.isCombinationFeasible,
-    computeUpperBound: config.computeUpperBound,
+    ...(config.compareEvaluations !== undefined
+      ? { compareEvaluations: config.compareEvaluations }
+      : {}),
+    ...(config.isCombinationFeasible !== undefined
+      ? { isCombinationFeasible: config.isCombinationFeasible }
+      : {}),
+    ...(config.computeUpperBound !== undefined
+      ? { computeUpperBound: config.computeUpperBound }
+      : {}),
   })
 
   if ('paused' in outcome && outcome.paused) {
@@ -170,10 +173,18 @@ async function runPauseResumeSolve(
       controller,
       artifactStore: store,
       evaluateCombination: config.evaluateCombination,
-      compareEvaluations: config.compareEvaluations,
-      isCombinationFeasible: config.isCombinationFeasible,
-      computeUpperBound: config.computeUpperBound,
-      resumeCheckpointState: checkpointState,
+      ...(config.compareEvaluations !== undefined
+        ? { compareEvaluations: config.compareEvaluations }
+        : {}),
+      ...(config.isCombinationFeasible !== undefined
+        ? { isCombinationFeasible: config.isCombinationFeasible }
+        : {}),
+      ...(config.computeUpperBound !== undefined
+        ? { computeUpperBound: config.computeUpperBound }
+        : {}),
+      ...(checkpointState !== undefined
+        ? { resumeCheckpointState: checkpointState }
+        : {}),
     }
 
     const outcome = await config.executeSolve(options)
@@ -241,20 +252,19 @@ function compareResults(
     (contOpt === undefined && resOpt === undefined) ||
     (contOpt !== undefined &&
       resOpt !== undefined &&
-      contOpt.winningStateId === resOpt.winningStateId &&
-      contOpt.optimalityGap === resOpt.optimalityGap)
+      contOpt.winnerStateId === resOpt.winnerStateId)
 
   if (!finalOptimalityMatch) {
     diagnostics.push(
-      `Final optimality diverged: continuous winner=${contOpt?.winningStateId ?? 'none'}, ` +
-        `resumed winner=${resOpt?.winningStateId ?? 'none'}`
+      `Final optimality diverged: continuous winner=${contOpt?.winnerStateId ?? 'none'}, ` +
+        `resumed winner=${resOpt?.winnerStateId ?? 'none'}`
     )
   }
 
   return {
     diverged: !topNMatch || !finalOptimalityMatch,
-    continuousTopN: contTopN,
-    resumedTopN: resTopN,
+    continuousTopN: continuous.topNEntries,
+    resumedTopN: resumed.topNEntries,
     topNMatch,
     finalOptimalityMatch,
     continuousCertificateCount: continuous.certificates.length,
@@ -286,15 +296,12 @@ function extractTopNEntries(
 
   if (completion.finalOptimality) {
     entries.push({
-      stateId: completion.finalOptimality.winningStateId,
+      stateId: completion.finalOptimality.winnerStateId,
       candidateIds: [],
       evaluation: {
-        objectiveValue:
-          completion.finalOptimality.optimalityGap === '0'
-            ? completion.finalOptimality.winningStateId
-            : '0',
+        objectiveValue: completion.finalOptimality.winnerStateId,
         evidenceDigest:
-          completion.finalOptimality.finalIncumbentSetDigest ?? 'final',
+          completion.finalOptimality.winnerDigest ?? 'final',
       },
     })
   }

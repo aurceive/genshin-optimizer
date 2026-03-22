@@ -56,18 +56,26 @@ export function arbOccupiedSlotMask(): fc.Arbitrary<number> {
 // ---------------------------------------------------------------------------
 
 export function arbExactSignatureGroupKey(): fc.Arbitrary<LapicExactSignatureGroupKey> {
-  return fc.record({
-    occupiedSlotMask: arbOccupiedSlotMask(),
-    actorIds: fc.array(arbCandidateId(), { minLength: 1, maxLength: 4 }),
-    exclusiveResourceKeys: fc.array(fc.string({ minLength: 1, maxLength: 8 }), {
-      maxLength: 3,
-    }),
-    frameAxisIdentityDigest: arbDigest(),
-    adapterSemanticMode: arbAdapterSemanticMode(),
-    discreteTeamModeKey: fc.option(fc.string({ minLength: 1, maxLength: 16 }), {
-      nil: undefined,
-    }),
-  })
+  return fc
+    .record({
+      occupiedSlotMask: arbOccupiedSlotMask(),
+      actorIds: fc.array(arbCandidateId(), { minLength: 1, maxLength: 4 }),
+      exclusiveResourceKeys: fc.array(
+        fc.string({ minLength: 1, maxLength: 8 }),
+        {
+          maxLength: 3,
+        }
+      ),
+      frameAxisIdentityDigest: arbDigest(),
+      adapterSemanticMode: arbAdapterSemanticMode(),
+    })
+    .chain((base) =>
+      fc
+        .option(fc.string({ minLength: 1, maxLength: 16 }), { nil: null })
+        .map((key) =>
+          key !== null ? { ...base, discreteTeamModeKey: key } : base
+        )
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -96,13 +104,25 @@ export function arbFrontierBlock(
   return fc
     .array(arbFrontierStateRow(), { minLength: 0, maxLength: maxRows })
     .chain((rows) =>
-      arbDigest().map((orderDigest) => ({
-        blockId: `block-${orderDigest.slice(0, 12)}`,
-        layout: { stateOrderDigest: orderDigest },
-        stateIds: rows.map((r) => r.stateId),
-        rows,
-        rowCount: rows.length,
-      }))
+      fc
+        .tuple(arbDigest(), arbDigest(), arbDigest())
+        .map(([orderDigest, layoutDigest, teamDigest]) => ({
+          blockId: `block-${orderDigest.slice(0, 12)}`,
+          layout: {
+            layoutId: `layout-${layoutDigest.slice(0, 8)}`,
+            teamLayoutDigest: teamDigest,
+            slotIds: rows.length > 0 ? [rows[0]!.slotId] : [],
+            frameAxisIdentity: {
+              axisKind: 'none' as const,
+              frameIds: [],
+            },
+            dominanceProjectionIds: [],
+            stateOrderDigest: orderDigest,
+          },
+          stateIds: rows.map((r) => r.stateId),
+          rows,
+          rowCount: rows.length,
+        }))
     )
 }
 
@@ -111,25 +131,30 @@ export function arbFrontierBlock(
 // ---------------------------------------------------------------------------
 
 export function arbFrontierGroupSummary(): fc.Arbitrary<LapicFrontierGroupSummary> {
-  return fc.record({
-    groupDigest: arbDigest(),
-    blockIds: fc.array(
-      arbDigest().map((d) => `block-${d.slice(0, 12)}`),
-      {
-        minLength: 1,
-        maxLength: 5,
-      }
-    ),
-    slotIds: fc.array(arbSlotId(), { minLength: 1, maxLength: 4 }),
-    rowDigests: fc.array(arbDigest(), { minLength: 1, maxLength: 10 }),
-    rowCount: fc.integer({ min: 1, max: 100 }),
-    occupiedSlotMask: arbOccupiedSlotMask(),
-    adapterSemanticMode: arbAdapterSemanticMode(),
-    frameAxisIdentityDigest: arbDigest(),
-    discreteTeamModeKey: fc.option(fc.string({ minLength: 1, maxLength: 16 }), {
-      nil: undefined,
-    }),
-  })
+  return fc
+    .record({
+      groupDigest: arbDigest(),
+      blockIds: fc.array(
+        arbDigest().map((d) => `block-${d.slice(0, 12)}`),
+        {
+          minLength: 1,
+          maxLength: 5,
+        }
+      ),
+      slotIds: fc.array(arbSlotId(), { minLength: 1, maxLength: 4 }),
+      rowDigests: fc.array(arbDigest(), { minLength: 1, maxLength: 10 }),
+      rowCount: fc.integer({ min: 1, max: 100 }),
+      occupiedSlotMask: arbOccupiedSlotMask(),
+      adapterSemanticMode: arbAdapterSemanticMode(),
+      frameAxisIdentityDigest: arbDigest(),
+    })
+    .chain((base) =>
+      fc
+        .option(fc.string({ minLength: 1, maxLength: 16 }), { nil: null })
+        .map((key) =>
+          key !== null ? { ...base, discreteTeamModeKey: key } : base
+        )
+    )
 }
 
 // ---------------------------------------------------------------------------

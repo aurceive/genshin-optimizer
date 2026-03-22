@@ -9,7 +9,6 @@ import type {
   LapicAdapterMetadata,
   LapicAggregateCountFact,
   LapicArithmeticPolicyId,
-  LapicAuxiliaryOutputDescriptor,
   LapicCandidateDescriptor,
   LapicCandidateDomain,
   LapicCanonicalProblem,

@@ -173,7 +173,9 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
         workUnit: current.workUnit,
         status: 'completed',
         enqueuedAtSequence: current.enqueuedAtSequence,
-        dispatchedAtSequence: current.dispatchedAtSequence,
+        ...(current.dispatchedAtSequence !== undefined
+          ? { dispatchedAtSequence: current.dispatchedAtSequence }
+          : {}),
         completedAtSequence: seq,
       }
       items.set(workUnitId, item)
@@ -218,7 +220,9 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
         workUnit: current.workUnit,
         status: 'failed',
         enqueuedAtSequence: current.enqueuedAtSequence,
-        dispatchedAtSequence: current.dispatchedAtSequence,
+        ...(current.dispatchedAtSequence !== undefined
+          ? { dispatchedAtSequence: current.dispatchedAtSequence }
+          : {}),
         completedAtSequence: seq,
       }
       items.set(workUnitId, item)
@@ -249,7 +253,9 @@ export function createLapicWorkScheduler(): LapicWorkScheduler {
         workUnit: current.workUnit,
         status: 'cancelled',
         enqueuedAtSequence: current.enqueuedAtSequence,
-        dispatchedAtSequence: current.dispatchedAtSequence,
+        ...(current.dispatchedAtSequence !== undefined
+          ? { dispatchedAtSequence: current.dispatchedAtSequence }
+          : {}),
         completedAtSequence: seq,
       }
       items.set(workUnitId, item)

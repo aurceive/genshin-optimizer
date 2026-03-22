@@ -97,7 +97,9 @@ export function createLapicFrontierIndex(
       occupiedSlotMask: group.occupiedSlotMask,
       adapterSemanticMode: group.adapterSemanticMode,
       frameAxisIdentityDigest: group.frameAxisIdentityDigest,
-      discreteTeamModeKey: group.discreteTeamModeKey,
+      ...(group.discreteTeamModeKey !== undefined
+        ? { discreteTeamModeKey: group.discreteTeamModeKey }
+        : {}),
     })),
   }
 }

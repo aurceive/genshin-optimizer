@@ -38,10 +38,14 @@ export function createGiLapicAdapterRequest(
   return {
     adapterKind: input.adapterKind,
     normalizationInput: input.normalizationInput,
-    giContext: input.giContext,
-    requestedPotentialSolveModes: input.requestedPotentialSolveModes
-      ? [...input.requestedPotentialSolveModes]
-      : undefined,
+    ...(input.giContext !== undefined ? { giContext: input.giContext } : {}),
+    ...(input.requestedPotentialSolveModes !== undefined
+      ? {
+          requestedPotentialSolveModes: [
+            ...input.requestedPotentialSolveModes,
+          ],
+        }
+      : {}),
   }
 }
 
@@ -90,6 +94,7 @@ export function buildGiLapicCanonicalExport(
       { adapterKind: input.problem.adapterMetadata.adapterKind }
     )
 
+  const potentialConfig = input.problem.potentialConfiguration
   return {
     ok: true,
     value: {
@@ -101,11 +106,15 @@ export function buildGiLapicCanonicalExport(
       sourceSnapshotDigestSet:
         input.problem.adapterMetadata.sourceSnapshotDigests,
       formulaCompilationMode:
-        input.problem.adapterMetadata.metadata.formulaCompilationMode ??
+        input.problem.adapterMetadata.metadata['formulaCompilationMode'] ??
         giLapicAdapterCapabilities.supportedFormulaCompilationModes[0],
       featureSchemaVersion: giLapicAdapterSchemaVersion,
       filterTransformationLog: uniqueStrings(
-        (input.problem.adapterMetadata.metadata.filterTransformationLog ?? '')
+        (
+          input.problem.adapterMetadata.metadata[
+            'filterTransformationLog'
+          ] ?? ''
+        )
           .split(',')
           .filter(Boolean)
       ),
@@ -113,20 +122,28 @@ export function buildGiLapicCanonicalExport(
         input.problem.adapterMetadata.declaredUnsupportedFeatures
       ),
       replayReconstructionHints: uniqueStrings(
-        (input.problem.adapterMetadata.metadata.replayReconstructionHints ?? '')
+        (
+          input.problem.adapterMetadata.metadata[
+            'replayReconstructionHints'
+          ] ?? ''
+        )
           .split(',')
           .filter(Boolean)
       ),
       supportedGraphOutputModes:
         giLapicAdapterCapabilities.supportedGraphOutputKinds,
-      potentialSolveMode: input.problem.potentialConfiguration?.solveMode,
-      potentialParticipationMode:
-        input.problem.potentialConfiguration?.participationMode,
-      upgradeFrontierDescriptorSet:
-        input.problem.potentialConfiguration?.upgradeFrontiers,
-      potentialSummarySchemaVersion: input.problem.potentialConfiguration
-        ? giLapicAdapterSchemaVersion
-        : undefined,
+      ...(potentialConfig?.solveMode !== undefined
+        ? { potentialSolveMode: potentialConfig.solveMode }
+        : {}),
+      ...(potentialConfig?.participationMode !== undefined
+        ? { potentialParticipationMode: potentialConfig.participationMode }
+        : {}),
+      ...(potentialConfig?.upgradeFrontiers !== undefined
+        ? { upgradeFrontierDescriptorSet: potentialConfig.upgradeFrontiers }
+        : {}),
+      ...(potentialConfig !== undefined
+        ? { potentialSummarySchemaVersion: giLapicAdapterSchemaVersion }
+        : {}),
     },
     diagnostics: [],
   }
@@ -151,7 +168,9 @@ export function createGiLapicCanonicalProblem(
     constraints: normalizationInput.constraints,
     topN: normalizationInput.topN,
     orderingPolicy: normalizationInput.orderingPolicy,
-    potentialConfiguration: normalizationInput.potentialConfiguration,
+    ...(normalizationInput.potentialConfiguration !== undefined
+      ? { potentialConfiguration: normalizationInput.potentialConfiguration }
+      : {}),
     auxiliaryOutputs: normalizationInput.auxiliaryOutputs ?? [],
     adapterMetadata: normalizationInput.adapterMetadata,
     provenance: normalizationInput.provenance,

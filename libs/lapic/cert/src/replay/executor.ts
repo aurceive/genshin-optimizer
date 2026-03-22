@@ -34,7 +34,6 @@ import type {
   LapicFinalOptimalityPayload,
   LapicInfeasibilityPayload,
   LapicReplayResult,
-  LapicReplayVerdict,
 } from '../types'
 import { validateLapicCertificate } from '../validation'
 
@@ -106,7 +105,11 @@ function mismatchedResult(
     reproducedVerdict: 'mismatched',
     validationOutcome: 'rejected',
     arithmeticModeUsed: arithmeticMode,
-    mismatchExplanation: { reason, expectedDigest, actualDigest },
+    mismatchExplanation: {
+      reason,
+      ...(expectedDigest !== undefined ? { expectedDigest } : {}),
+      ...(actualDigest !== undefined ? { actualDigest } : {}),
+    },
     referencedEvidenceDigests: evidenceDigests,
     exactReplayInvoked: arithmeticMode === 'exact',
   }

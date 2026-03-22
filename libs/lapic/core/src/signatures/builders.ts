@@ -4,9 +4,9 @@ import {
   createLapicSuccessResult,
 } from '../diagnostics'
 import type {
+  LapicCapabilityFact,
   LapicCompatibilitySignature,
   LapicCompatibilitySignatureSchemaVersion,
-  LapicDeterministicOrderingRelation,
   LapicDiagnostic,
   LapicExactSignatureGroupKey,
   LapicExactSignatureGroupKeyDerivationInput,
@@ -49,7 +49,9 @@ export function createLapicExactSignatureGroupKey(
     exclusiveResourceKeys: [...key.exclusiveResourceKeys].sort(),
     frameAxisIdentityDigest: key.frameAxisIdentityDigest,
     adapterSemanticMode: key.adapterSemanticMode,
-    discreteTeamModeKey: key.discreteTeamModeKey,
+    ...(key.discreteTeamModeKey !== undefined
+      ? { discreteTeamModeKey: key.discreteTeamModeKey }
+      : {}),
   }
 }
 
@@ -223,13 +225,15 @@ export function validateLapicCompatibilitySignature(
         )
       )
   })
-  ;[
-    ['providedCapabilityFacts', signature.providedCapabilityFacts],
+  ;(
     [
-      'remainingRequiredCapabilityFacts',
-      signature.remainingRequiredCapabilityFacts,
-    ],
-  ].forEach(([collectionName, facts]) => {
+      ['providedCapabilityFacts', signature.providedCapabilityFacts],
+      [
+        'remainingRequiredCapabilityFacts',
+        signature.remainingRequiredCapabilityFacts,
+      ],
+    ] as [string, readonly LapicCapabilityFact[]][]
+  ).forEach(([collectionName, facts]) => {
     facts.forEach((fact, index) => {
       if (!fact.capabilityId)
         diagnostics.push(

@@ -67,16 +67,20 @@ export function createLapicSolveCheckpointState(
     cursorPosition,
     frontierBlockIds: [...frontierBlockIds],
     phase: 'join',
-    pruningStatistics,
-    pruneCertificateIds: pruneCertificateIds
-      ? [...pruneCertificateIds]
-      : undefined,
-    branchReachabilityCertificateIds: branchReachabilityCertificateIds
-      ? [...branchReachabilityCertificateIds]
-      : undefined,
-    dominanceCertificateIds: dominanceCertificateIds
-      ? [...dominanceCertificateIds]
-      : undefined,
+    ...(pruningStatistics !== undefined ? { pruningStatistics } : {}),
+    ...(pruneCertificateIds !== undefined
+      ? { pruneCertificateIds: [...pruneCertificateIds] }
+      : {}),
+    ...(branchReachabilityCertificateIds !== undefined
+      ? {
+          branchReachabilityCertificateIds: [
+            ...branchReachabilityCertificateIds,
+          ],
+        }
+      : {}),
+    ...(dominanceCertificateIds !== undefined
+      ? { dominanceCertificateIds: [...dominanceCertificateIds] }
+      : {}),
   }
 }
 

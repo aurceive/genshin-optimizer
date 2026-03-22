@@ -1,4 +1,5 @@
 import { executeLapicBoundedExactSolve } from '@genshin-optimizer/lapic/runtime'
+import type { LapicBoundedExactCandidateCombination } from '@genshin-optimizer/lapic/runtime'
 import {
   createLapicArtifactWriteRequest,
   createLapicStorageEnvelope,
@@ -100,17 +101,23 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
     problem: canonicalExport.value.problem,
     controller: options.controller,
     artifactStore: options.artifactStore,
-    firGraph,
+    ...(firGraph !== undefined ? { firGraph } : {}),
     evaluateCombination(combination) {
       return options.evaluateCombination(combination, canonicalExport.value)
     },
-    compareEvaluations: options.compareEvaluations,
-    isCombinationFeasible: options.isCombinationFeasible
-      ? (combination) =>
-          options.isCombinationFeasible!(combination, canonicalExport.value)
-      : undefined,
-    maxCombinationCount: options.maxCombinationCount,
-    computeUpperBound,
+    ...(options.compareEvaluations !== undefined
+      ? { compareEvaluations: options.compareEvaluations }
+      : {}),
+    ...(options.isCombinationFeasible !== undefined
+      ? {
+          isCombinationFeasible: (combination: LapicBoundedExactCandidateCombination) =>
+            options.isCombinationFeasible!(combination, canonicalExport.value),
+        }
+      : {}),
+    ...(options.maxCombinationCount !== undefined
+      ? { maxCombinationCount: options.maxCombinationCount }
+      : {}),
+    ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
   })
 
   if ('paused' in outcome)
@@ -121,6 +128,6 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
   return {
     canonicalExport: canonicalExport.value,
     completion: outcome,
-    firGraph,
+    ...(firGraph !== undefined ? { firGraph } : {}),
   }
 }

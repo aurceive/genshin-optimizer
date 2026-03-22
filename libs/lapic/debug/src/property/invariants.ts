@@ -220,14 +220,26 @@ export function runLapicProperty<T>(
   const seed = options?.seed
 
   try {
-    fc.assert(fc.property(arb, predicate), { numRuns, seed, verbose: false })
-    return { propertyName, passed: true, numRuns, seed }
+    fc.assert(
+      fc.property(arb, (v) => predicate(v)),
+      {
+        numRuns,
+        ...(seed !== undefined ? { seed } : {}),
+        verbose: false,
+      }
+    )
+    return {
+      propertyName,
+      passed: true,
+      numRuns,
+      ...(seed !== undefined ? { seed } : {}),
+    }
   } catch (e) {
     return {
       propertyName,
       passed: false,
       numRuns,
-      seed,
+      ...(seed !== undefined ? { seed } : {}),
       counterexample: String(e),
     }
   }

@@ -8,7 +8,6 @@ import {
   validateGiLapicValidationCorpus,
   validateMilestoneGate,
 } from './governance'
-import type { GiLapicMigrationState } from './governance'
 
 // =========================================================================
 // Migration State Transitions

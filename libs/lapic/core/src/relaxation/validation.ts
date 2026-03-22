@@ -1,11 +1,9 @@
 import type { LapicValidationResult } from '../types'
 import type {
-  LapicConstraintSystem,
   LapicLinearConstraint,
   LapicLinearModel,
   LapicLinearObjective,
   LapicLinearVariable,
-  LapicObjectiveSystem,
   LapicRelaxationArtifact,
   LapicRelaxationKind,
   LapicRelaxationValidityDomain,

@@ -68,7 +68,7 @@ export function createBranchReachabilityCertificate(
     validationStatus: 'validated',
     payload: {
       branchPredicateDigest,
-      exactBoundsDigest,
+      ...(exactBoundsDigest !== undefined ? { exactBoundsDigest } : {}),
       selectedArm,
       validityRegionId: context.validityRegionId,
     },

@@ -1,4 +1,7 @@
-import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
+import type {
+  LapicCertificate,
+  LapicFinalOptimalityPayload,
+} from '@genshin-optimizer/lapic/cert'
 import type {
   LapicProgressEvent,
   LapicSessionSummary,
@@ -93,12 +96,14 @@ export async function createLapicSolveSliceHarnessReport(
           const finalCert = certificates.find(
             (cert) => cert.certKind === 'FinalOptimalityCert'
           )!
+          const finalPayload =
+            finalCert.payload as LapicFinalOptimalityPayload
           return {
-            winnerStateId: finalCert.payload.winningStateId,
+            winnerStateId: finalPayload.winningStateId,
             winnerDigest: finalCert.evidenceDigest,
             certId: finalCert.certId,
             decisionMetadata: {
-              thresholdDigest: finalCert.payload.finalThresholdDigest,
+              thresholdDigest: finalPayload.finalThresholdDigest,
               exactReplayRequired:
                 finalCert.replayRecipe.arithmeticMode === 'exact',
               dangerZoneDetected: false,

@@ -15,6 +15,7 @@ import {
   executeLapicBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
+  LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
   LapicInMemorySessionController,
   LapicSolveOrchestration,
@@ -103,7 +104,9 @@ export function createGiLapicSolveOrchestration(
     engineVersion: config.canonicalIdentity.engineVersion,
     arithmeticPolicyId: config.canonicalIdentity.arithmeticPolicyId,
     artifactStore: config.artifactStore,
-    sessionId: config.sessionId,
+    ...(config.sessionId !== undefined
+      ? { sessionId: config.sessionId }
+      : {}),
     solveFn: async (
       controller: LapicInMemorySessionController,
       artifactStore: LapicArtifactStore
@@ -165,22 +168,33 @@ export function createGiLapicSolveOrchestration(
         problem: canonicalExport.value.problem,
         controller,
         artifactStore,
-        firGraph,
+        ...(firGraph !== undefined ? { firGraph } : {}),
         evaluateCombination(combination) {
           return config.evaluateCombination(combination, canonicalExport.value)
         },
-        compareEvaluations: config.compareEvaluations,
-        isCombinationFeasible: config.isCombinationFeasible
-          ? (combination) =>
-              config.isCombinationFeasible!(combination, canonicalExport.value)
-          : undefined,
-        maxCombinationCount: config.maxCombinationCount,
-        computeUpperBound,
+        ...(config.compareEvaluations !== undefined
+          ? { compareEvaluations: config.compareEvaluations }
+          : {}),
+        ...(config.isCombinationFeasible !== undefined
+          ? {
+              isCombinationFeasible: (combination: LapicBoundedExactCandidateCombination) =>
+                config.isCombinationFeasible!(
+                  combination,
+                  canonicalExport.value
+                ),
+            }
+          : {}),
+        ...(config.maxCombinationCount !== undefined
+          ? { maxCombinationCount: config.maxCombinationCount }
+          : {}),
+        ...(computeUpperBound !== undefined
+          ? { computeUpperBound }
+          : {}),
       })
     },
   })
 
-  return {
+  const result: LapicSolveOrchestration = {
     get handle() {
       return base.handle
     },
@@ -196,10 +210,17 @@ export function createGiLapicSolveOrchestration(
     start() {
       return base.start()
     },
-    get canonicalExport() {
+  }
+
+  Object.defineProperty(result, 'canonicalExport', {
+    get() {
       return resolvedCanonicalExport
     },
-  }
+    enumerable: true,
+    configurable: true,
+  })
+
+  return result as GiLapicSolveOrchestration
 }
 
 // ---------------------------------------------------------------------------

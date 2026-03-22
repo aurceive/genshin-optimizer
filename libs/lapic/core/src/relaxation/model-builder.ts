@@ -455,7 +455,7 @@ function compileProduct(
   ctx.relaxedNodes.add(node.nodeId)
 
   // Pairwise McCormick: reduce to bilinear products
-  let currentId = childIds[0]!
+  const currentId = childIds[0]!
   let currentBound = nodeBound(ctx, currentId)
   let currentIdx = nodeIdx(ctx, currentId)
 

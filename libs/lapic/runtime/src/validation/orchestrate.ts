@@ -98,7 +98,7 @@ export function validateLapicSolveOrchestrationConfig(
     ])
 
   if (
-    typeof (config.artifactStore as Record<string, unknown>).write !==
+    typeof (config.artifactStore as Record<string, unknown>)['write'] !==
     'function'
   )
     return createRuntimeFailure('Artifact store must have a write method.', [
@@ -107,7 +107,7 @@ export function validateLapicSolveOrchestrationConfig(
     ])
 
   if (
-    typeof (config.artifactStore as Record<string, unknown>).read !== 'function'
+    typeof (config.artifactStore as Record<string, unknown>)['read'] !== 'function'
   )
     return createRuntimeFailure('Artifact store must have a read method.', [
       'artifactStore',

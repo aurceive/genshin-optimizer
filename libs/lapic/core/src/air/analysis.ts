@@ -87,21 +87,21 @@ function createMutableAnnotation(nodeId: LapicFirNodeId): MutableAnnotation {
 function freezeAnnotation(m: MutableAnnotation): LapicAirNodeAnnotation {
   return {
     firNodeId: m.firNodeId,
-    exactLower: m.exactLower,
-    exactUpper: m.exactUpper,
-    monotonicityByVariable:
-      m.monotonicityByVariable.size > 0
-        ? new Map(m.monotonicityByVariable)
-        : undefined,
+    ...(m.exactLower !== undefined ? { exactLower: m.exactLower } : {}),
+    ...(m.exactUpper !== undefined ? { exactUpper: m.exactUpper } : {}),
+    ...(m.monotonicityByVariable.size > 0
+      ? { monotonicityByVariable: new Map(m.monotonicityByVariable) }
+      : {}),
     curvature: m.curvature,
-    branchControlSet:
-      m.branchControlSet.size > 0 ? new Set(m.branchControlSet) : undefined,
-    requiredVariables:
-      m.requiredVariables.size > 0 ? new Set(m.requiredVariables) : undefined,
-    nonlinearInteractions:
-      m.nonlinearInteractions.size > 0
-        ? new Set(m.nonlinearInteractions)
-        : undefined,
+    ...(m.branchControlSet.size > 0
+      ? { branchControlSet: new Set(m.branchControlSet) }
+      : {}),
+    ...(m.requiredVariables.size > 0
+      ? { requiredVariables: new Set(m.requiredVariables) }
+      : {}),
+    ...(m.nonlinearInteractions.size > 0
+      ? { nonlinearInteractions: new Set(m.nonlinearInteractions) }
+      : {}),
   }
 }
 
@@ -514,11 +514,11 @@ class AirAnalysisEngine {
 
     // Bounds
     if (forcedFace === 'then') {
-      ann.exactLower = thenChild.exactLower
-      ann.exactUpper = thenChild.exactUpper
+      if (thenChild.exactLower !== undefined) ann.exactLower = thenChild.exactLower
+      if (thenChild.exactUpper !== undefined) ann.exactUpper = thenChild.exactUpper
     } else if (forcedFace === 'else') {
-      ann.exactLower = elseChild.exactLower
-      ann.exactUpper = elseChild.exactUpper
+      if (elseChild.exactLower !== undefined) ann.exactLower = elseChild.exactLower
+      if (elseChild.exactUpper !== undefined) ann.exactUpper = elseChild.exactUpper
     } else {
       // Both branches possible
       if (

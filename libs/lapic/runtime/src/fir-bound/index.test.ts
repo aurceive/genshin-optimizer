@@ -2,7 +2,6 @@ import {
   type LapicFirGraph,
   LapicFirGraphBuilder,
   type LapicFirVariableId,
-  type LapicInterval,
   lapicInterval,
   lapicIntervalPoint,
 } from '@genshin-optimizer/lapic/core'

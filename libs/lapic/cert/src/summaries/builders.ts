@@ -6,15 +6,16 @@ import {
 import type {
   LapicDiagnostic,
   LapicDigest,
+  LapicPotentialParticipationMode,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
 import type {
+  LapicBoundPrunePayload,
   LapicCertificate,
   LapicCertificateSummary,
   LapicFinalOptimalityPayload,
   LapicFinalOptimalityRollup,
   LapicFinalOptimalitySummary,
-  LapicPotentialParticipationMode,
   LapicThresholdSensitiveDecisionCounters,
   LapicThresholdSensitiveDecisionMetadata,
 } from '../types'
@@ -62,14 +63,16 @@ export function createLapicCertificateSummary(
   let potentialParticipationMode: LapicPotentialParticipationMode | undefined
 
   if (certificate.certKind === 'BoundPruneCert') {
-    thresholdDigest = certificate.payload.thresholdDigest
+    const payload = certificate.payload as LapicBoundPrunePayload
+    thresholdDigest = payload.thresholdDigest
     potentialParticipationMode =
-      certificate.payload.potentialDecisionBasis?.participationMode
+      payload.potentialDecisionBasis?.participationMode
   }
 
   if (certificate.certKind === 'FinalOptimalityCert') {
-    thresholdDigest = certificate.payload.finalThresholdDigest
-    potentialParticipationMode = certificate.payload.rankingParticipationMode
+    const payload = certificate.payload as LapicFinalOptimalityPayload
+    thresholdDigest = payload.finalThresholdDigest
+    potentialParticipationMode = payload.rankingParticipationMode
   }
 
   return createLapicSuccessResult({
@@ -83,8 +86,10 @@ export function createLapicCertificateSummary(
     referencedBlockCount: certificate.referencedBlockIds.length,
     referencedRegionCount: certificate.referencedRegionIds.length,
     referencedRelaxCount: certificate.referencedRelaxIds.length,
-    thresholdDigest,
-    potentialParticipationMode,
+    ...(thresholdDigest !== undefined ? { thresholdDigest } : {}),
+    ...(potentialParticipationMode !== undefined
+      ? { potentialParticipationMode }
+      : {}),
   })
 }
 
@@ -92,18 +97,22 @@ function createLapicThresholdSensitiveDecisionMetadataFromCertificate(
   certificate: LapicCertificate
 ): LapicValidationResult<LapicThresholdSensitiveDecisionMetadata | null> {
   switch (certificate.certKind) {
-    case 'BoundPruneCert':
+    case 'BoundPruneCert': {
+      const payload = certificate.payload as LapicBoundPrunePayload
       return createLapicThresholdSensitiveDecisionMetadata(
-        certificate.payload.thresholdDigest,
+        payload.thresholdDigest,
         certificate.replayRecipe.arithmeticMode === 'exact',
-        certificate.payload.dangerZoneRecord.triggered
+        payload.dangerZoneRecord.triggered
       )
-    case 'FinalOptimalityCert':
+    }
+    case 'FinalOptimalityCert': {
+      const payload = certificate.payload as LapicFinalOptimalityPayload
       return createLapicThresholdSensitiveDecisionMetadata(
-        certificate.payload.finalThresholdDigest,
+        payload.finalThresholdDigest,
         certificate.replayRecipe.arithmeticMode === 'exact',
         false
       )
+    }
     default:
       return createLapicSuccessResult(null)
   }

@@ -127,7 +127,7 @@ export function createPoolTransport(
   }
 
   function releaseEntry(entry: PoolEntry) {
-    entry.activePartitionIndex = undefined
+    delete entry.activePartitionIndex
 
     if (waiters.length > 0) {
       // Hand directly to next waiter without going idle

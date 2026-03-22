@@ -135,7 +135,7 @@ export function validateLapicFrontierBlock(
 
   const rowStateIds = new Set<string>()
   for (const [index, row] of block.rows.entries()) {
-    if (!isRecord(row))
+    if (typeof row !== 'object' || row === null || Array.isArray(row))
       return createStorageFailure('Frontier rows must be records.', [
         'rows',
         String(index),
@@ -265,7 +265,7 @@ export function validateLapicFrontierIndex(
 
   const seenGroupDigests = new Set<string>()
   for (const [indexPosition, group] of index.exactSignatureGroups.entries()) {
-    if (!isRecord(group))
+    if (typeof group !== 'object' || group === null || Array.isArray(group))
       return createStorageFailure('Exact-signature groups must be records.', [
         'exactSignatureGroups',
         String(indexPosition),

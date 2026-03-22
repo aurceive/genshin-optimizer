@@ -142,7 +142,7 @@ class OptNodeFirCompiler {
         this.errors.push({
           kind: 'unsupported-operation',
           operation: String(
-            (node as Record<string, unknown>).operation ?? 'unknown'
+            (node as Record<string, unknown>)['operation'] ?? 'unknown'
           ),
           message: `Unknown OptNode operation`,
         })

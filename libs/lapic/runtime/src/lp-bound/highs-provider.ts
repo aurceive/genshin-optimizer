@@ -293,8 +293,9 @@ export async function createLapicHighsProvider(
 
       const result: LapicLpSolveResult = {
         outcome,
-        objectiveValue:
-          outcome === 'solved' ? String(objWithOffset) : undefined,
+        ...(outcome === 'solved'
+          ? { objectiveValue: String(objWithOffset) }
+          : {}),
         boundDirection:
           model.objective.sense === 'maximize' ? 'upper' : 'lower',
         evidenceDigest,

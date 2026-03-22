@@ -393,8 +393,12 @@ export async function executeLapicBoundedExactSolve(
           branchNodeId: evidence.branchNodeId,
           guardNodeId: evidence.guardNodeId,
           forcedArm: evidence.forcedArm,
-          guardLower: evidence.guardLower,
-          guardUpper: evidence.guardUpper,
+          ...(evidence.guardLower !== undefined
+            ? { guardLower: evidence.guardLower }
+            : {}),
+          ...(evidence.guardUpper !== undefined
+            ? { guardUpper: evidence.guardUpper }
+            : {}),
           validityRegionId: evidence.parentRegionId,
           stepIndex: i + 1,
         })
@@ -413,10 +417,10 @@ export async function executeLapicBoundedExactSolve(
 
     // Build a comparator for bound-vs-threshold checks.
     const explicitComparator = options.compareEvaluations
-    function isBoundBelowThreshold(
+    const isBoundBelowThreshold = (
       boundValue: string,
       thresholdValue: string
-    ): boolean {
+    ): boolean => {
       const boundEval: LapicBoundedExactCombinationEvaluation = {
         objectiveValue: boundValue,
         evidenceDigest: 'bound-check',
@@ -441,13 +445,13 @@ export async function executeLapicBoundedExactSolve(
      * Commit a bound-prune: skip the subtree, emit BoundPruneCert.
      * Extracted from the pruning block so both danger-zone paths can call it.
      */
-    async function commitPrune(
+    const commitPrune = async (
       boundValue: string,
       boundEvidenceDigest: string,
       thresholdValue: string,
       domainIndex: number,
       detection?: import('./danger-zone').LapicDangerZoneDetectionResult
-    ): Promise<void> {
+    ): Promise<void> => {
       const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
       currentFlatIndex += subtreeSize
       pruningStats.prunedCombinationCount += subtreeSize
@@ -464,7 +468,7 @@ export async function executeLapicBoundedExactSolve(
         domainIndex,
         stepIndex: pruneCertStepCounter,
         frontierBlockIds,
-        dangerZoneRecord,
+        ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
       })
       await persistArtifact(
         options,

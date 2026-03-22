@@ -3,6 +3,7 @@ import type {
   LapicDigest,
   LapicExactSignatureGroupKey,
   LapicSlotId,
+  LapicStateLayoutDescriptor,
 } from '@genshin-optimizer/lapic/core'
 import type {
   LapicBlockLayoutDescriptor,
@@ -18,6 +19,7 @@ import type {
  */
 export interface LapicColumnarFrontierLayout {
   readonly layoutDescriptor: LapicBlockLayoutDescriptor
+  readonly layout: LapicStateLayoutDescriptor
   readonly blockId: string
   readonly stateIds: readonly string[]
   readonly rowCount: number
@@ -56,8 +58,9 @@ export function frontierBlockToColumnar(
   return {
     layoutDescriptor: {
       layoutKind: 'columnar',
-      stateOrderDigest: block.layout.stateOrderDigest,
+      stateOrderDigest: block.layout.stateOrderDigest ?? '',
     },
+    layout: block.layout,
     blockId: block.blockId,
     stateIds: block.stateIds,
     rowCount: block.rowCount,
@@ -90,6 +93,7 @@ export function columnarToFrontierBlock(
   return {
     blockId: columnar.blockId,
     layout: {
+      ...columnar.layout,
       stateOrderDigest: columnar.layoutDescriptor.stateOrderDigest,
     },
     stateIds: [...columnar.stateIds],

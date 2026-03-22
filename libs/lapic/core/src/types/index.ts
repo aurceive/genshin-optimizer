@@ -373,6 +373,7 @@ export interface LapicStateLayoutDescriptor {
   readonly slotIds: readonly LapicSlotId[]
   readonly frameAxisIdentity: LapicFrameAxisIdentity
   readonly dominanceProjectionIds: readonly string[]
+  readonly stateOrderDigest?: LapicDigest
 }
 
 export interface LapicDominanceProjection {

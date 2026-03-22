@@ -34,7 +34,7 @@ function isBoolean(value: unknown): value is boolean {
 }
 
 function isPositiveInteger(value: unknown): value is number {
-  return Number.isInteger(value) && value > 0
+  return Number.isInteger(value) && (value as number) > 0
 }
 
 function hasAnyArtifacts(artifacts: readonly unknown[]): boolean {
@@ -61,8 +61,8 @@ export function giAdapterFailure(
     severity: 'error',
     code: 'NormalizationFailure',
     message,
-    path,
-    details,
+    ...(path !== undefined ? { path } : {}),
+    ...(details !== undefined ? { details } : {}),
   }
 
   return {

@@ -14,7 +14,6 @@ import {
   type LapicBoundedExactUpperBoundEvaluator,
   createLapicFirBoundProvider,
 } from '@genshin-optimizer/lapic/runtime'
-import type { LapicFirDomainVariableMap } from '@genshin-optimizer/lapic/runtime'
 import type { GiLapicCandidateVariableExtractor } from './bound-maps'
 import { buildGiLapicDomainVariableMaps } from './bound-maps'
 import type { GiLapicCanonicalExport } from './types'
@@ -57,7 +56,11 @@ export function createGiLapicBuiltinBoundProvider(
   return createLapicFirBoundProvider({
     graph: config.firGraph,
     domainVariableMaps,
-    globalConstants: config.globalConstants,
-    formatUpperBound: config.formatUpperBound,
+    ...(config.globalConstants !== undefined
+      ? { globalConstants: config.globalConstants }
+      : {}),
+    ...(config.formatUpperBound !== undefined
+      ? { formatUpperBound: config.formatUpperBound }
+      : {}),
   })
 }

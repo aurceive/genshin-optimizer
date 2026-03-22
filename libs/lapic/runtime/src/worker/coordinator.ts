@@ -25,7 +25,6 @@ import {
 } from '../solve/combination'
 import type { LapicFrontierJoinPlan } from '../solve/join-plan'
 import type {
-  LapicBoundedExactCombinationEvaluation,
   LapicBoundedExactCombinationEvaluator,
   LapicBoundedExactEvaluationComparator,
   LapicBoundedExactFeasibilityEvaluator,

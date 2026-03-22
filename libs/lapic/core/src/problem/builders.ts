@@ -29,7 +29,9 @@ export function createLapicCanonicalProblem(
     constraints: normalizationInput.constraints,
     topN: normalizationInput.topN,
     orderingPolicy: normalizationInput.orderingPolicy,
-    potentialConfiguration: normalizationInput.potentialConfiguration,
+    ...(normalizationInput.potentialConfiguration !== undefined
+      ? { potentialConfiguration: normalizationInput.potentialConfiguration }
+      : {}),
     auxiliaryOutputs: normalizationInput.auxiliaryOutputs ?? [],
     adapterMetadata: normalizationInput.adapterMetadata,
     provenance: normalizationInput.provenance,
@@ -178,7 +180,9 @@ export function validateLapicCanonicalProblem(problem: LapicCanonicalProblem) {
     constraints: problem.constraints,
     topN: problem.topN,
     orderingPolicy: problem.orderingPolicy,
-    potentialConfiguration: problem.potentialConfiguration,
+    ...(problem.potentialConfiguration !== undefined
+      ? { potentialConfiguration: problem.potentialConfiguration }
+      : {}),
     auxiliaryOutputs: problem.auxiliaryOutputs,
     adapterMetadata: problem.adapterMetadata,
     provenance: problem.provenance,
