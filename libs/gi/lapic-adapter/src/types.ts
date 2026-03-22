@@ -11,6 +11,7 @@ import type {
   LapicCanonicalProblem,
   LapicDigest,
   LapicEngineVersion,
+  LapicFirGraph,
   LapicPotentialParticipationMode,
   LapicPotentialSolveMode,
   LapicProblemDigest,
@@ -156,6 +157,8 @@ export interface GiLapicBoundedCurrentOnlySolveOptions {
 export interface GiLapicBoundedCurrentOnlySolveResult {
   readonly canonicalExport: GiLapicCanonicalExport
   readonly completion: LapicSolveCompletionResult
+  /** Compiled F-IR graph (present when optimization target compiles successfully). */
+  readonly firGraph?: LapicFirGraph
 }
 
 export interface GiLapicCanonicalIdentity {

@@ -4,6 +4,7 @@ import {
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
 import { buildGiLapicCanonicalExportFromRequest } from './canonical'
+import { compileGiOptNodeToFir } from './compilation'
 import type {
   GiLapicBoundedCurrentOnlySolveOptions,
   GiLapicBoundedCurrentOnlySolveResult,
@@ -69,10 +70,22 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
     options.controller
   )
 
+  // Compile the optimization target OptNode to F-IR for static analysis.
+  // This enables BranchReachabilityCert inference in the executor.
+  // Compilation is best-effort: if the target is not available or compilation
+  // fails, the solve proceeds without F-IR (no branch analysis).
+  const optimizationTarget =
+    options.request.giContext?.optimizationRequest.optimizationTarget
+  const firCompilation = optimizationTarget
+    ? compileGiOptNodeToFir(optimizationTarget)
+    : undefined
+  const firGraph = firCompilation?.ok ? firCompilation.result.graph : undefined
+
   const outcome = await executeLapicBoundedExactSolve({
     problem: canonicalExport.value.problem,
     controller: options.controller,
     artifactStore: options.artifactStore,
+    firGraph,
     evaluateCombination(combination) {
       return options.evaluateCombination(combination, canonicalExport.value)
     },
@@ -93,5 +106,6 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
   return {
     canonicalExport: canonicalExport.value,
     completion: outcome,
+    firGraph,
   }
 }

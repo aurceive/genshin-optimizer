@@ -16,9 +16,11 @@ import {
 import {
   buildGiLapicCanonicalExportFromRequest,
   buildGiLapicDomainVariableMaps,
+  compileGiOptNodeToFir,
   createGiLapicAdapterMetadata,
   createGiLapicAdapterRequest,
   createGiLapicAuxiliaryOutputs,
+  createGiLapicBuiltinBoundProvider,
   createGiLapicCandidateDomains,
   createGiLapicCanonicalIdentity,
   createGiLapicCanonicalProblem,
@@ -35,6 +37,7 @@ import {
   validateGiLapicOptimizationRequest,
   validateGiLapicSourceSnapshotDescriptor,
 } from './index'
+import type { GiLapicCanonicalExport } from './types'
 
 function createArtifact(
   overrides: Partial<ICachedArtifact> = {}
@@ -576,6 +579,186 @@ describe('gi lapic adapter', () => {
       expect(maps[0].candidateVariables.get('flower-a')?.get('total:hp')).toBe(4780)
       expect(maps[1].domainId).toBe('gi:plume')
       expect(maps[1].candidateVariables.get('plume-a')?.get('total:atk')).toBe(311)
+    })
+  })
+
+  describe('F-IR compilation wiring in adapter solve', () => {
+    it('compiles OptNode to F-IR and returns firGraph in result when target is compilable', async () => {
+      const { artifactStore, controller } = createSolveController()
+      const request = createGiRequest()
+      request.giContext.optimizationRequest.topN = 1
+      request.normalizationInput.topN = 1
+
+      // Replace the stub with a real compilable OptNode
+      const compilableTarget: OptNode = {
+        operation: 'add',
+        operands: [
+          { operation: 'const', operands: [], value: 100, info: {} } as OptNode,
+          { operation: 'const', operands: [], value: 50, info: {} } as OptNode,
+        ],
+        info: {},
+      } as OptNode
+      request.giContext.optimizationRequest.optimizationTarget = compilableTarget
+
+      const result = await executeGiLapicBoundedCurrentOnlySolve({
+        request,
+        canonicalIdentity: createGiLapicCanonicalIdentity({
+          problemId: 'problem-id',
+          problemDigest: 'problem-digest',
+          engineVersion: 'engine-version',
+          arithmeticPolicyId: 'arithmetic-policy',
+        }),
+        controller,
+        artifactStore,
+        evaluateCombination({ candidates }) {
+          const score = candidates
+            .map((c) => c.candidateId)
+            .join('|')
+          return {
+            ok: true,
+            value: {
+              objectiveValue: score,
+              evidenceDigest: `evidence:${score}`,
+              orderingKey: [score],
+            },
+            diagnostics: [],
+          }
+        },
+        maxCombinationCount: 8,
+      })
+
+      expect(result.completion.summary.solveState).toBe('completed')
+      // firGraph should be present because we gave it a compilable target
+      expect(result.firGraph).toBeDefined()
+      expect(result.firGraph!.rootId).toBeDefined()
+      expect(result.firGraph!.nodes.size).toBeGreaterThan(0)
+    })
+
+    it('proceeds without firGraph when OptNode contains unsupported operations', async () => {
+      const { artifactStore, controller } = createSolveController()
+      const request = createGiRequest()
+      request.giContext.optimizationRequest.topN = 1
+      request.normalizationInput.topN = 1
+
+      // sum_frac is unsupported → compilation returns ok: false
+      const unsupportedTarget: OptNode = {
+        operation: 'sum_frac',
+        operands: [
+          { operation: 'const', operands: [], value: 100, info: {} } as OptNode,
+          { operation: 'const', operands: [], value: 50, info: {} } as OptNode,
+        ],
+        info: {},
+      } as OptNode
+      request.giContext.optimizationRequest.optimizationTarget = unsupportedTarget
+
+      const result = await executeGiLapicBoundedCurrentOnlySolve({
+        request,
+        canonicalIdentity: createGiLapicCanonicalIdentity({
+          problemId: 'problem-id',
+          problemDigest: 'problem-digest',
+          engineVersion: 'engine-version',
+          arithmeticPolicyId: 'arithmetic-policy',
+        }),
+        controller,
+        artifactStore,
+        evaluateCombination({ candidates }) {
+          const score = candidates
+            .map((c) => c.candidateId)
+            .join('|')
+          return {
+            ok: true,
+            value: {
+              objectiveValue: score,
+              evidenceDigest: `evidence:${score}`,
+              orderingKey: [score],
+            },
+            diagnostics: [],
+          }
+        },
+        maxCombinationCount: 8,
+      })
+
+      expect(result.completion.summary.solveState).toBe('completed')
+      // firGraph should be undefined because compilation failed gracefully
+      expect(result.firGraph).toBeUndefined()
+    })
+  })
+
+  describe('createGiLapicBuiltinBoundProvider', () => {
+    it('creates a bound provider that computes upper bounds from F-IR graph and domain maps', () => {
+      // Compile a simple add(read("x"), const(10)) target
+      const target: OptNode = {
+        operation: 'add',
+        operands: [
+          { operation: 'read', operands: [], path: ['x'], info: {} } as unknown as OptNode,
+          { operation: 'const', operands: [], value: 10, info: {} } as OptNode,
+        ],
+        info: {},
+      } as OptNode
+
+      const compilation = compileGiOptNodeToFir(target)
+      expect(compilation.ok).toBe(true)
+      if (!compilation.ok) return
+
+      const canonicalExport: GiLapicCanonicalExport = {
+        problem: {
+          itemDomains: [
+            {
+              domainId: 'slot-a',
+              slotId: 'slot-a',
+              candidates: [
+                { candidateId: 'c1', domainId: 'slot-a' },
+                { candidateId: 'c2', domainId: 'slot-a' },
+              ],
+            },
+          ],
+        } as never,
+        canonicalProblemDigest: 'test-digest',
+        sourceSnapshotDigestSet: [],
+      }
+
+      const provider = createGiLapicBuiltinBoundProvider({
+        firGraph: compilation.result.graph,
+        canonicalExport,
+        extractVariables: (candidateId: string) => {
+          const vals: Record<string, number> = {
+            c1: 5,
+            c2: 8,
+          }
+          return new Map([['x', vals[candidateId] ?? 0]])
+        },
+      })
+
+      expect(provider).toBeDefined()
+    })
+
+    it('returns undefined when canonical export has no item domains', () => {
+      const target: OptNode = {
+        operation: 'const',
+        operands: [],
+        value: 42,
+        info: {},
+      } as OptNode
+
+      const compilation = compileGiOptNodeToFir(target)
+      expect(compilation.ok).toBe(true)
+      if (!compilation.ok) return
+
+      const canonicalExport: GiLapicCanonicalExport = {
+        problem: {
+          itemDomains: [],
+        } as never,
+        canonicalProblemDigest: 'test-digest',
+        sourceSnapshotDigestSet: [],
+      }
+
+      const provider = createGiLapicBuiltinBoundProvider({
+        firGraph: compilation.result.graph,
+        canonicalExport,
+        extractVariables: () => new Map(),
+      })
+
+      expect(provider).toBeUndefined()
     })
   })
 })
