@@ -1,6 +1,10 @@
 import type { LapicAdapterMetadata, LapicDigest } from '@genshin-optimizer/lapic/core'
+import type { GiLapicMigrationState } from './governance'
 import type { GiLapicAdapterCapabilities, GiLapicAdapterRequest, GiLapicSourceSnapshotDescriptor } from './types'
 import { giLapicAdapterCapabilities, giLapicAdapterSchemaVersion } from './types'
+
+/** Current production migration state for the GI adapter. */
+export const GI_LAPIC_CURRENT_MIGRATION_STATE: GiLapicMigrationState = 'legacyValidated'
 
 export function uniqueStrings(values: readonly string[]): readonly string[] {
   return [...new Set(values)]
@@ -94,7 +98,7 @@ export function createGiLapicAdapterMetadata(
       formulaCompilationMode:
         giLapicAdapterCapabilities.supportedFormulaCompilationModes[0],
       featureSchemaVersion: giLapicAdapterSchemaVersion,
-      migrationState: 'legacyValidated',
+      migrationState: GI_LAPIC_CURRENT_MIGRATION_STATE,
       supportedGraphOutputKinds:
         giLapicAdapterCapabilities.supportedGraphOutputKinds.join(','),
       supportedCandidateDomainClasses:
