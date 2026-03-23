@@ -10,6 +10,7 @@ import {
   createGiArtifactFeatureDigest,
   createGiOptNodeDigest,
 } from './digest'
+import { createGiArtifactExclusiveResourceClaims } from './exclusivity'
 import type { GiLapicAdapterContext, GiLapicAdapterRequest } from './types'
 
 function shouldIncludeGiArtifact(
@@ -68,7 +69,10 @@ export function createGiLapicCandidateDescriptor(
       slotId: artifact.slotKey,
       sourceEntityId: artifact.location || 'inventory',
       sourceRecordDigests: [artifact.id],
-      exclusiveResourceClaims: [],
+      exclusiveResourceClaims: createGiArtifactExclusiveResourceClaims(
+        [artifact.id],
+        artifact.slotKey
+      ),
       concreteInventoryBacked: true,
       featureExtractionDigest: createGiArtifactFeatureDigest(artifact),
     },
