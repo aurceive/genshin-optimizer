@@ -26,6 +26,11 @@ export interface LapicFrontierJoinPlanEntry {
 
 export interface LapicFrontierJoinPlan {
   readonly entries: readonly LapicFrontierJoinPlanEntry[]
+  /**
+   * Upper-bound combination count (cartesian product of per-slot row counts).
+   * The actual legal combination count may be lower after cross-slot
+   * legality filtering via {@link checkJoinLegality}.
+   */
   readonly totalCombinationCount: number
 }
 

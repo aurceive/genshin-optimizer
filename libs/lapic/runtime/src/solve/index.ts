@@ -36,3 +36,9 @@ export type { LapicDangerZoneConfig } from './danger-zone'
 export { defaultLapicDangerZoneConfig } from './danger-zone'
 
 export type { LapicPruningStatisticsSnapshot } from './pruning'
+
+export type { JoinLegalityResult as LapicJoinLegalityResult } from './join-legality'
+export {
+  checkJoinLegality,
+  mergeCompatibilitySignatures,
+} from './join-legality'
