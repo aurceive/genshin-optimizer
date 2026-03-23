@@ -303,7 +303,11 @@ describe('executeCoordinatedBoundedExactSolve', () => {
           candidate(`c-${i}-${j}`, `d-${i}`, slotId)
         ),
       }))
-      const problem = createProblem({ slotIds: slotIds3, domains: domains3, topN: 1 })
+      const problem = createProblem({
+        slotIds: slotIds3,
+        domains: domains3,
+        topN: 1,
+      })
 
       const infra1 = createTestInfra()
       const singleOutcome = await executeCoordinatedBoundedExactSolve({
@@ -440,6 +444,181 @@ describe('executeCoordinatedBoundedExactSolve', () => {
     })
   })
 
+  describe('incumbent sharing', () => {
+    /**
+     * Upper-bound evaluator: for a partial assignment, returns
+     * the current sum + maximum possible value from remaining domains.
+     * This gives a tight upper bound that enables B&B pruning.
+     */
+    function makeUpperBoundEvaluator(
+      domains: Array<{ candidates: LapicCandidateDescriptor[] }>
+    ) {
+      // Pre-compute max candidate index per domain
+      const maxPerDomain = domains.map((d) => {
+        let max = 0
+        for (const c of d.candidates) {
+          const parts = c.candidateId.split('-')
+          const val = parseInt(parts[parts.length - 1]!, 10)
+          if (val > max) max = val
+        }
+        return max
+      })
+
+      return (partial: {
+        assignedCandidates: readonly LapicCandidateDescriptor[]
+        assignedDomainCount: number
+        totalDomainCount: number
+      }) => {
+        let sum = 0
+        for (const c of partial.assignedCandidates) {
+          const parts = c.candidateId.split('-')
+          sum += parseInt(parts[parts.length - 1]!, 10)
+        }
+        // Add max possible from remaining domains
+        for (
+          let i = partial.assignedDomainCount;
+          i < partial.totalDomainCount;
+          i++
+        ) {
+          sum += maxPerDomain[i] ?? 0
+        }
+        const formatted = sum.toFixed(4).padStart(12, '0')
+        return {
+          upperBoundValue: formatted,
+          evidenceDigest: `bound:${formatted}`,
+        }
+      }
+    }
+
+    it('finds the same global optimum with incumbent sharing active', async () => {
+      const problem = createProblem({ slotIds, domains, topN: 1 })
+      const upperBound = makeUpperBoundEvaluator(domains)
+
+      // Single-partition reference (with upper bound)
+      const infra1 = createTestInfra()
+      const singleOutcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller: infra1.controller,
+        artifactStore: infra1.store,
+        evaluateCombination: numericEvaluator,
+        computeUpperBound: upperBound,
+        workerCount: 1,
+      })
+      const singleCompletion = singleOutcome as LapicSolveCompletionResult
+
+      // Multi-partition with incumbent sharing via upper bound
+      const infra2 = createTestInfra()
+      const multiOutcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller: infra2.controller,
+        artifactStore: infra2.store,
+        evaluateCombination: numericEvaluator,
+        computeUpperBound: upperBound,
+        workerCount: 2,
+      })
+      const multiCompletion = multiOutcome as LapicSolveCompletionResult
+
+      expect(multiCompletion.finalOptimality!.winnerStateId).toBe(
+        singleCompletion.finalOptimality!.winnerStateId
+      )
+    })
+
+    it('emits BoundPruneCerts when incumbent sharing enables pruning', async () => {
+      // 3 domains: small first domain (partitioned), large inner domains
+      // where depth-2 pruning occurs thanks to incumbent sharing.
+      // Domain 0: 4 candidates (values 0-3) — outermost, smallest
+      // Domain 1: 10 candidates (values 0-9) — depth-2 pruning target
+      // Domain 2: 10 candidates (values 0-9) — innermost
+      const threeSlots = ['s0', 's1', 's2']
+      const threeDomains = [
+        {
+          domainId: 'td-0',
+          slotId: 's0',
+          candidates: Array.from({ length: 4 }, (_, j) =>
+            candidate(`t-0-${j}`, 'td-0', 's0')
+          ),
+        },
+        {
+          domainId: 'td-1',
+          slotId: 's1',
+          candidates: Array.from({ length: 10 }, (_, j) =>
+            candidate(`t-1-${j}`, 'td-1', 's1')
+          ),
+        },
+        {
+          domainId: 'td-2',
+          slotId: 's2',
+          candidates: Array.from({ length: 10 }, (_, j) =>
+            candidate(`t-2-${j}`, 'td-2', 's2')
+          ),
+        },
+      ]
+      const problem = createProblem({
+        slotIds: threeSlots,
+        domains: threeDomains,
+        topN: 1,
+      })
+      const upperBound = makeUpperBoundEvaluator(threeDomains)
+
+      const { store, controller } = createTestInfra()
+      const outcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller,
+        artifactStore: store,
+        evaluateCombination: numericEvaluator,
+        computeUpperBound: upperBound,
+        workerCount: 2,
+      })
+
+      const completion = outcome as LapicSolveCompletionResult
+      expect(completion.summary.solveState).toBe('completed')
+      // Partition 0 finds best=1+9+9=19 as threshold.
+      // Partition 1 at depth 2 prunes subtrees where
+      // partial_sum + max_remaining < 19.
+      const pruneCerts = completion.emittedCertificates.filter(
+        (c) => c.certKind === 'BoundPruneCert'
+      )
+      expect(pruneCerts.length).toBeGreaterThan(0)
+    })
+
+    it('produces correct top-N with incumbent sharing and multiple partitions', async () => {
+      const problem = createProblem({ slotIds, domains, topN: 3 })
+      const upperBound = makeUpperBoundEvaluator(domains)
+
+      // Reference without upper bound
+      const infra1 = createTestInfra()
+      const refOutcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller: infra1.controller,
+        artifactStore: infra1.store,
+        evaluateCombination: numericEvaluator,
+        workerCount: 1,
+      })
+      const refCompletion = refOutcome as LapicSolveCompletionResult
+
+      // With upper bound + incumbent sharing
+      const infra2 = createTestInfra()
+      const prunedOutcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller: infra2.controller,
+        artifactStore: infra2.store,
+        evaluateCombination: numericEvaluator,
+        computeUpperBound: upperBound,
+        workerCount: 2,
+      })
+      const prunedCompletion = prunedOutcome as LapicSolveCompletionResult
+
+      // Same top-3 objective values regardless of pruning
+      const refValues = refCompletion
+        .topNCandidates!.map((c) => c.evaluation.objectiveValue)
+        .sort()
+      const prunedValues = prunedCompletion
+        .topNCandidates!.map((c) => c.evaluation.objectiveValue)
+        .sort()
+      expect(prunedValues).toEqual(refValues)
+    })
+  })
+
   describe('infeasible problems', () => {
     it('completes without optimality when all feasibility checks fail', async () => {
       const problem = createProblem({ slotIds, domains, topN: 1 })
@@ -483,7 +662,11 @@ describe('domain-partitioner', () => {
         ),
       },
     ]
-    const problem = createProblem({ slotIds: slotIds2, domains: domains2, topN: 1 })
+    const problem = createProblem({
+      slotIds: slotIds2,
+      domains: domains2,
+      topN: 1,
+    })
 
     // Run with 1 worker to get reference answer
     const infra1 = createTestInfra()

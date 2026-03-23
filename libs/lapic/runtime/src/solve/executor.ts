@@ -607,56 +607,58 @@ export async function executeLapicBoundedExactSolve(
       }
 
       // --- Branch-and-bound pruning at intermediate recursion levels ---
+      // Use the tracker's own threshold when it's full, otherwise
+      // fall back to the initial incumbent threshold from a prior
+      // partition (incumbent sharing).
+      const effectiveThreshold =
+        tracker.currentThreshold() ?? options.initialIncumbentThreshold
       if (
         options.computeUpperBound &&
-        tracker.isFull() &&
+        effectiveThreshold !== undefined &&
         domainIndex > 0 // At least one candidate already assigned
       ) {
-        const threshold = tracker.currentThreshold()
-        if (threshold !== undefined) {
-          pruningStats.boundEvaluationCount += 1
-          const bound = options.computeUpperBound({
-            problem: options.problem,
-            assignedCandidates: partialCandidates,
-            assignedDomainCount: domainIndex,
-            totalDomainCount: joinPlan.value.entries.length,
-          })
-          if (
-            bound !== undefined &&
-            isBoundBelowThreshold(bound.upperBoundValue, threshold)
-          ) {
-            // Check danger zone before committing the prune.
-            if (options.dangerZoneConfig) {
-              const detection = detectBoundPruneDangerZone(
-                bound.upperBoundValue,
-                threshold,
-                options.dangerZoneConfig
-              )
-              if (detection.triggered) {
-                // Conservative: decline to prune (architecture §10.3).
-                pruningStats.dangerZoneDeclinedCount += 1
-                // Fall through to explore the subtree normally.
-              } else {
-                // Safe gap — proceed to prune.
-                await commitPrune(
-                  bound.upperBoundValue,
-                  bound.evidenceDigest,
-                  threshold,
-                  domainIndex,
-                  detection
-                )
-                return
-              }
+        pruningStats.boundEvaluationCount += 1
+        const bound = options.computeUpperBound({
+          problem: options.problem,
+          assignedCandidates: partialCandidates,
+          assignedDomainCount: domainIndex,
+          totalDomainCount: joinPlan.value.entries.length,
+        })
+        if (
+          bound !== undefined &&
+          isBoundBelowThreshold(bound.upperBoundValue, effectiveThreshold)
+        ) {
+          // Check danger zone before committing the prune.
+          if (options.dangerZoneConfig) {
+            const detection = detectBoundPruneDangerZone(
+              bound.upperBoundValue,
+              effectiveThreshold,
+              options.dangerZoneConfig
+            )
+            if (detection.triggered) {
+              // Conservative: decline to prune (architecture §10.3).
+              pruningStats.dangerZoneDeclinedCount += 1
+              // Fall through to explore the subtree normally.
             } else {
-              // No danger-zone config — prune unconditionally (legacy behavior).
+              // Safe gap — proceed to prune.
               await commitPrune(
                 bound.upperBoundValue,
                 bound.evidenceDigest,
-                threshold,
-                domainIndex
+                effectiveThreshold,
+                domainIndex,
+                detection
               )
               return
             }
+          } else {
+            // No danger-zone config — prune unconditionally (legacy behavior).
+            await commitPrune(
+              bound.upperBoundValue,
+              bound.evidenceDigest,
+              effectiveThreshold,
+              domainIndex
+            )
+            return
           }
         }
       }

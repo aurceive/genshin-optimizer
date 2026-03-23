@@ -111,6 +111,44 @@ export interface LapicCoordinatedBoundedExactSolveConfig {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Compute the incumbent threshold from the running best-N candidates.
+ * Returns the worst (N-th) candidate's objective value when we have
+ * at least `topN` candidates, or `undefined` otherwise.
+ */
+function computeIncumbentThreshold(
+  candidates: readonly LapicTopNCandidateEntry[],
+  topN: number
+): string | undefined {
+  if (candidates.length < topN) return undefined
+  // candidates are sorted best-first; the last entry is the worst in top-N
+  return candidates[candidates.length - 1]!.evaluation.objectiveValue
+}
+
+/**
+ * Merge new candidates into the running best set, sort by evaluation,
+ * and truncate to the top N.
+ */
+function mergeAndTruncateCandidates(
+  existing: readonly LapicTopNCandidateEntry[],
+  incoming: readonly LapicTopNCandidateEntry[],
+  topN: number,
+  comparator?: LapicBoundedExactEvaluationComparator
+): LapicTopNCandidateEntry[] {
+  return [...existing, ...incoming]
+    .sort(
+      (a, b) =>
+        -compareEvaluations(
+          a.evaluation,
+          a.stateId,
+          b.evaluation,
+          b.stateId,
+          comparator
+        )
+    )
+    .slice(0, topN)
+}
+
 /** Build a minimal `LapicBoundedExactSolveOptions` for certificate / persist fns. */
 function buildMinimalOptions(
   config: LapicCoordinatedBoundedExactSolveConfig
@@ -127,7 +165,8 @@ function buildMinimalOptions(
 function buildExecutorOptions(
   config: LapicCoordinatedBoundedExactSolveConfig,
   controller: LapicInMemorySessionController,
-  prebuiltJoinContext?: LapicBoundedExactSolveOptions['prebuiltJoinContext']
+  prebuiltJoinContext?: LapicBoundedExactSolveOptions['prebuiltJoinContext'],
+  initialIncumbentThreshold?: string
 ): LapicBoundedExactSolveOptions {
   return {
     problem: config.problem,
@@ -151,6 +190,9 @@ function buildExecutorOptions(
       maxCombinationCount: config.maxCombinationCount,
     }),
     ...(prebuiltJoinContext !== undefined && { prebuiltJoinContext }),
+    ...(initialIncumbentThreshold !== undefined && {
+      initialIncumbentThreshold,
+    }),
   }
 }
 
@@ -298,7 +340,7 @@ export async function executeCoordinatedBoundedExactSolve(
     return config.controller.complete()
   }
 
-  // --- Execute partitions sequentially ---
+  // --- Execute partitions sequentially with incumbent sharing ---
   config.controller.activate('join')
 
   const parentIdentity = (await config.controller.inspectSessionState()).summary
@@ -308,6 +350,10 @@ export async function executeCoordinatedBoundedExactSolve(
     readonly completion: LapicSolveCompletionResult
   }
   const completions: PartitionCompletion[] = []
+  // Running best-N candidates across completed partitions.
+  // The worst entry's objective value becomes the initial incumbent
+  // threshold for the next partition, enabling early pruning.
+  let runningBestCandidates: LapicTopNCandidateEntry[] = []
 
   for (const partition of partitions) {
     // Check for pause on the parent controller between partitions
@@ -339,11 +385,22 @@ export async function executeCoordinatedBoundedExactSolve(
     // completion promise (we extract the result below).
     partitionController.awaitCompletion().catch(() => {})
 
+    // Compute the incumbent threshold from the running best-N.
+    // When we have at least topN candidates, the worst entry's
+    // objective value becomes the threshold — any subtree that
+    // can't beat it is provably outside the global top-N.
+    const incumbentThreshold = computeIncumbentThreshold(
+      runningBestCandidates,
+      config.problem.topN
+    )
+
     const outcome = await executeLapicBoundedExactSolve(
-      buildExecutorOptions(config, partitionController, {
-        joinPlan: partition.joinPlan,
-        frontierBlockIds,
-      })
+      buildExecutorOptions(
+        config,
+        partitionController,
+        { joinPlan: partition.joinPlan, frontierBlockIds },
+        incumbentThreshold
+      )
     )
 
     if ('paused' in outcome && outcome.paused) {
@@ -353,7 +410,18 @@ export async function executeCoordinatedBoundedExactSolve(
       return outcome
     }
 
-    completions.push({ completion: outcome as LapicSolveCompletionResult })
+    const completion = outcome as LapicSolveCompletionResult
+    completions.push({ completion })
+
+    // Update running best-N with this partition's candidates
+    if (completion.topNCandidates) {
+      runningBestCandidates = mergeAndTruncateCandidates(
+        runningBestCandidates,
+        completion.topNCandidates,
+        config.problem.topN,
+        config.compareEvaluations
+      )
+    }
 
     config.controller.publishProgress({
       phase: 'join',

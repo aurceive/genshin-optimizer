@@ -111,6 +111,14 @@ export interface LapicBoundedExactSolveOptions {
    * block IDs directly. Used by the coordinated solve.
    */
   readonly prebuiltJoinContext?: LapicPrebuiltJoinContext
+  /**
+   * Initial incumbent threshold for branch-and-bound pruning.
+   * When provided, the executor prunes subtrees whose upper bound
+   * falls below this value even before the top-N tracker is full.
+   * Used by the coordinated solve to share the best-known objective
+   * value from completed partitions with subsequent partitions.
+   */
+  readonly initialIncumbentThreshold?: string
 }
 
 /**
