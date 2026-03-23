@@ -6,6 +6,7 @@ export * from './benchmark'
 export * from './validation'
 export * from './property'
 export * from './divergence'
+export * from './trace'
 
 export {
   createLapicCheckpointClosureInventory,

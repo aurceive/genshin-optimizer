@@ -4,3 +4,5 @@ export type {
   LapicFilesystemArtifactStoreConfig,
   LapicFilesystemArtifactStore,
 } from './filesystem'
+export { createLapicIndexedDBArtifactStore } from './indexeddb'
+export type { LapicIndexedDBArtifactStoreConfig } from './indexeddb'

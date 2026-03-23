@@ -1,34 +1,24 @@
-export const lapicCorePackageName = 'lapic-core'
-export const lapicCoreSchemaVersion = '0.1.0-draft'
-export const lapicCompatibilitySignatureSchemaVersion = '0.1.0-draft'
-
-export type LapicSchemaVersion = typeof lapicCoreSchemaVersion
-export type LapicCompatibilitySignatureSchemaVersion =
-  typeof lapicCompatibilitySignatureSchemaVersion
-export type LapicDigest = string
-export type LapicProblemId = string
-export type LapicProblemDigest = string
-export type LapicStateId = string
-export type LapicRegionId = string
-export type LapicBlockId = string
-export type LapicRelaxId = string
-export type LapicArithmeticPolicyId = string
-export type LapicEngineVersion = string
-export type LapicLogicalTimestamp = string
-export type LapicContentHash = string
-export type LapicCanonicalByteDigest = string
-export type LapicSlotId = string
-export type LapicFrameId = string
-export type LapicCandidateId = string
-export type LapicDomainId = string
-export type LapicObjectiveId = string
-export type LapicConstraintId = string
-export type LapicActorId = string
-export type LapicResourceId = string
-export type LapicCapabilityId = string
-export type LapicCounterId = string
-export type LapicMetadataKey = string
-export type LapicDigestSet = readonly LapicDigest[]
+import type {
+  LapicActorId,
+  LapicArithmeticPolicyId,
+  LapicCandidateId,
+  LapicCapabilityId,
+  LapicConstraintId,
+  LapicCounterId,
+  LapicDigest,
+  LapicDigestSet,
+  LapicDomainId,
+  LapicEngineVersion,
+  LapicFrameId,
+  LapicMetadataKey,
+  LapicObjectiveId,
+  LapicProblemDigest,
+  LapicProblemId,
+  LapicResourceId,
+  LapicSlotId,
+  LapicStateId,
+} from '../identity'
+import type { LapicCompatibilitySignatureSchemaVersion } from '../schema'
 export type LapicPotentialSolveMode =
   | 'current-only'
   | 'current-plus-governed-bonus'
@@ -403,16 +393,4 @@ export interface LapicExactSignatureGroupKeyDerivationInput {
   readonly compatibilitySignature: LapicCompatibilitySignature
   readonly frameAxisIdentityDigest: LapicDigest
   readonly discreteTeamModeKey?: string
-}
-
-export type LapicDeterministicOrderingRelation = -1 | 0 | 1
-
-export interface LapicCoreSkeletonMarker {
-  readonly packageName: typeof lapicCorePackageName
-  readonly schemaVersion: LapicSchemaVersion
-}
-
-export const lapicCoreSkeleton: LapicCoreSkeletonMarker = {
-  packageName: lapicCorePackageName,
-  schemaVersion: lapicCoreSchemaVersion,
 }

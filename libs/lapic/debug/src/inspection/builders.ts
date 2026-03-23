@@ -14,18 +14,20 @@ import type {
 } from '@genshin-optimizer/lapic/runtime'
 import type { LapicArtifactRef } from '@genshin-optimizer/lapic/storage'
 import type {
+  LapicFailureTimelineView,
+  LapicPhaseSummary,
+  LapicThresholdLineageView,
+  LapicTraceQuery,
+} from '../trace'
+import type {
   LapicArtifactSummary,
   LapicCertificateInspectionView,
-  LapicFailureTimelineView,
   LapicFormulaRegionDecompositionExportDescriptor,
   LapicFrontierSkylineVisualizationExportDescriptor,
   LapicInspectionRequest,
-  LapicPhaseSummary,
   LapicPotentialGraphInspectionDescriptor,
   LapicPotentialSummaryView,
   LapicStateBlockInspectionView,
-  LapicThresholdLineageView,
-  LapicTraceQuery,
 } from '../types'
 
 export function createLapicInspectionRequest(

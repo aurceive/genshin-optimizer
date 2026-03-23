@@ -3,8 +3,8 @@ import type {
   LapicDigest,
   LapicRegionId,
   LapicRelaxId,
-  LapicSchemaVersion,
-} from '../types'
+} from '../identity'
+import type { LapicSchemaVersion } from '../schema'
 
 /**
  * Classification of admissible relaxation methods within the bound cascade.

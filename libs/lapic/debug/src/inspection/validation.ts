@@ -2,17 +2,19 @@ import { createLapicSuccessResult } from '@genshin-optimizer/lapic/core'
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
 import { validateLapicArtifactRef } from '@genshin-optimizer/lapic/storage'
 import type {
+  LapicFailureTimelineView,
+  LapicPhaseSummary,
+  LapicTraceQuery,
+} from '../trace'
+import type {
   LapicArtifactSummary,
   LapicCertificateInspectionView,
-  LapicFailureTimelineView,
   LapicFormulaRegionDecompositionExportDescriptor,
   LapicFrontierSkylineVisualizationExportDescriptor,
   LapicInspectionRequest,
-  LapicPhaseSummary,
   LapicPotentialGraphInspectionDescriptor,
   LapicPotentialSummaryView,
   LapicStateBlockInspectionView,
-  LapicTraceQuery,
 } from '../types'
 import {
   createDebugFailure,

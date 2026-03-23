@@ -1,8 +1,5 @@
-import type {
-  LapicActorUniquenessClaim,
-  LapicDeterministicOrderingRelation,
-  LapicResourceClaim,
-} from '../types'
+import type { LapicDeterministicOrderingRelation } from '../identity'
+import type { LapicActorUniquenessClaim, LapicResourceClaim } from '../types'
 
 export function createLapicActorUniquenessClaimOrderingKey(
   claim: LapicActorUniquenessClaim

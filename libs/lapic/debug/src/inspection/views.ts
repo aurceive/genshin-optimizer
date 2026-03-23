@@ -12,13 +12,15 @@ import type {
 } from '@genshin-optimizer/lapic/storage'
 import { createLapicOfflineReplayBundleDescriptor } from '../replay/builders'
 import type {
-  LapicArtifactSummary,
   LapicFailureTimelineView,
-  LapicInspectionRequest,
-  LapicOfflineReplayBundleDescriptor,
   LapicPhaseSummary,
   LapicThresholdLineageView,
   LapicTraceQuery,
+} from '../trace'
+import type {
+  LapicArtifactSummary,
+  LapicInspectionRequest,
+  LapicOfflineReplayBundleDescriptor,
 } from '../types'
 import { createDebugFailure } from '../validation/internal'
 import {

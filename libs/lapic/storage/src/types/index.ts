@@ -4,6 +4,7 @@ import type {
   LapicContentHash,
   LapicDigest,
   LapicExactSignatureGroupKey,
+  LapicRelaxId,
   LapicSchemaVersion,
   LapicSlotId,
   LapicStateLayoutDescriptor,
@@ -18,7 +19,10 @@ export type LapicArtifactKind =
   | 'canonical-problem'
   | 'frontier-block'
   | 'frontier-index'
+  | 'block-manifest'
+  | 'threshold-snapshot'
   | 'certificate'
+  | 'relaxation-record'
   | 'checkpoint-manifest'
   | 'solve-checkpoint'
   | 'debug-export'
@@ -136,12 +140,108 @@ export interface LapicBackendCapabilityDescriptor {
   readonly supportsCompression: boolean
 }
 
+/**
+ * §4.4 ThresholdSnapshot — persisted top-N threshold state relevant to
+ * threshold-sensitive certificates.
+ */
+export interface LapicThresholdSnapshotRecord {
+  readonly snapshotId: string
+  readonly thresholdDigest: LapicDigest
+  readonly incumbentDigest: LapicDigest
+  readonly topNValues: readonly number[]
+  readonly capturedAtStep: number
+  readonly arithmeticPolicyId: LapicArithmeticPolicyId
+}
+
+/**
+ * §4.5 CertificateRecord — persisted C-IR certificate and replay recipe
+ * as a first-class storage artifact.
+ */
+export interface LapicCertificateRecord {
+  readonly recordId: string
+  readonly certId: string
+  readonly certDigest: LapicDigest
+  readonly replayRecipeDigest: LapicDigest
+  readonly referencedStateIds: readonly string[]
+  readonly emittedAtStep: number
+}
+
+/**
+ * §4.6 RelaxationRecord — persisted R-IR descriptors and provider evidence
+ * references required for replay.
+ */
+export interface LapicRelaxationRecord {
+  readonly recordId: string
+  readonly relaxId: LapicRelaxId
+  readonly relaxDigest: LapicDigest
+  readonly providerEvidenceRefs: readonly LapicDigest[]
+  readonly referencedRegionIds: readonly string[]
+}
+
+/**
+ * §4.8 DebugView — deterministic text or binary inspection export.
+ * Non-canonical; must not be used as primary persistence for correctness-critical state.
+ */
+export interface LapicDebugViewRecord {
+  readonly recordId: string
+  readonly viewKind: string
+  readonly viewDigest: LapicDigest
+  readonly sourceArtifactRef: LapicArtifactRef
+  readonly createdAtStep: number
+}
+
+/**
+ * Result of a scanIndex operation — lists artifact references matching
+ * a given artifact kind filter.
+ */
+export interface LapicIndexScanResult {
+  readonly artifactKind: LapicArtifactKind
+  readonly matchingRefs: readonly LapicArtifactRef[]
+  readonly totalCount: number
+}
+
+/**
+ * Describes a logical transaction to be committed atomically.
+ */
+export interface LapicLogicalTransaction {
+  readonly transactionId: string
+  readonly writes: readonly LapicArtifactWriteRequest[]
+}
+
+/**
+ * Result of committing a logical transaction.
+ */
+export interface LapicLogicalTransactionCommitResult {
+  readonly transactionId: string
+  readonly committed: boolean
+  readonly committedRefs: readonly LapicArtifactRef[]
+  readonly diagnostics: readonly string[]
+}
+
 export interface LapicArtifactStore {
   readonly capabilities: LapicBackendCapabilityDescriptor
   read(request: LapicArtifactReadRequest): Promise<LapicArtifactReadResult>
   write(
     request: LapicArtifactWriteRequest
   ): Promise<LapicArtifactWriteCommitResult>
+  /** §17.3 Scan stored artifacts by kind. */
+  scanIndex(artifactKind: LapicArtifactKind): Promise<LapicIndexScanResult>
+  /** §17.3 Atomically commit a group of writes. */
+  commitLogicalTransaction(
+    transaction: LapicLogicalTransaction
+  ): Promise<LapicLogicalTransactionCommitResult>
+  /** §17.3 Import a checkpoint closure from an export descriptor. */
+  importCheckpoint(
+    descriptor: LapicClosureImportDescriptor
+  ): Promise<LapicCheckpointClosureVerificationResult>
+  /** §17.3 Export a checkpoint closure for external transfer. */
+  exportCheckpoint(
+    descriptor: LapicClosureExportDescriptor
+  ): Promise<LapicClosureExportDescriptor>
+  /** §17.3 Verify integrity of a single artifact. */
+  verifyArtifact(
+    artifactRef: LapicArtifactRef
+  ): Promise<LapicIntegrityScanResult>
 }
 
 export interface LapicClosureMaterializationRequest {

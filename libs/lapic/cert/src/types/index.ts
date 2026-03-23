@@ -214,23 +214,6 @@ export interface LapicReplayResult {
   readonly exactReplayInvoked: boolean
 }
 
-export interface LapicProviderEvidenceDescriptor {
-  readonly providerKind: string
-  readonly evidenceDigest: LapicDigest
-  readonly payloadEncoding: string
-}
-
-export interface LapicDeterministicProfileDescriptor {
-  readonly providerKind: string
-  readonly profileId: string
-  readonly configDigest: LapicDigest
-}
-
-export interface LapicProviderReplayEligibility {
-  readonly eligible: boolean
-  readonly reason?: string
-}
-
 export interface LapicCertificateSummary {
   readonly certId: string
   readonly certKind: LapicCertificateKind

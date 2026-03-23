@@ -13,8 +13,6 @@ import type {
   LapicTeamProvenance,
 } from '@genshin-optimizer/lapic/core'
 import type {
-  LapicFailureRecord,
-  LapicProgressEvent,
   LapicSessionSummary,
   LapicTraceEvent,
 } from '@genshin-optimizer/lapic/runtime'
@@ -24,6 +22,7 @@ import type {
   LapicCheckpointClosureVerificationResult,
   LapicIntegrityScanResult,
 } from '@genshin-optimizer/lapic/storage'
+import type { LapicPhaseSummary, LapicThresholdLineageView } from '../trace'
 
 export const lapicDebugPackageName = 'lapic-debug'
 export const lapicDebugSchemaVersion = '0.1.0-draft'
@@ -76,26 +75,6 @@ export interface LapicPotentialGraphInspectionDescriptor {
   readonly outputDigest: LapicDigest
   readonly graphKind: string
   readonly exactness: string
-}
-
-export interface LapicTraceQuery {
-  readonly sessionId: string
-  readonly includeFailures: boolean
-}
-
-export interface LapicPhaseSummary {
-  readonly sessionId: string
-  readonly phase: string
-  readonly progressEvents: readonly LapicProgressEvent[]
-}
-
-export interface LapicThresholdLineageView {
-  readonly thresholdDigest: LapicDigest
-  readonly relatedCertificates: readonly string[]
-}
-
-export interface LapicFailureTimelineView {
-  readonly failures: readonly LapicFailureRecord[]
 }
 
 export interface LapicAuditReportRequest {

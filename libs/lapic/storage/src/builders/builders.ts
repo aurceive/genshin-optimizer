@@ -6,6 +6,7 @@ import type {
   LapicBackendCapabilityDescriptor,
   LapicBlockLayoutDescriptor,
   LapicBlockManifest,
+  LapicCertificateRecord,
   LapicCheckpointClosureInventory,
   LapicCheckpointClosureVerificationResult,
   LapicCheckpointManifest,
@@ -13,10 +14,13 @@ import type {
   LapicClosureImportDescriptor,
   LapicCorruptionClassification,
   LapicDebugArtifactSummary,
+  LapicDebugViewRecord,
   LapicFrontierBlock,
   LapicFrontierIndex,
   LapicIntegrityScanResult,
+  LapicRelaxationRecord,
   LapicStorageEnvelope,
+  LapicThresholdSnapshotRecord,
 } from '../types'
 
 export function createLapicStorageEnvelope(
@@ -253,4 +257,54 @@ export function createLapicArtifactRefKey(
     artifactRef.artifactKind,
     artifactRef.contentHash,
   ].join('|')
+}
+
+export function createLapicThresholdSnapshotRecord(
+  input: LapicThresholdSnapshotRecord
+): LapicThresholdSnapshotRecord {
+  return {
+    snapshotId: input.snapshotId,
+    thresholdDigest: input.thresholdDigest,
+    incumbentDigest: input.incumbentDigest,
+    topNValues: [...input.topNValues],
+    capturedAtStep: input.capturedAtStep,
+    arithmeticPolicyId: input.arithmeticPolicyId,
+  }
+}
+
+export function createLapicCertificateRecord(
+  input: LapicCertificateRecord
+): LapicCertificateRecord {
+  return {
+    recordId: input.recordId,
+    certId: input.certId,
+    certDigest: input.certDigest,
+    replayRecipeDigest: input.replayRecipeDigest,
+    referencedStateIds: [...input.referencedStateIds],
+    emittedAtStep: input.emittedAtStep,
+  }
+}
+
+export function createLapicRelaxationRecord(
+  input: LapicRelaxationRecord
+): LapicRelaxationRecord {
+  return {
+    recordId: input.recordId,
+    relaxId: input.relaxId,
+    relaxDigest: input.relaxDigest,
+    providerEvidenceRefs: [...input.providerEvidenceRefs],
+    referencedRegionIds: [...input.referencedRegionIds],
+  }
+}
+
+export function createLapicDebugViewRecord(
+  input: LapicDebugViewRecord
+): LapicDebugViewRecord {
+  return {
+    recordId: input.recordId,
+    viewKind: input.viewKind,
+    viewDigest: input.viewDigest,
+    sourceArtifactRef: createLapicArtifactRef(input.sourceArtifactRef),
+    createdAtStep: input.createdAtStep,
+  }
 }

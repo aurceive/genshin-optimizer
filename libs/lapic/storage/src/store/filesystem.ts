@@ -19,6 +19,7 @@ import {
   createLapicStorageEnvelope,
 } from '../builders'
 import type {
+  LapicArtifactKind,
   LapicArtifactRef,
   LapicArtifactStore,
   LapicBackendCapabilityDescriptor,
@@ -187,6 +188,91 @@ export function createLapicFilesystemArtifactStore(
       fs.renameSync(tmp, filePath)
 
       return { artifactRef, committed: true }
+    },
+
+    async scanIndex(artifactKind: LapicArtifactKind) {
+      const kindDir = artifactDir(rootDir, artifactKind)
+      const matchingRefs: LapicArtifactRef[] = []
+      if (fs.existsSync(kindDir)) {
+        const files = fs.readdirSync(kindDir, { withFileTypes: true })
+        for (const file of files) {
+          if (!file.isFile() || !file.name.endsWith('.json')) continue
+          try {
+            const raw = fs.readFileSync(path.join(kindDir, file.name), 'utf-8')
+            const record: LapicFilesystemArtifactRecord = JSON.parse(raw)
+            matchingRefs.push(createLapicArtifactRef(record.artifactRef))
+          } catch {
+            // Skip corrupted files during scan
+          }
+        }
+      }
+      return {
+        artifactKind,
+        matchingRefs,
+        totalCount: matchingRefs.length,
+      }
+    },
+
+    async commitLogicalTransaction(transaction) {
+      const committedRefs: LapicArtifactRef[] = []
+      for (const request of transaction.writes) {
+        const result = await this.write(request)
+        committedRefs.push(result.artifactRef)
+      }
+      return {
+        transactionId: transaction.transactionId,
+        committed: true,
+        committedRefs,
+        diagnostics: [],
+      }
+    },
+
+    async importCheckpoint(descriptor) {
+      return {
+        checkpointId: descriptor.checkpointId,
+        resumable: false,
+        replayable: false,
+        diagnostics: [
+          'importCheckpoint requires external checkpoint data not yet supported by the filesystem store',
+        ],
+      }
+    },
+
+    async exportCheckpoint(descriptor) {
+      return descriptor
+    },
+
+    async verifyArtifact(artifactRef) {
+      const filePath = artifactPath(
+        rootDir,
+        artifactRef.artifactKind,
+        artifactRef.artifactId
+      )
+      if (!fs.existsSync(filePath)) {
+        return {
+          ok: false,
+          classifications: ['missing-artifact' as const],
+          affectedArtifacts: [createLapicArtifactRef(artifactRef)],
+        }
+      }
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8')
+        const record: LapicFilesystemArtifactRecord = JSON.parse(raw)
+        if (record.artifactRef.contentHash !== artifactRef.contentHash) {
+          return {
+            ok: false,
+            classifications: ['checksum-mismatch' as const],
+            affectedArtifacts: [createLapicArtifactRef(artifactRef)],
+          }
+        }
+        return { ok: true, classifications: [], affectedArtifacts: [] }
+      } catch {
+        return {
+          ok: false,
+          classifications: ['checksum-mismatch' as const],
+          affectedArtifacts: [createLapicArtifactRef(artifactRef)],
+        }
+      }
     },
 
     listArtifactRefs() {

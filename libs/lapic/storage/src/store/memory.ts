@@ -5,6 +5,7 @@ import {
   createLapicStorageEnvelope,
 } from '../builders'
 import type {
+  LapicArtifactKind,
   LapicArtifactWriteRequest,
   LapicMemoryArtifactStore,
   LapicMemoryArtifactStoreEntry,
@@ -81,6 +82,56 @@ export function createLapicMemoryArtifactStore(
       return {
         artifactRef,
         committed: true,
+      }
+    },
+    async scanIndex(artifactKind: LapicArtifactKind) {
+      const matchingRefs = [...entries.values()]
+        .filter((e) => e.artifactRef.artifactKind === artifactKind)
+        .map((e) => createLapicArtifactRef(e.artifactRef))
+      return {
+        artifactKind,
+        matchingRefs,
+        totalCount: matchingRefs.length,
+      }
+    },
+    async commitLogicalTransaction(transaction) {
+      const committedRefs = transaction.writes.map((request) => {
+        writeValidatedEntry(request)
+        return createLapicArtifactRefFromWriteRequest(request)
+      })
+      return {
+        transactionId: transaction.transactionId,
+        committed: true,
+        committedRefs,
+        diagnostics: [],
+      }
+    },
+    async importCheckpoint(descriptor) {
+      return {
+        checkpointId: descriptor.checkpointId,
+        resumable: false,
+        replayable: false,
+        diagnostics: [
+          'importCheckpoint is not supported by the in-memory store',
+        ],
+      }
+    },
+    async exportCheckpoint(descriptor) {
+      return descriptor
+    },
+    async verifyArtifact(artifactRef) {
+      const entry = entries.get(artifactRef.artifactId)
+      if (!entry) {
+        return {
+          ok: false,
+          classifications: ['missing-artifact' as const],
+          affectedArtifacts: [createLapicArtifactRef(artifactRef)],
+        }
+      }
+      return {
+        ok: true,
+        classifications: [],
+        affectedArtifacts: [],
       }
     },
     listArtifactRefs() {

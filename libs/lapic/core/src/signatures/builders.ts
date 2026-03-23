@@ -3,15 +3,15 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '../diagnostics'
+import type { LapicCompatibilitySignatureSchemaVersion } from '../schema'
+import { lapicCompatibilitySignatureSchemaVersion } from '../schema'
 import type {
   LapicCapabilityFact,
   LapicCompatibilitySignature,
-  LapicCompatibilitySignatureSchemaVersion,
   LapicDiagnostic,
   LapicExactSignatureGroupKey,
   LapicExactSignatureGroupKeyDerivationInput,
 } from '../types'
-import { lapicCompatibilitySignatureSchemaVersion } from '../types'
 import { validateLapicFrameAxisIdentity } from '../validation'
 import {
   compareLapicStringArrays,
