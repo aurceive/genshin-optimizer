@@ -6,11 +6,69 @@
  * a real evaluator that uses precomputed OptNode evaluation.
  */
 
-import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
+import type { ArtifactSlotKey } from '@genshin-optimizer/gi/consts'
+import { allArtifactSlotKeys } from '@genshin-optimizer/gi/consts'
+import type {
+  GeneratedBuild,
+  ICachedArtifact,
+  OptConfig,
+} from '@genshin-optimizer/gi/db'
 import type { GiLapicSolveOrchestrationConfig } from '@genshin-optimizer/gi/lapic-adapter'
 import { createGiLapicOrchestrationConfigFromUi } from '@genshin-optimizer/gi/lapic-adapter'
 import type { ArtifactBuildData, DynStat } from '@genshin-optimizer/gi/solver'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
+
+// ---------------------------------------------------------------------------
+// Top-N collector (side-channel for result accumulation)
+// ---------------------------------------------------------------------------
+
+interface CollectedBuild {
+  readonly score: number
+  readonly artifactIds: readonly string[]
+  readonly slotIds: readonly string[]
+}
+
+/**
+ * Accumulates the best N builds as a side-effect of evaluation.
+ *
+ * The lapic solver does not expose top-N candidate objects in its
+ * completion outcome, so we collect them during evaluation.
+ */
+export class TopNCollector {
+  private readonly capacity: number
+  private builds: CollectedBuild[] = []
+  private worstScore = -Infinity
+
+  constructor(capacity: number) {
+    this.capacity = Math.max(1, capacity)
+  }
+
+  insert(
+    score: number,
+    artifactIds: readonly string[],
+    slotIds: readonly string[]
+  ): void {
+    if (this.builds.length >= this.capacity && score <= this.worstScore) return
+
+    this.builds.push({ score, artifactIds, slotIds })
+    this.builds.sort((a, b) => b.score - a.score)
+
+    if (this.builds.length > this.capacity) {
+      this.builds.length = this.capacity
+    }
+
+    this.worstScore = this.builds[this.builds.length - 1].score
+  }
+
+  getResults(): readonly CollectedBuild[] {
+    return this.builds
+  }
+
+  reset(): void {
+    this.builds = []
+    this.worstScore = -Infinity
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Evaluator factory
@@ -44,15 +102,21 @@ const EMPTY_ART: { readonly values: Record<string, number> } = { values: {} }
  *
  * The returned function looks up each candidate's artifact stats and
  * evaluates the precomputed optimization target formula.
+ * Results are accumulated into the provided `TopNCollector`.
  */
-function createGiLapicEvaluator(prep: LapicEvalPrepData) {
+function createGiLapicEvaluator(
+  prep: LapicEvalPrepData,
+  collector: TopNCollector
+) {
   return (
     combination: {
-      readonly candidates: readonly { readonly candidateId: string }[]
+      readonly candidates: readonly {
+        readonly candidateId: string
+        readonly slotId?: string
+      }[]
     },
     _canonicalExport: unknown
   ) => {
-    // Build slot array from combination candidates
     const slots = combination.candidates.map((c) => {
       const art = prep.artifactLookup.get(c.candidateId)
       return art ?? EMPTY_ART
@@ -62,10 +126,9 @@ function createGiLapicEvaluator(prep: LapicEvalPrepData) {
       const results = prep.evalFn(slots)
       const objectiveValue = results[0]
 
-      // Check constraints (indices 1..N correspond to constraint nodes)
+      // Check constraints
       for (let i = 0; i < prep.constraintMinimums.length; i++) {
         if (results[i + 1] < prep.constraintMinimums[i]) {
-          // Infeasible — return a very low score so the solver deprioritizes
           return {
             ok: true as const,
             value: {
@@ -77,6 +140,13 @@ function createGiLapicEvaluator(prep: LapicEvalPrepData) {
           }
         }
       }
+
+      // Accumulate feasible result
+      collector.insert(
+        objectiveValue,
+        combination.candidates.map((c) => c.candidateId),
+        combination.candidates.map((c) => c.slotId ?? '')
+      )
 
       const scoreStr = objectiveValue.toString()
       return {
@@ -103,17 +173,40 @@ function createGiLapicEvaluator(prep: LapicEvalPrepData) {
 }
 
 // ---------------------------------------------------------------------------
+// Result mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps collected lapic results to GI `GeneratedBuild[]` format.
+ */
+export function mapLapicResultsToBuilds(
+  collector: TopNCollector,
+  weaponId: string
+): GeneratedBuild[] {
+  return collector.getResults().map((build) => {
+    const artifactIds: Record<string, string | undefined> = {}
+    for (const slotKey of allArtifactSlotKeys) {
+      artifactIds[slotKey] = undefined
+    }
+    for (let i = 0; i < build.artifactIds.length; i++) {
+      const slotId = build.slotIds[i]
+      if (slotId && allArtifactSlotKeys.includes(slotId as ArtifactSlotKey)) {
+        artifactIds[slotId] = build.artifactIds[i]
+      }
+    }
+    return {
+      artifactIds: artifactIds as Record<ArtifactSlotKey, string | undefined>,
+      weaponId,
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Normalization input template
 // ---------------------------------------------------------------------------
 
 const GI_SLOT_IDS = ['flower', 'plume', 'sands', 'goblet', 'circlet'] as const
 
-/**
- * Minimal normalization input template for GI 5-slot artifact optimization.
- *
- * The adapter's `buildGiLapicCanonicalExportFromRequest` enriches this with
- * actual candidate domains from the inventory snapshot in `giContext`.
- */
 function createNormalizationInputTemplate(topN: number) {
   return {
     teamLayout: {
@@ -182,12 +275,6 @@ function createNormalizationInputTemplate(topN: number) {
 // Artifact lookup builder
 // ---------------------------------------------------------------------------
 
-/**
- * Builds the artifact lookup map from compacted artifacts.
- *
- * Maps artifact ID → `{values: Record<string, number>}` for fast
- * stat retrieval in the evaluator.
- */
 export function buildArtifactLookup(
   compactedBySlot: Record<string, readonly ArtifactBuildData[]>
 ): Map<string, { readonly values: Readonly<Record<string, number>> }> {
@@ -216,6 +303,8 @@ export interface LapicBridgeInput {
   readonly maxBuildsToShow: number
   /** Precomputed evaluation data; if absent, uses stub evaluator */
   readonly prepData?: LapicEvalPrepData
+  /** Side-channel collector for top-N results */
+  readonly collector?: TopNCollector
 }
 
 /**
@@ -232,18 +321,18 @@ export function buildLapicSolveConfig(
       input.maxBuildsToShow
     )
 
-    const evaluator = input.prepData
-      ? createGiLapicEvaluator(input.prepData)
-      : // Fallback stub evaluator
-        () => ({
-          ok: true as const,
-          value: {
-            objectiveValue: '0',
-            evidenceDigest: 'gi-stub-evaluator',
-            orderingKey: ['0'],
-          },
-          diagnostics: [],
-        })
+    const evaluator =
+      input.prepData && input.collector
+        ? createGiLapicEvaluator(input.prepData, input.collector)
+        : () => ({
+            ok: true as const,
+            value: {
+              objectiveValue: '0',
+              evidenceDigest: 'gi-stub-evaluator',
+              orderingKey: ['0'],
+            },
+            diagnostics: [],
+          })
 
     return createGiLapicOrchestrationConfigFromUi({
       problemId: `${input.characterKey}:${input.teamId}`,

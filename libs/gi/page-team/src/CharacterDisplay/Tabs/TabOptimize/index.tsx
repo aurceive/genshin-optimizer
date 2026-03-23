@@ -134,7 +134,12 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
-import { buildArtifactLookup, buildLapicSolveConfig } from './lapicBridge'
+import {
+  TopNCollector,
+  buildArtifactLookup,
+  buildLapicSolveConfig,
+  mapLapicResultsToBuilds,
+} from './lapicBridge'
 import type { LapicEvalPrepData } from './lapicBridge'
 
 function initBuildStatus(): BuildStatus {
@@ -327,6 +332,8 @@ export default function TabBuild() {
   const throwGlobalError = useGlobalError()
 
   // Lapic solver — prepare evaluation data and orchestration config
+  const lapicCollectorRef = useRef(new TopNCollector(maxBuildsToShow))
+
   const lapicPrepData: LapicEvalPrepData | undefined = useMemo(() => {
     if (enginePref !== 'lapic' || !characterKey) return undefined
 
@@ -407,30 +414,31 @@ export default function TabBuild() {
     activeCharKey,
   ])
 
-  const lapicConfig = useMemo(
-    () =>
-      enginePref === 'lapic' && characterKey && optimizationTargetNode
-        ? buildLapicSolveConfig({
-            characterKey,
-            teamId,
-            artifacts: filteredArts,
-            buildSetting,
-            optimizationTarget: optimizationTargetNode as OptNode,
-            maxBuildsToShow,
-            prepData: lapicPrepData,
-          })
-        : null,
-    [
-      enginePref,
-      characterKey,
-      teamId,
-      filteredArts,
-      buildSetting,
-      optimizationTargetNode,
-      maxBuildsToShow,
-      lapicPrepData,
-    ]
-  )
+  const lapicConfig = useMemo(() => {
+    // Reset collector for new config
+    lapicCollectorRef.current = new TopNCollector(maxBuildsToShow)
+    return enginePref === 'lapic' && characterKey && optimizationTargetNode
+      ? buildLapicSolveConfig({
+          characterKey,
+          teamId,
+          artifacts: filteredArts,
+          buildSetting,
+          optimizationTarget: optimizationTargetNode as OptNode,
+          maxBuildsToShow,
+          prepData: lapicPrepData,
+          collector: lapicCollectorRef.current,
+        })
+      : null
+  }, [
+    enginePref,
+    characterKey,
+    teamId,
+    filteredArts,
+    buildSetting,
+    optimizationTargetNode,
+    maxBuildsToShow,
+    lapicPrepData,
+  ])
   const [lapicState, lapicControls] = useLapicSolve(lapicConfig)
   const lapicStartedAt = useRef<number | undefined>()
 
@@ -438,6 +446,29 @@ export default function TabBuild() {
   useEffect(() => {
     if (lapicState.status === 'idle') lapicStartedAt.current = undefined
   }, [lapicState.status])
+
+  // Store results when lapic solve completes
+  useEffect(() => {
+    if (lapicState.status !== 'completed') return
+    const weaponId = database.teams.getLoadoutWeapon(loadoutDatum).id
+    const builds = mapLapicResultsToBuilds(lapicCollectorRef.current, weaponId)
+    if (builds.length > 0) {
+      database.optConfigs.newOrSetGeneratedBuildList(optConfigId, {
+        builds,
+        buildDate: Date.now(),
+      })
+    }
+    // Notification
+    if (notificationRef.current) {
+      audio.play()
+      if (!tabFocused.current)
+        if (Notification?.permission === 'granted')
+          new Notification('Genshin Optimizer', {
+            body: t('buildCompleted'),
+            icon: './favicon.ico',
+          })
+    }
+  }, [lapicState.status, database, loadoutDatum, optConfigId, t])
 
   // Combined generating flag for both engines
   const legacyGenerating = buildStatus.type !== 'inactive'
