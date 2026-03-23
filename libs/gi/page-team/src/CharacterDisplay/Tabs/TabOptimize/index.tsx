@@ -41,6 +41,8 @@ import {
   useTeammateArtifactIds,
   useWeapon,
 } from '@genshin-optimizer/gi/db-ui'
+import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
+import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
 import { GOSolver, mergeBuilds, mergePlot } from '@genshin-optimizer/gi/solver'
 import { compactArtifacts } from '@genshin-optimizer/gi/solver-tc'
@@ -90,6 +92,8 @@ import {
   MenuItem,
   Skeleton,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import type { FormEventHandler, ReactNode } from 'react'
@@ -157,6 +161,24 @@ export default function TabBuild() {
   const generatingBuilds = buildStatus.type !== 'inactive'
 
   const [maxWorkers, nativeThreads, setMaxWorkers] = useNumWorkers()
+
+  // Engine preference (legacy vs lapic)
+  const [enginePref, setEnginePref] = useState<LapicEngineKind>(() => {
+    try {
+      const stored = localStorage.getItem('gi-optimizer-engine')
+      return stored === 'lapic' ? 'lapic' : 'legacy'
+    } catch {
+      return 'legacy'
+    }
+  })
+  const handleEngineChange = useCallback((engine: LapicEngineKind) => {
+    try {
+      localStorage.setItem('gi-optimizer-engine', engine)
+    } catch {
+      // Ignore localStorage errors (e.g. private browsing)
+    }
+    setEnginePref(engine)
+  }, [])
 
   // Clear state when changing characters
   if (usePrev(characterKey) !== characterKey) setBuildStatus(initBuildStatus())
@@ -538,327 +560,366 @@ export default function TabBuild() {
     builds.length + (graphBuilds ? graphBuilds.length : 0)
 
   return (
-    <Box display="flex" flexDirection="column" gap={1}>
-      {noArtifact && <NoArtWarning />}
-      {/* Build Generator Editor */}
-      <Grid container spacing={1}>
-        {/* 1*/}
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          lg={3}
-          display="flex"
-          flexDirection="column"
-          gap={1}
-        >
-          <OptCharacterCard characterKey={characterKey} />
-          <BonusStatsCard />
-          <CustomMultiTargetButton />
-        </Grid>
-        {/* 2 */}
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          lg={4}
-          display="flex"
-          flexDirection="column"
-          gap={1}
-        >
-          {/* Level Filter */}
-          <LevelFilter
-            levelTotal={levelTotal['in']}
-            levelLow={levelLow}
-            levelHigh={levelHigh}
-            disabled={generatingBuilds}
-            optConfigId={optConfigId}
-          />
-
-          {/* Main Stat Filters */}
-          <CardThemed bgt="light">
-            <CardContent>
-              <Typography sx={{ fontWeight: 'bold' }}>
-                {t('mainStat.title')}
-              </Typography>
-            </CardContent>
-            <Divider />
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1}>
-                <AssumeFullLevelToggle
-                  mainStatAssumptionLevel={mainStatAssumptionLevel}
-                  setmainStatAssumptionLevel={(
-                    mainStatAssumptionLevel: number
-                  ) =>
-                    database.optConfigs.set(optConfigId, {
-                      mainStatAssumptionLevel,
-                    })
-                  }
-                  disabled={generatingBuilds}
-                />
-                <InfoTooltip
-                  title={
-                    <Box>
-                      <Typography variant="h6">
-                        {t('mainStat.levelAssTooltip.title')}
-                      </Typography>
-                      <Typography>
-                        {t('mainStat.levelAssTooltip.desc')}
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-            </CardContent>
-            {/* main stat selector */}
-            <MainStatSelectionCard
+    <LapicEngineProvider
+      engine={enginePref}
+      onEngineChange={handleEngineChange}
+    >
+      <Box display="flex" flexDirection="column" gap={1}>
+        {noArtifact && <NoArtWarning />}
+        {/* Build Generator Editor */}
+        <Grid container spacing={1}>
+          {/* 1*/}
+          <Grid
+            item
+            xs={12}
+            sm={6}
+            lg={3}
+            display="flex"
+            flexDirection="column"
+            gap={1}
+          >
+            <OptCharacterCard characterKey={characterKey} />
+            <BonusStatsCard />
+            <CustomMultiTargetButton />
+          </Grid>
+          {/* 2 */}
+          <Grid
+            item
+            xs={12}
+            sm={6}
+            lg={4}
+            display="flex"
+            flexDirection="column"
+            gap={1}
+          >
+            {/* Level Filter */}
+            <LevelFilter
+              levelTotal={levelTotal['in']}
+              levelLow={levelLow}
+              levelHigh={levelHigh}
               disabled={generatingBuilds}
-              filteredArtIdMap={filteredArtIdMap}
+              optConfigId={optConfigId}
             />
-          </CardThemed>
 
-          {/* use excluded */}
-          <ExcludeArt
-            disabled={generatingBuilds}
-            excludedTotal={excludedTotal['in']}
-          />
-          <UseTeammateArt
-            totalTally={teammateBuildTotal['in']}
-            useTeammateBuild={useTeammateBuild}
-            disabled={generatingBuilds}
-          />
-          <Button
-            fullWidth
-            startIcon={allowPartial ? <CheckBox /> : <CheckBoxOutlineBlank />}
-            color={allowPartial ? 'success' : 'secondary'}
-            onClick={() =>
-              database.optConfigs.set(optConfigId, {
-                allowPartial: !allowPartial,
-              })
-            }
+            {/* Main Stat Filters */}
+            <CardThemed bgt="light">
+              <CardContent>
+                <Typography sx={{ fontWeight: 'bold' }}>
+                  {t('mainStat.title')}
+                </Typography>
+              </CardContent>
+              <Divider />
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <AssumeFullLevelToggle
+                    mainStatAssumptionLevel={mainStatAssumptionLevel}
+                    setmainStatAssumptionLevel={(
+                      mainStatAssumptionLevel: number
+                    ) =>
+                      database.optConfigs.set(optConfigId, {
+                        mainStatAssumptionLevel,
+                      })
+                    }
+                    disabled={generatingBuilds}
+                  />
+                  <InfoTooltip
+                    title={
+                      <Box>
+                        <Typography variant="h6">
+                          {t('mainStat.levelAssTooltip.title')}
+                        </Typography>
+                        <Typography>
+                          {t('mainStat.levelAssTooltip.desc')}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+              </CardContent>
+              {/* main stat selector */}
+              <MainStatSelectionCard
+                disabled={generatingBuilds}
+                filteredArtIdMap={filteredArtIdMap}
+              />
+            </CardThemed>
+
+            {/* use excluded */}
+            <ExcludeArt
+              disabled={generatingBuilds}
+              excludedTotal={excludedTotal['in']}
+            />
+            <UseTeammateArt
+              totalTally={teammateBuildTotal['in']}
+              useTeammateBuild={useTeammateBuild}
+              disabled={generatingBuilds}
+            />
+            <Button
+              fullWidth
+              startIcon={allowPartial ? <CheckBox /> : <CheckBoxOutlineBlank />}
+              color={allowPartial ? 'success' : 'secondary'}
+              onClick={() =>
+                database.optConfigs.set(optConfigId, {
+                  allowPartial: !allowPartial,
+                })
+              }
+              disabled={generatingBuilds}
+            >
+              {t('allowPartial')}
+            </Button>
+          </Grid>
+
+          {/* 3 */}
+          <Grid
+            item
+            xs={12}
+            sm={6}
+            lg={5}
+            display="flex"
+            flexDirection="column"
+            gap={1}
+          >
+            <ArtifactSetConfig disabled={generatingBuilds} />
+
+            {/* use equipped */}
+            <UseEquipped
+              disabled={generatingBuilds}
+              allowListTotal={allowListTotal['in']}
+            />
+
+            {/*Minimum Final Stat Filter */}
+            <StatFilterCard disabled={generatingBuilds} />
+            <AdResponsive
+              dataAdSlot="7724855772"
+              bgt="light"
+              Ad={GOAdWrapper}
+            />
+          </Grid>
+        </Grid>
+        {/* Footer */}
+        {isSM && targetSelector}
+        {/* Engine toggle */}
+        <Box display="flex" alignItems="center" gap={1}>
+          <ToggleButtonGroup
+            exclusive
+            value={enginePref}
+            onChange={(_, v) => {
+              if (v === 'legacy' || v === 'lapic') handleEngineChange(v)
+            }}
+            size="small"
             disabled={generatingBuilds}
           >
-            {t('allowPartial')}
-          </Button>
-        </Grid>
-
-        {/* 3 */}
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          lg={5}
-          display="flex"
-          flexDirection="column"
-          gap={1}
-        >
-          <ArtifactSetConfig disabled={generatingBuilds} />
-
-          {/* use equipped */}
-          <UseEquipped
-            disabled={generatingBuilds}
-            allowListTotal={allowListTotal['in']}
-          />
-
-          {/*Minimum Final Stat Filter */}
-          <StatFilterCard disabled={generatingBuilds} />
-          <AdResponsive dataAdSlot="7724855772" bgt="light" Ad={GOAdWrapper} />
-        </Grid>
-      </Grid>
-      {/* Footer */}
-      {isSM && targetSelector}
-      <ButtonGroup>
-        {!isSM && targetSelector}
-        <DropdownButton
-          disabled={generatingBuilds || !characterKey || !optimizationTarget}
-          title={
-            <Trans t={t} i18nKey="build" count={maxBuildsToShow}>
-              {{ count: maxBuildsToShow }} Builds
-            </Trans>
-          }
-        >
-          <MenuItem>
-            <Typography variant="caption" color="info.main">
-              {t('buildDropdownDesc')}
-            </Typography>
-          </MenuItem>
-          <Divider />
-          {maxBuildsToShowList.map((v) => (
-            <MenuItem
-              key={v}
-              onClick={() =>
-                database.optConfigs.set(optConfigId, { maxBuildsToShow: v })
-              }
-            >
-              <Trans t={t} i18nKey="build" count={v}>
-                {{ count: v }} Builds
+            <ToggleButton value="legacy">Legacy</ToggleButton>
+            <ToggleButton value="lapic">
+              <Science sx={{ mr: 0.5 }} fontSize="inherit" />
+              Lapic
+            </ToggleButton>
+          </ToggleButtonGroup>
+          {enginePref === 'lapic' && (
+            <SqBadge color="warning">Experimental</SqBadge>
+          )}
+        </Box>
+        <ButtonGroup>
+          {!isSM && targetSelector}
+          <DropdownButton
+            disabled={generatingBuilds || !characterKey || !optimizationTarget}
+            title={
+              <Trans t={t} i18nKey="build" count={maxBuildsToShow}>
+                {{ count: maxBuildsToShow }} Builds
               </Trans>
+            }
+          >
+            <MenuItem>
+              <Typography variant="caption" color="info.main">
+                {t('buildDropdownDesc')}
+              </Typography>
             </MenuItem>
-          ))}
-        </DropdownButton>
-        <DropdownButton
-          disabled={generatingBuilds || !characterKey || !optimizationTarget}
-          sx={{ borderRadius: '4px 0px 0px 4px' }}
-          title={
-            <Trans t={t} i18nKey="thread" count={maxWorkers}>
-              {{ count: maxWorkers }} Threads
-            </Trans>
-          }
-        >
-          <MenuItem>
-            <Typography variant="caption" color="info.main">
-              {t('threadDropdownDesc')}
-            </Typography>
-          </MenuItem>
-          <Divider />
-          {range(1, nativeThreads)
-            .reverse()
-            .map((v) => (
-              <MenuItem key={v} onClick={() => setMaxWorkers(v)}>
-                <Trans t={t} i18nKey="thread" count={v}>
-                  {{ count: v }} Threads
+            <Divider />
+            {maxBuildsToShowList.map((v) => (
+              <MenuItem
+                key={v}
+                onClick={() =>
+                  database.optConfigs.set(optConfigId, { maxBuildsToShow: v })
+                }
+              >
+                <Trans t={t} i18nKey="build" count={v}>
+                  {{ count: v }} Builds
                 </Trans>
               </MenuItem>
             ))}
-        </DropdownButton>
-        <BootstrapTooltip placement="top" title={t('notifyTooltip')}>
-          <Box>
-            <Button
-              sx={{ borderRadius: 0 }}
-              color="warning"
-              onClick={async () => {
-                await Notification?.requestPermission()
-                setnotification((n) => !n)
-              }}
-              disabled={!optimizationTarget}
-            >
-              {notification ? (
-                <NotificationsActiveIcon />
-              ) : (
-                <NotificationsOffIcon />
-              )}
-            </Button>
-          </Box>
-        </BootstrapTooltip>
-        <BootstrapTooltip
-          placement="top"
-          title={!optimizationTarget ? t('selectTargetFirst') : ''}
-        >
-          <span>
-            <Button
-              disabled={
-                !characterKey || !optimizationTarget || !optimizationTargetNode
-              }
-              color={generatingBuilds ? 'error' : 'success'}
-              onClick={
-                generatingBuilds ? () => cancelToken.current() : generateBuilds
-              }
-              startIcon={generatingBuilds ? <Close /> : <TrendingUp />}
-              sx={{ borderRadius: '0px 4px 4px 0px' }}
-            >
-              {generatingBuilds
-                ? t('generateButton.cancel')
-                : t('generateButton.generateBuilds')}
-            </Button>
-          </span>
-        </BootstrapTooltip>
-      </ButtonGroup>
-      <ScalesWith />
-      {!!characterKey && (
-        <BuildAlert
-          {...{ status: buildStatus, characterName, maxBuildsToShow }}
-        />
-      )}
-      {optimizationTarget && (
-        <Box>
-          <ChartCard
-            disabled={generatingBuilds || !optimizationTarget}
-            plotBase={plotBase}
-            setPlotBase={setPlotBase}
-            showTooltip={!optimizationTarget}
-          />
-        </Box>
-      )}
-      {optimizationTarget && (
-        <CardThemed bgt="light">
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <Typography sx={{ flexGrow: 1 }}>
-                {builds ? (
-                  <span>
-                    <Trans
-                      t={t}
-                      i18nKey="buildShowingNum"
-                      count={buildShowingCount}
-                    >
-                      Showing{' '}
-                      <strong>{{ count: buildShowingCount } as any}</strong>{' '}
-                      build generated for{' '}
-                      <CharacterName
-                        characterKey={characterKey}
-                        gender={gender}
-                      />
-                      .
-                    </Trans>{' '}
-                    {!!buildDate && (
-                      <span>
-                        {t('generatedOn')}
-                        <strong>{new Date(buildDate).toLocaleString()}</strong>
-                      </span>
-                    )}
-                  </span>
-                ) : (
-                  <span>{t('selectChar')}</span>
-                )}
+          </DropdownButton>
+          <DropdownButton
+            disabled={generatingBuilds || !characterKey || !optimizationTarget}
+            sx={{ borderRadius: '4px 0px 0px 4px' }}
+            title={
+              <Trans t={t} i18nKey="thread" count={maxWorkers}>
+                {{ count: maxWorkers }} Threads
+              </Trans>
+            }
+          >
+            <MenuItem>
+              <Typography variant="caption" color="info.main">
+                {t('threadDropdownDesc')}
               </Typography>
+            </MenuItem>
+            <Divider />
+            {range(1, nativeThreads)
+              .reverse()
+              .map((v) => (
+                <MenuItem key={v} onClick={() => setMaxWorkers(v)}>
+                  <Trans t={t} i18nKey="thread" count={v}>
+                    {{ count: v }} Threads
+                  </Trans>
+                </MenuItem>
+              ))}
+          </DropdownButton>
+          <BootstrapTooltip placement="top" title={t('notifyTooltip')}>
+            <Box>
               <Button
-                disabled={!builds.length}
-                color="error"
-                onClick={() => {
-                  setGraphBuilds(undefined)
-                  database.optConfigs.newOrSetGeneratedBuildList(optConfigId, {
-                    builds: [],
-                    buildDate: 0,
-                  })
+                sx={{ borderRadius: 0 }}
+                color="warning"
+                onClick={async () => {
+                  await Notification?.requestPermission()
+                  setnotification((n) => !n)
                 }}
+                disabled={!optimizationTarget}
               >
-                {t('clearBuildsBtn')}
+                {notification ? (
+                  <NotificationsActiveIcon />
+                ) : (
+                  <NotificationsOffIcon />
+                )}
               </Button>
             </Box>
-            <Grid container display="flex" spacing={1}>
-              <Grid item>
-                <HitModeToggle size="small" />
+          </BootstrapTooltip>
+          <BootstrapTooltip
+            placement="top"
+            title={!optimizationTarget ? t('selectTargetFirst') : ''}
+          >
+            <span>
+              <Button
+                disabled={
+                  !characterKey ||
+                  !optimizationTarget ||
+                  !optimizationTargetNode
+                }
+                color={generatingBuilds ? 'error' : 'success'}
+                onClick={
+                  generatingBuilds
+                    ? () => cancelToken.current()
+                    : generateBuilds
+                }
+                startIcon={generatingBuilds ? <Close /> : <TrendingUp />}
+                sx={{ borderRadius: '0px 4px 4px 0px' }}
+              >
+                {generatingBuilds
+                  ? t('generateButton.cancel')
+                  : t('generateButton.generateBuilds')}
+              </Button>
+            </span>
+          </BootstrapTooltip>
+        </ButtonGroup>
+        <ScalesWith />
+        {!!characterKey && (
+          <BuildAlert
+            {...{ status: buildStatus, characterName, maxBuildsToShow }}
+          />
+        )}
+        {optimizationTarget && (
+          <Box>
+            <ChartCard
+              disabled={generatingBuilds || !optimizationTarget}
+              plotBase={plotBase}
+              setPlotBase={setPlotBase}
+              showTooltip={!optimizationTarget}
+            />
+          </Box>
+        )}
+        {optimizationTarget && (
+          <CardThemed bgt="light">
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <Typography sx={{ flexGrow: 1 }}>
+                  {builds ? (
+                    <span>
+                      <Trans
+                        t={t}
+                        i18nKey="buildShowingNum"
+                        count={buildShowingCount}
+                      >
+                        Showing{' '}
+                        <strong>{{ count: buildShowingCount } as any}</strong>{' '}
+                        build generated for{' '}
+                        <CharacterName
+                          characterKey={characterKey}
+                          gender={gender}
+                        />
+                        .
+                      </Trans>{' '}
+                      {!!buildDate && (
+                        <span>
+                          {t('generatedOn')}
+                          <strong>
+                            {new Date(buildDate).toLocaleString()}
+                          </strong>
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span>{t('selectChar')}</span>
+                  )}
+                </Typography>
+                <Button
+                  disabled={!builds.length}
+                  color="error"
+                  onClick={() => {
+                    setGraphBuilds(undefined)
+                    database.optConfigs.newOrSetGeneratedBuildList(
+                      optConfigId,
+                      {
+                        builds: [],
+                        buildDate: 0,
+                      }
+                    )
+                  }}
+                >
+                  {t('clearBuildsBtn')}
+                </Button>
+              </Box>
+              <Grid container display="flex" spacing={1}>
+                <Grid item>
+                  <HitModeToggle size="small" />
+                </Grid>
+                <Grid item>
+                  <ReactionToggle size="small" />
+                </Grid>
+                <Grid item flexGrow={1} />
+                <Grid item>
+                  <CompareBtn />
+                </Grid>
               </Grid>
-              <Grid item>
-                <ReactionToggle size="small" />
-              </Grid>
-              <Grid item flexGrow={1} />
-              <Grid item>
-                <CompareBtn />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </CardThemed>
-      )}
+            </CardContent>
+          </CardThemed>
+        )}
 
-      {graphBuilds && (
+        {graphBuilds && (
+          <BuildList
+            builds={graphBuilds}
+            compareData={compareData}
+            disabled={!!generatingBuilds}
+            getLabel={getGraphBuildLabel}
+            setBuilds={setGraphBuilds}
+            mainStatAssumptionLevel={mainStatAssumptionLevel}
+          />
+        )}
         <BuildList
-          builds={graphBuilds}
+          builds={builds}
           compareData={compareData}
           disabled={!!generatingBuilds}
-          getLabel={getGraphBuildLabel}
-          setBuilds={setGraphBuilds}
+          getLabel={getNormBuildLabel}
           mainStatAssumptionLevel={mainStatAssumptionLevel}
         />
-      )}
-      <BuildList
-        builds={builds}
-        compareData={compareData}
-        disabled={!!generatingBuilds}
-        getLabel={getNormBuildLabel}
-        mainStatAssumptionLevel={mainStatAssumptionLevel}
-      />
-    </Box>
+      </Box>
+    </LapicEngineProvider>
   )
 }
 
