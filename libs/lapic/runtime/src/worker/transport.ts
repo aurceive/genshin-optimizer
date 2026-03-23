@@ -1,17 +1,13 @@
 /**
- * Abstract transport layer for multi-worker communication.
+ * Flat-index transport layer for multi-worker communication.
  *
- * Provides an environment-agnostic interface for sending work
- * to worker backends and collecting results. Three backends
- * are specified by the architecture:
- *
- * - `in-process`: synchronous execution in the coordinator thread
- *   (deterministic, used for testing and small problems)
- * - `browser-worker`: Web Worker + MessagePort
- * - `node-worker`: Node.js worker_threads
- *
- * Only the `in-process` backend is implemented here. Browser and
- * Node backends are extension points for platform-specific packages.
+ * @deprecated The flat-index transport protocol is superseded by the
+ * unified partition dispatch contract in `partition-dispatch.ts`.
+ * New code should use `LapicPartitionDispatcher` and its concrete
+ * implementations (`createInProcessPartitionDispatcher`,
+ * `createMessagePortPartitionDispatcher`).  The types in this module
+ * are retained for backward compatibility with the existing
+ * `message-port.ts` flat-index envelope types and `pool.ts`.
  */
 
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
@@ -107,6 +103,10 @@ export type LapicWorkerMessage =
 /**
  * Abstract transport for dispatching work to and collecting results
  * from worker backends.
+ *
+ * @deprecated Use `LapicPartitionDispatcher` from `partition-dispatch.ts`
+ * instead. This interface operates on flat-index ranges and lacks
+ * branch-and-bound pruning, certificates, and incumbent sharing.
  */
 export interface LapicWorkerTransport {
   readonly backendKind: LapicWorkerBackendKind

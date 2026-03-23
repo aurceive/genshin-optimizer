@@ -2,6 +2,8 @@
 // Multi-worker protocol facade
 // ---------------------------------------------------------------------------
 
+// --- Flat-index partitioner (used by validation/scheduler) ---
+
 export type {
   LapicWorkerPartition,
   LapicWorkerPartitionPlan,
@@ -14,6 +16,8 @@ export {
   decodeFlatIndex,
   encodeFlatIndex,
 } from './partitioner'
+
+// --- Flat-index transport protocol (used by message-port, pool) ---
 
 export type {
   LapicWorkerDispatchMessage,
@@ -30,6 +34,8 @@ export type {
 
 export { createInProcessTransport } from './transport'
 
+// --- Worker pool ---
+
 export type {
   LapicWorkerHandle,
   LapicPoolWorkerState,
@@ -40,6 +46,8 @@ export {
   createPoolTransport,
   createCallbackWorkerHandle,
 } from './pool'
+
+// --- MessagePort-based worker handles ---
 
 export type {
   LapicMessagePortLike,
@@ -60,21 +68,12 @@ export {
   createMessagePortPartitionDispatcher,
 } from './message-port'
 
-export type {
-  LapicCoordinatedSolveConfig,
-  LapicCoordinatedSolveResult,
-} from './coordinator'
-
-export {
-  mergeWorkerResults,
-  mergeWorkerCertificates,
-  createInProcessPartitionExecutor,
-  executeCoordinatedSolve,
-  createInProcessCoordinatedSolve,
-} from './coordinator'
+// --- Domain-level partitioner ---
 
 export type { LapicDomainPartition } from './domain-partitioner'
 export { createDomainPartitionedJoinPlans } from './domain-partitioner'
+
+// --- Unified partition dispatch contract ---
 
 export type {
   LapicPartitionDispatchRequest,
@@ -85,6 +84,8 @@ export type {
   LapicPartitionDispatchConfig,
 } from './partition-dispatch'
 export { createInProcessPartitionDispatcher } from './partition-dispatch'
+
+// --- Coordinated bounded-exact solve (coordinator + executor bridge) ---
 
 export type { LapicCoordinatedBoundedExactSolveConfig } from './coordinated-solve'
 export { executeCoordinatedBoundedExactSolve } from './coordinated-solve'

@@ -14,9 +14,7 @@ import {
   createLapicSolveRequest,
 } from '../builders'
 import { createLapicInMemorySessionController } from '../session'
-import type {
-  LapicPartitionDispatcher,
-} from './partition-dispatch'
+import type { LapicPartitionDispatcher } from './partition-dispatch'
 import { createInProcessPartitionDispatcher } from './partition-dispatch'
 import {
   createBoundedExactWorkerEntryHandler,
