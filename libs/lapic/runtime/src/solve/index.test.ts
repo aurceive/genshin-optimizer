@@ -5,6 +5,7 @@ import {
   createLapicFailureResult,
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
+import { validateLapicCertificate } from '@genshin-optimizer/lapic/cert'
 import {
   createLapicArtifactWriteRequest,
   createLapicMemoryArtifactStore,
@@ -15,7 +16,10 @@ import {
   createLapicSolveRequest,
 } from '../builders'
 import { createLapicInMemorySessionController } from '../session'
-import { createBoundPruneCertificate } from './certificate'
+import {
+  createBoundPruneCertificate,
+  createDominanceCertificate,
+} from './certificate'
 import {
   buildDangerZoneRecord,
   defaultLapicDangerZoneConfig,
@@ -1082,11 +1086,6 @@ describe('lapic bounded exact solve executor', () => {
 
   describe('createDominanceCertificate', () => {
     it('creates a valid dominance certificate with all required payload fields', async () => {
-      const { validateLapicCertificate } = await import(
-        '@genshin-optimizer/lapic/cert'
-      )
-      const { createDominanceCertificate } = await import('./certificate')
-
       const problem = createProblem()
       const options = {
         problem,

@@ -1,9 +1,9 @@
-import {
-  LapicFirGraphBuilder,
-  type LapicLinearModel,
-  type LapicLpProvider,
-  type LapicLpSolveResult,
-} from '@genshin-optimizer/lapic/core'
+import { LapicFirGraphBuilder } from '../fir'
+import type {
+  LapicLinearModel,
+  LapicLpProvider,
+  LapicLpSolveResult,
+} from './types'
 import type { LapicGoldenDomain } from '../fir/golden-harness'
 import { runLapicLpGoldenHarness } from './golden-harness'
 
