@@ -29,8 +29,8 @@ We optimize over a discrete combinatorial space induced by equipment slots, set 
 The engine must support:
 
 - Genshin Impact artifact optimization.
-- Star Rail relic and light cone optimization.
-- Zenless disc and wengine optimization.
+- Star Rail relic and light cone optimization. *(architecturally specified; implementation is outside current lapic project scope)*
+- Zenless disc and wengine optimization. *(architecturally specified; implementation is outside current lapic project scope)*
 - Future team and combo optimization where build state participates in larger multi-entity search.
 
 The objective function is a symbolic formula graph with:
@@ -656,8 +656,8 @@ The intended codebase shape is:
 - libs/lapic/storage
 - libs/lapic/debug
 - libs/gi/lapic-adapter
-- libs/sr/lapic-adapter
-- libs/zzz/lapic-adapter
+- libs/sr/lapic-adapter *(architecturally specified; not currently implemented — outside lapic project scope)*
+- libs/zzz/lapic-adapter *(architecturally specified; not currently implemented — outside lapic project scope)*
 
 Responsibilities:
 

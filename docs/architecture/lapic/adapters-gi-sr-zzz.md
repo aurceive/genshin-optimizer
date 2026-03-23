@@ -503,8 +503,8 @@ Adapter benchmark reports must identify whether cost increases come from adapter
 The intended repository module layout is:
 
 - libs/gi/lapic-adapter
-- libs/sr/lapic-adapter
-- libs/zzz/lapic-adapter
+- libs/sr/lapic-adapter *(architecturally specified; not currently implemented — outside lapic project scope)*
+- libs/zzz/lapic-adapter *(architecturally specified; not currently implemented — outside lapic project scope)*
 
 These adapter packages must depend on existing game-local formula and data packages but must expose only canonical problem APIs to lapic core.
 

@@ -80,8 +80,8 @@ The roadmap assumes the following module family will be introduced.
 - libs/lapic/storage
 - libs/lapic/debug
 - libs/gi/lapic-adapter
-- libs/sr/lapic-adapter
-- libs/zzz/lapic-adapter
+- libs/sr/lapic-adapter *(architecturally specified; outside current lapic project scope)*
+- libs/zzz/lapic-adapter *(architecturally specified; outside current lapic project scope)*
 
 Additional support modules may be introduced if they do not fracture ownership or blur package boundaries.
 
@@ -290,17 +290,15 @@ Internal module decomposition within each lapic package should precede major sea
 
 ### 11.1 Objectives
 
-- implement GI, SR, and ZZZ adapters on top of current repository packages,
+- implement the GI adapter on top of current repository packages,
 - establish canonical source snapshot digests,
 - preserve parity with current semantics on bounded exact workloads.
 
 ### 11.2 Target Packages
 
 - libs/gi/lapic-adapter
-- libs/sr/lapic-adapter
-- libs/zzz/lapic-adapter
 
-GI is the primary adapter target. SR and ZZZ adapters are architecturally specified but deferred until product scope explicitly includes them. This is a planning and ownership decision, not an architecture blocker.
+SR and ZZZ adapters (`libs/sr/lapic-adapter`, `libs/zzz/lapic-adapter`) are architecturally specified but outside the current lapic project scope. Their architectural contracts (§8.2, §8.3 of `adapters-gi-sr-zzz.md`) remain valid for future reference. No adapter packages for SR or ZZZ currently exist in the repository.
 
 ### 11.3 GI Work Items
 

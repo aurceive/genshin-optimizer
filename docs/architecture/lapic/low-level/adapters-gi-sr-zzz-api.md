@@ -7,7 +7,7 @@
 - Depends on: [Canonical Optimizer IR Specification](../canonical-ir.md)
 - Depends on: [lapic-core-ir-api.md](./lapic-core-ir-api.md)
 - Depends on: [Implementation Roadmap](../implementation-roadmap.md)
-- Scope: public package surfaces for libs/gi/lapic-adapter, libs/sr/lapic-adapter, and libs/zzz/lapic-adapter, including request models, canonical problem export, snapshot metadata, capability reporting, and validation hooks
+- Scope: public package surfaces for libs/gi/lapic-adapter (active), libs/sr/lapic-adapter, and libs/zzz/lapic-adapter (SR and ZZZ are architecturally specified but outside current lapic project scope), including request models, canonical problem export, snapshot metadata, capability reporting, and validation hooks
 - Audience: adapter, lapic core, frontend, validation, and migration maintainers
 
 ## 1. Purpose
@@ -49,10 +49,10 @@ Adapter packages MUST NOT own:
 This specification applies to:
 
 - `libs/gi/lapic-adapter`
-- `libs/sr/lapic-adapter`
-- `libs/zzz/lapic-adapter`
+- `libs/sr/lapic-adapter` *(architecturally specified; not currently implemented — outside lapic project scope)*
+- `libs/zzz/lapic-adapter` *(architecturally specified; not currently implemented — outside lapic project scope)*
 
-All three packages MUST implement a common adapter surface shape, even where game-specific extension payloads differ.
+All adapter packages MUST implement a common adapter surface shape, even where game-specific extension payloads differ. SR and ZZZ sections below (§10, §11) remain valid as architectural reference for future implementation.
 
 ## 4. Public Surface Model
 
@@ -332,6 +332,8 @@ If GI TC support is surfaced through the same package, its API MUST be explicitl
 
 ## 10. SR Adapter Surface
 
+> **Note:** SR adapter implementation is outside current lapic project scope. This section is retained as architectural reference for future implementation.
+
 ### 10.1 Additional Export Requirements
 
 `libs/sr/lapic-adapter` MUST additionally export:
@@ -346,6 +348,8 @@ If GI TC support is surfaced through the same package, its API MUST be explicitl
 The SR adapter surface SHOULD remain single-path unless a second formula family is introduced. No legacy compatibility multiplexing should be invented without explicit need.
 
 ## 11. ZZZ Adapter Surface
+
+> **Note:** ZZZ adapter implementation is outside current lapic project scope. This section is retained as architectural reference for future implementation.
 
 ### 11.1 Additional Export Requirements
 

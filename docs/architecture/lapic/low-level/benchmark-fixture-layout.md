@@ -83,8 +83,8 @@ Registry files MUST be version-controlled.
 Required subdivisions:
 
 - `gi/`: Genshin Impact governed fixtures.
-- `sr/`: Star Rail governed fixtures.
-- `zzz/`: Zenless Zone Zero governed fixtures.
+- `sr/`: Star Rail governed fixtures. *(reserved; SR adapter is outside current lapic project scope)*
+- `zzz/`: Zenless Zone Zero governed fixtures. *(reserved; ZZZ adapter is outside current lapic project scope)*
 - `synthetic/`: parameterized synthetic fixtures frozen by generated payload and metadata.
 - `adversarial/`: fixtures designed to stress correctness or performance assumptions.
 - `generators/`: source-controlled generator definitions and seeds for generated fixture families.
