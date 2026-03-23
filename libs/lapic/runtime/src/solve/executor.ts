@@ -5,6 +5,7 @@ import {
   analyzeLapicFirGraph,
   createCombinationStateId,
   createLapicDiagnostic,
+  createLapicSuccessResult,
   hasExclusiveResourceConflict,
   inferForcedBranches,
 } from '@genshin-optimizer/lapic/core'
@@ -55,6 +56,7 @@ import type {
   LapicBoundedExactCombinationEvaluation,
   LapicBoundedExactSolveOptions,
   LapicBoundedExactSolveOutcome,
+  LapicPrebuiltJoinContext,
 } from './types'
 
 async function failSolve(
@@ -315,8 +317,8 @@ export async function executeLapicBoundedExactSolve(
         validation.diagnostics
       )
 
-    const totalCombinationCount = validation.value
     const isResuming = options.resumeCheckpointState !== undefined
+    const hasPrebuiltContext = options.prebuiltJoinContext !== undefined
 
     options.controller.publishTrace(
       'InitSession',
@@ -324,20 +326,33 @@ export async function executeLapicBoundedExactSolve(
     )
 
     // --- Frontier setup ---
-    const { frontierBlocks, frontierBlockIds, frontierIndex } = isResuming
-      ? await rebuildFrontierForResume(
-          options,
-          orderedDomains,
-          totalCombinationCount
-        )
-      : await buildFrontierFromScratch(options, orderedDomains)
+    let frontierBlockIds: string[]
+    let joinPlan: ReturnType<typeof createFrontierJoinPlan>
 
-    const joinPlan = createFrontierJoinPlan(
-      options.problem,
-      orderedDomains,
-      frontierBlocks,
-      frontierIndex
-    )
+    if (hasPrebuiltContext) {
+      // Partition-scoped path: use pre-built join plan and frontier block IDs.
+      // Skip frontier construction and join-plan creation entirely.
+      const ctx = options.prebuiltJoinContext as LapicPrebuiltJoinContext
+      frontierBlockIds = [...ctx.frontierBlockIds]
+      joinPlan = createLapicSuccessResult(ctx.joinPlan)
+    } else {
+      const frontierSetup = isResuming
+        ? await rebuildFrontierForResume(
+            options,
+            orderedDomains,
+            validation.value
+          )
+        : await buildFrontierFromScratch(options, orderedDomains)
+
+      frontierBlockIds = frontierSetup.frontierBlockIds
+
+      joinPlan = createFrontierJoinPlan(
+        options.problem,
+        orderedDomains,
+        frontierSetup.frontierBlocks,
+        frontierSetup.frontierIndex
+      )
+    }
     if (!joinPlan.ok)
       return failSolve(
         options,
@@ -346,7 +361,18 @@ export async function executeLapicBoundedExactSolve(
         joinPlan.diagnostics
       )
 
-    if (joinPlan.value.totalCombinationCount !== totalCombinationCount)
+    // The effective combination count comes from the join plan when using
+    // a prebuilt context (partition), or from domain-level validation otherwise.
+    const totalCombinationCount = hasPrebuiltContext
+      ? joinPlan.value.totalCombinationCount
+      : validation.value
+
+    // Cardinality cross-check: only meaningful when the executor built
+    // the join plan itself (not when using a partitioned prebuilt plan).
+    if (
+      !hasPrebuiltContext &&
+      joinPlan.value.totalCombinationCount !== totalCombinationCount
+    )
       return failSolve(
         options,
         'Frontier-index join plan cardinality diverged from the bounded domain cardinality.',

@@ -60,7 +60,14 @@ export type {
 
 export {
   mergeWorkerResults,
+  mergeWorkerCertificates,
   createInProcessPartitionExecutor,
   executeCoordinatedSolve,
   createInProcessCoordinatedSolve,
 } from './coordinator'
+
+export type { LapicDomainPartition } from './domain-partitioner'
+export { createDomainPartitionedJoinPlans } from './domain-partitioner'
+
+export type { LapicCoordinatedBoundedExactSolveConfig } from './coordinated-solve'
+export { executeCoordinatedBoundedExactSolve } from './coordinated-solve'

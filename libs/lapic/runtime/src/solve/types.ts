@@ -13,6 +13,7 @@ import type {
 } from '../types'
 import type { LapicSolveCheckpointState } from './checkpoint-state'
 import type { LapicDangerZoneConfig } from './danger-zone'
+import type { LapicFrontierJoinPlan } from './join-plan'
 
 export interface LapicBoundedExactCandidateCombination {
   readonly problem: LapicCanonicalProblem
@@ -68,6 +69,21 @@ export type LapicBoundedExactUpperBoundEvaluator = (
   partial: LapicBoundedExactPartialCombination
 ) => LapicBoundedExactPartialBound | undefined
 
+/**
+ * Pre-built join context for partition-scoped execution.
+ *
+ * When provided, the executor skips frontier construction and join-plan
+ * creation, using the pre-built plan directly. This enables the
+ * coordinated solve to build frontiers once, partition the join plan,
+ * and dispatch each partition to a separate executor instance.
+ */
+export interface LapicPrebuiltJoinContext {
+  /** The (possibly partitioned) join plan to execute. */
+  readonly joinPlan: LapicFrontierJoinPlan
+  /** Frontier block IDs referenced by certificates and checkpoints. */
+  readonly frontierBlockIds: readonly string[]
+}
+
 export interface LapicBoundedExactSolveOptions {
   readonly problem: LapicCanonicalProblem
   readonly controller: LapicInMemorySessionController
@@ -88,6 +104,13 @@ export interface LapicBoundedExactSolveOptions {
   /** When provided, the executor resumes from the given checkpoint state
    *  instead of starting a fresh solve. Frontier blocks are NOT rebuilt. */
   readonly resumeCheckpointState?: LapicSolveCheckpointState
+  /**
+   * Pre-built join context for partition-scoped execution.
+   * When provided, the executor skips frontier construction and
+   * join-plan creation, using the supplied plan and frontier
+   * block IDs directly. Used by the coordinated solve.
+   */
+  readonly prebuiltJoinContext?: LapicPrebuiltJoinContext
 }
 
 /**

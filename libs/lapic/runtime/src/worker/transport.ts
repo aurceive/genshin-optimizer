@@ -15,6 +15,7 @@
  */
 
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
+import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import type { LapicBoundedExactCombinationEvaluation } from '../solve/types'
 import type { LapicWorkerBackendKind } from '../types'
 
@@ -47,6 +48,12 @@ export interface LapicWorkerResultMessage {
   readonly evaluatedCount: number
   /** Total combinations visited (including pruned/infeasible). */
   readonly visitedCount: number
+  /**
+   * Certificates emitted during this partition's execution.
+   * Present when the partition was executed via the full bounded-exact
+   * executor (not the primitive flat-index executor).
+   */
+  readonly certificates?: readonly LapicCertificate[]
 }
 
 /**

@@ -21,6 +21,7 @@ export type {
   LapicBoundedExactSolveOutcome,
   LapicBoundedExactSolvePauseResult,
   LapicBoundedExactUpperBoundEvaluator,
+  LapicPrebuiltJoinContext,
 } from './types'
 
 export { executeLapicBoundedExactSolve } from './executor'
@@ -52,3 +53,15 @@ export type {
   LapicTeamObjectiveEvaluator,
 } from './join-executor'
 export { executeJoinPhase } from './join-executor'
+
+export type {
+  LapicFrontierJoinPlan,
+  LapicFrontierJoinPlanEntry,
+  LapicFrontierJoinPlanRow,
+} from './join-plan'
+export { createFrontierJoinPlan } from './join-plan'
+
+export {
+  createFrontierBlockForDomain,
+  createFrontierIndexForSolve,
+} from './frontier'

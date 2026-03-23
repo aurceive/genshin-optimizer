@@ -15,6 +15,7 @@ import type {
   LapicCandidateDescriptor,
   LapicCanonicalProblem,
 } from '@genshin-optimizer/lapic/core'
+import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import {
   createCombinationStateId,
   hasExclusiveResourceConflict,
@@ -83,6 +84,8 @@ export interface LapicCoordinatedSolveResult {
   readonly workerCount: number
   readonly partitionPlan: LapicWorkerPartitionPlan
   readonly perWorkerResults: readonly LapicWorkerResultMessage[]
+  /** Aggregated certificates from all partitions (deterministic order). */
+  readonly certificates: readonly LapicCertificate[]
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +139,32 @@ export function mergeWorkerResults(
   }
 
   return deduplicated
+}
+
+/**
+ * Merge certificates from all partitions in deterministic order.
+ *
+ * Certificates are concatenated in partition-index order then
+ * deduplicated by `certId`. This guarantees deterministic ordering
+ * independent of worker count or scheduling order (architecture
+ * invariant from runtime-and-checkpoints §4).
+ */
+export function mergeWorkerCertificates(
+  perWorkerResults: readonly LapicWorkerResultMessage[]
+): readonly LapicCertificate[] {
+  const seen = new Set<string>()
+  const merged: LapicCertificate[] = []
+
+  for (const result of perWorkerResults) {
+    if (!result.certificates) continue
+    for (const cert of result.certificates) {
+      if (seen.has(cert.certId)) continue
+      seen.add(cert.certId)
+      merged.push(cert)
+    }
+  }
+
+  return merged
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +293,7 @@ export async function executeCoordinatedSolve(
       workerCount: 0,
       partitionPlan,
       perWorkerResults: [],
+      certificates: [],
     }
   }
 
@@ -327,6 +357,8 @@ export async function executeCoordinatedSolve(
     config.compareEvaluations
   )
 
+  const certificates = mergeWorkerCertificates(perWorkerResults)
+
   return {
     topCandidates,
     totalEvaluatedCount,
@@ -334,6 +366,7 @@ export async function executeCoordinatedSolve(
     workerCount: partitionPlan.workerCount,
     partitionPlan,
     perWorkerResults,
+    certificates,
   }
 }
 

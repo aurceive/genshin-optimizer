@@ -13,6 +13,7 @@
 import {
   createSolveOrchestration,
   executeLapicBoundedExactSolve,
+  executeCoordinatedBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicBoundedExactCandidateCombination,
@@ -56,6 +57,14 @@ export interface GiLapicSolveOrchestrationConfig {
   readonly candidateVariableExtractor?: GiLapicBoundedCurrentOnlySolveOptions['candidateVariableExtractor']
   /** Optional explicit session ID. */
   readonly sessionId?: string
+  /**
+   * Number of domain-level partitions for the coordinated solve.
+   * When > 1, the solve splits the outermost domain and runs
+   * each partition through the full bounded-exact executor
+   * with branch-and-bound, certificates, and pruning.
+   * Defaults to 1 (single-threaded executor).
+   */
+  readonly workerCount?: number
 }
 
 /**
@@ -161,7 +170,42 @@ export function createGiLapicSolveOrchestration(
             })
           : undefined)
 
-      // 5. Execute solve
+      // 5. Execute solve — coordinated or single-threaded
+      const effectiveWorkerCount = config.workerCount ?? 1
+      if (effectiveWorkerCount > 1) {
+        return executeCoordinatedBoundedExactSolve({
+          problem: canonicalExport.value.problem,
+          controller,
+          artifactStore,
+          workerCount: effectiveWorkerCount,
+          ...(firGraph !== undefined ? { firGraph } : {}),
+          evaluateCombination(combination) {
+            return config.evaluateCombination(
+              combination,
+              canonicalExport.value
+            )
+          },
+          ...(config.compareEvaluations !== undefined
+            ? { compareEvaluations: config.compareEvaluations }
+            : {}),
+          ...(config.isCombinationFeasible !== undefined
+            ? {
+                isCombinationFeasible: (
+                  combination: LapicBoundedExactCandidateCombination
+                ) =>
+                  config.isCombinationFeasible!(
+                    combination,
+                    canonicalExport.value
+                  ),
+              }
+            : {}),
+          ...(config.maxCombinationCount !== undefined
+            ? { maxCombinationCount: config.maxCombinationCount }
+            : {}),
+          ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+        })
+      }
+
       return executeLapicBoundedExactSolve({
         problem: canonicalExport.value.problem,
         controller,

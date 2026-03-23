@@ -107,7 +107,8 @@ function makeSignature(
 ): LapicCompatibilitySignature {
   const sid = slotId(slotIdx)
   return {
-    schemaVersion: '0.1.0-draft' as LapicCompatibilitySignature['schemaVersion'],
+    schemaVersion:
+      '0.1.0-draft' as LapicCompatibilitySignature['schemaVersion'],
     occupiedSlotMask: 1 << slotIdx,
     actorUniquenessClaims: [
       createGiCharacterActorUniquenessClaim(`char-${slotIdx}`, sid),
@@ -392,9 +393,7 @@ describe('Golden: resonance facts comprehensive', () => {
     )
     // 1 unique element → no rainbow
     expect(
-      resonance.some(
-        (f) => f.capabilityId === 'gi:resonance:protective-canopy'
-      )
+      resonance.some((f) => f.capabilityId === 'gi:resonance:protective-canopy')
     ).toBe(false)
   })
 
@@ -407,14 +406,12 @@ describe('Golden: resonance facts comprehensive', () => {
     ]
     const resonance = extractGiResonanceFacts(members)
     expect(
-      resonance.some(
-        (f) => f.capabilityId === 'gi:resonance:protective-canopy'
-      )
+      resonance.some((f) => f.capabilityId === 'gi:resonance:protective-canopy')
     ).toBe(true)
     // No element has 2+, so no elemental resonance
-    expect(
-      resonance.some((f) => f.capabilityId === 'gi:resonance:pyro')
-    ).toBe(false)
+    expect(resonance.some((f) => f.capabilityId === 'gi:resonance:pyro')).toBe(
+      false
+    )
   })
 
   test('3-member team → no resonance (needs 4)', () => {
@@ -435,17 +432,15 @@ describe('Golden: resonance facts comprehensive', () => {
       { characterKey: 'Albedo', element: 'geo' },
     ]
     const resonance = extractGiResonanceFacts(members)
-    expect(
-      resonance.some((f) => f.capabilityId === 'gi:resonance:pyro')
-    ).toBe(true)
-    expect(
-      resonance.some((f) => f.capabilityId === 'gi:resonance:geo')
-    ).toBe(true)
+    expect(resonance.some((f) => f.capabilityId === 'gi:resonance:pyro')).toBe(
+      true
+    )
+    expect(resonance.some((f) => f.capabilityId === 'gi:resonance:geo')).toBe(
+      true
+    )
     // Only 2 unique elements → no rainbow
     expect(
-      resonance.some(
-        (f) => f.capabilityId === 'gi:resonance:protective-canopy'
-      )
+      resonance.some((f) => f.capabilityId === 'gi:resonance:protective-canopy')
     ).toBe(false)
   })
 
