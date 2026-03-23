@@ -1,0 +1,15 @@
+{
+  "fixtureId": "gi-team-4slot-conflict-heavy",
+  "description": "4-slot GI team join phase with high conflict rate: shared weapons and artifacts across slots",
+  "category": "team-join",
+  "gameAdapter": "gi",
+  "teamLayout": {
+    "teamKind": "gi-ordered-roster",
+    "slotCount": 4,
+    "slotIds": ["gi-slot-0", "gi-slot-1", "gi-slot-2", "gi-slot-3"]
+  },
+  "candidatesPerSlot": [5, 5, 5, 5],
+  "totalCombinations": 625,
+  "expectedLegalityFilterRatio": "< 0.3",
+  "notes": "Most combinations are illegal due to shared weapon/artifact inventory. Measures legality filter efficiency."
+}

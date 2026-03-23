@@ -1,0 +1,15 @@
+{
+  "fixtureId": "gi-team-4slot-join-baseline",
+  "description": "4-slot GI team join phase baseline: 4 characters × 3 candidates each, no conflicts",
+  "category": "team-join",
+  "gameAdapter": "gi",
+  "teamLayout": {
+    "teamKind": "gi-ordered-roster",
+    "slotCount": 4,
+    "slotIds": ["gi-slot-0", "gi-slot-1", "gi-slot-2", "gi-slot-3"]
+  },
+  "candidatesPerSlot": [3, 3, 3, 3],
+  "totalCombinations": 81,
+  "expectedLegalCombinations": 81,
+  "notes": "No resource conflicts — all combinations are legal. Measures join executor throughput on a minimal problem."
+}
