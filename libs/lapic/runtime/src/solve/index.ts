@@ -42,3 +42,13 @@ export {
   checkJoinLegality,
   mergeCompatibilitySignatures,
 } from './join-legality'
+
+export type {
+  LapicJoinExecutorOptions,
+  LapicJoinExecutorResult,
+  LapicJoinExecutorStats,
+  LapicJoinResult,
+  LapicTeamCombinationEvaluation,
+  LapicTeamObjectiveEvaluator,
+} from './join-executor'
+export { executeJoinPhase } from './join-executor'
