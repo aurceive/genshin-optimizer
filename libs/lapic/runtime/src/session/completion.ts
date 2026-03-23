@@ -11,6 +11,7 @@ import type {
   LapicFailedSessionSummary,
   LapicFailureClass,
   LapicSolveCompletionResult,
+  LapicTopNCandidateEntry,
 } from '../types'
 import {
   type LapicSessionControllerContext,
@@ -78,7 +79,8 @@ export function requestCancel(
 
 export function completeSession(
   context: LapicSessionControllerContext,
-  nextFinalOptimality?: LapicFinalOptimalitySummary
+  nextFinalOptimality?: LapicFinalOptimalitySummary,
+  topNCandidates?: readonly LapicTopNCandidateEntry[]
 ): LapicSolveCompletionResult {
   ensureNonTerminal(context, 'complete session')
   moveToState(context, 'finalizing', context.activePhase)
@@ -87,7 +89,8 @@ export function completeSession(
   const result = createLapicSolveCompletionResult(
     currentSummary(context),
     context.emittedCertificates,
-    context.finalOptimality
+    context.finalOptimality,
+    topNCandidates
   )
   settleCompletion(context, result)
   emitTrace(context, 'Shutdown')

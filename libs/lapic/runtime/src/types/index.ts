@@ -4,6 +4,7 @@ import type {
 } from '@genshin-optimizer/lapic/cert'
 import type {
   LapicArithmeticPolicyId,
+  LapicCandidateDescriptor,
   LapicDiagnostic,
   LapicDigest,
   LapicEngineVersion,
@@ -113,6 +114,27 @@ export interface LapicSolveCompletionResult {
   readonly summary: LapicSessionSummary
   readonly finalOptimality?: LapicFinalOptimalitySummary
   readonly emittedCertificates: readonly LapicCertificate[]
+  /**
+   * Top-N candidates from the solve tracker, sorted best-to-worst.
+   * Populated by the bounded-exact executor after a successful solve.
+   * Used for cross-partition result merging in coordinated solves.
+   */
+  readonly topNCandidates?: readonly LapicTopNCandidateEntry[]
+}
+
+/**
+ * A top-N candidate entry from a completed solve.
+ * Structurally compatible with `LapicBoundedExactBestCandidate` but
+ * defined here to avoid circular imports from the solve module.
+ */
+export interface LapicTopNCandidateEntry {
+  readonly stateId: string
+  readonly candidates: readonly LapicCandidateDescriptor[]
+  readonly evaluation: {
+    readonly objectiveValue: string
+    readonly evidenceDigest: LapicDigest
+    readonly orderingKey?: readonly string[]
+  }
 }
 
 export interface LapicPauseRequestResult {
@@ -271,7 +293,8 @@ export interface LapicInMemorySessionController extends LapicPublicSolveHandle {
   reachPauseSafePoint(): void
   resume(phase?: LapicActivePhase): void
   complete(
-    finalOptimality?: LapicFinalOptimalitySummary
+    finalOptimality?: LapicFinalOptimalitySummary,
+    topNCandidates?: readonly LapicTopNCandidateEntry[]
   ): Promise<LapicSolveCompletionResult>
   fail(
     failureClass: LapicFailureClass,

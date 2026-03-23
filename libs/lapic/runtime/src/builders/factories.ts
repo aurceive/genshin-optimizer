@@ -34,6 +34,7 @@ import type {
   LapicSolveCompletionResult,
   LapicSolveRequest,
   LapicSubscriptionToken,
+  LapicTopNCandidateEntry,
   LapicTraceEvent,
   LapicWorkResultSummary,
   LapicWorkUnitEnvelope,
@@ -81,12 +82,14 @@ export function createLapicSolveRequest(
 export function createLapicSolveCompletionResult(
   summary: LapicSessionSummary,
   emittedCertificates: readonly LapicCertificate[],
-  finalOptimality?: LapicFinalOptimalitySummary
+  finalOptimality?: LapicFinalOptimalitySummary,
+  topNCandidates?: readonly LapicTopNCandidateEntry[]
 ): LapicSolveCompletionResult {
   return {
     summary,
     emittedCertificates: [...emittedCertificates],
     ...(finalOptimality !== undefined ? { finalOptimality } : {}),
+    ...(topNCandidates !== undefined ? { topNCandidates } : {}),
   }
 }
 

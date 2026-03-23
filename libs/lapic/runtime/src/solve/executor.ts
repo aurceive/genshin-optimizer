@@ -296,7 +296,7 @@ async function completeSolve(
     frontierBlockIds
   )
   options.controller.emitCertificate(finalCertificate)
-  return options.controller.complete(finalOptimality.value)
+  return options.controller.complete(finalOptimality.value, winners)
 }
 
 // ---------------------------------------------------------------------------

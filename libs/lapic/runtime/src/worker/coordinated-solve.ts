@@ -22,26 +22,25 @@
  * ### Merge strategy
  *
  * Each partition runs an independent executor with its own top-N tracker.
- * After all partitions complete, the coordinated solve selects the
- * partition whose incumbent (best objective value) wins under the
- * configured comparator.  This is correct for top-1; for top-N > 1,
- * the result may miss entries that would appear in a single-threaded
- * global top-N.  Full cross-partition top-N merging requires exposing
- * tracker state from the executor and is deferred to a follow-up.
+ * After all partitions complete, the coordinated solve collects all
+ * `topNCandidates` from every partition, sorts them using the configured
+ * comparator (or default numeric descending), takes the global top-N,
+ * and creates a new FinalOptimality certificate from the merged set.
+ * This produces the correct global top-N regardless of partition count.
  */
 
 import { createLapicFinalOptimalitySummary } from '@genshin-optimizer/lapic/cert'
 import type {
-  LapicCertificate,
-  LapicFinalOptimalityPayload,
-} from '@genshin-optimizer/lapic/cert'
-import type { LapicCanonicalProblem, LapicFirGraph } from '@genshin-optimizer/lapic/core'
+  LapicCanonicalProblem,
+  LapicFirGraph,
+} from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import { createLapicInMemorySessionController } from '../session/controller'
 import type {
   LapicInMemorySessionController,
   LapicSessionIdentity,
   LapicSolveCompletionResult,
+  LapicTopNCandidateEntry,
 } from '../types'
 import { lapicRuntimeProtocolVersion } from '../types'
 import {
@@ -49,10 +48,17 @@ import {
   createFrontierIndexForSolve,
 } from '../solve/frontier'
 import { createFrontierJoinPlan } from '../solve/join-plan'
-import { sortDomains, validateSolveOptions } from '../solve/combination'
+import {
+  sortDomains,
+  validateSolveOptions,
+  compareEvaluations,
+} from '../solve/combination'
 import { executeLapicBoundedExactSolve } from '../solve/executor'
 import { persistArtifact } from '../solve/persistence'
-import { createInfeasibilityCertificate } from '../solve/certificate'
+import {
+  createInfeasibilityCertificate,
+  createFinalOptimalityCertificate,
+} from '../solve/certificate'
 import type {
   LapicBoundedExactCombinationEvaluator,
   LapicBoundedExactEvaluationComparator,
@@ -166,30 +172,6 @@ function createPartitionController(
     },
     artifactStore,
   })
-}
-
-/**
- * Compare two FinalOptimality certificates by incumbent value.
- * Returns true if `a` is strictly better than `b`.
- */
-function isIncumbentBetter(
-  a: LapicCertificate<LapicFinalOptimalityPayload>,
-  b: LapicCertificate<LapicFinalOptimalityPayload>,
-  comparator?: LapicBoundedExactEvaluationComparator
-): boolean {
-  if (comparator) {
-    const evalA = {
-      objectiveValue: a.incumbentDigest ?? '0',
-      evidenceDigest: a.evidenceDigest,
-    }
-    const evalB = {
-      objectiveValue: b.incumbentDigest ?? '0',
-      evidenceDigest: b.evidenceDigest,
-    }
-    return comparator(evalA, evalB) > 0
-  }
-  // Default: numeric descending (maximize)
-  return Number(a.incumbentDigest ?? 0) > Number(b.incumbentDigest ?? 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -382,7 +364,7 @@ export async function executeCoordinatedBoundedExactSolve(
     config.onPartitionComplete?.(partition.partitionIndex, partitions.length)
   }
 
-  // --- Select best partition and forward results ---
+  // --- Cross-partition top-N merge ---
   config.controller.activate('resolve-residual')
 
   // Forward all non-FinalOptimality certificates to the parent controller
@@ -394,29 +376,15 @@ export async function executeCoordinatedBoundedExactSolve(
     }
   }
 
-  // Find the best partition by comparing FinalOptimality certs
-  let bestCompletion: LapicSolveCompletionResult | undefined
-  let bestFinalCert:
-    | LapicCertificate<LapicFinalOptimalityPayload>
-    | undefined
-
+  // Collect all top-N candidates from every partition
+  const allCandidates: LapicTopNCandidateEntry[] = []
   for (const { completion } of completions) {
-    const finalCert = completion.emittedCertificates.find(
-      (c): c is LapicCertificate<LapicFinalOptimalityPayload> =>
-        c.certKind === 'FinalOptimalityCert'
-    )
-    if (!finalCert) continue
-
-    if (
-      !bestFinalCert ||
-      isIncumbentBetter(finalCert, bestFinalCert, config.compareEvaluations)
-    ) {
-      bestFinalCert = finalCert
-      bestCompletion = completion
+    if (completion.topNCandidates) {
+      allCandidates.push(...completion.topNCandidates)
     }
   }
 
-  if (!bestCompletion || !bestFinalCert) {
+  if (allCandidates.length === 0) {
     // No partition found a feasible solution
     const infeasibilityCert = createInfeasibilityCertificate(
       minimalOpts,
@@ -434,12 +402,41 @@ export async function executeCoordinatedBoundedExactSolve(
     return config.controller.complete()
   }
 
-  // Emit the best partition's FinalOptimality cert on the parent controller
-  config.controller.emitCertificate(bestFinalCert)
+  // Sort candidates across all partitions and take the global top-N
+  const topN = config.problem.topN
+  const mergedCandidates = [...allCandidates]
+    .sort(
+      (a, b) =>
+        // compareEvaluations returns >0 when left is better;
+        // Array.sort expects negative for "a before b",
+        // so negate to sort best-first.
+        -compareEvaluations(
+          a.evaluation,
+          a.stateId,
+          b.evaluation,
+          b.stateId,
+          config.compareEvaluations
+        )
+    )
+    .slice(0, topN)
 
-  // Use the best partition's final optimality summary for the global result.
-  // Re-derive the summary from the certificate for consistency.
-  const globalOptimality = createLapicFinalOptimalitySummary(bestFinalCert)
+  // Create a new global FinalOptimality certificate from merged winners
+  const globalFinalCert = createFinalOptimalityCertificate(
+    minimalOpts,
+    mergedCandidates,
+    frontierBlockIds
+  )
+  await persistArtifact(
+    minimalOpts,
+    'certificate',
+    globalFinalCert.certId,
+    globalFinalCert.evidenceDigest,
+    globalFinalCert,
+    frontierBlockIds
+  )
+  config.controller.emitCertificate(globalFinalCert)
+
+  const globalOptimality = createLapicFinalOptimalitySummary(globalFinalCert)
   if (!globalOptimality.ok)
     return config.controller.fail(
       'workerFailure',
@@ -448,7 +445,7 @@ export async function executeCoordinatedBoundedExactSolve(
       globalOptimality.diagnostics
     )
 
-  return config.controller.complete(globalOptimality.value)
+  return config.controller.complete(globalOptimality.value, mergedCandidates)
 }
 
 /**

@@ -44,8 +44,7 @@ export function createDomainPartitionedJoinPlans(
   joinPlan: LapicFrontierJoinPlan,
   partitionCount: number
 ): readonly LapicDomainPartition[] {
-  if (partitionCount < 1)
-    throw new Error('partitionCount must be >= 1')
+  if (partitionCount < 1) throw new Error('partitionCount must be >= 1')
 
   if (joinPlan.entries.length === 0) return []
 

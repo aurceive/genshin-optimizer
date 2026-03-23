@@ -150,8 +150,8 @@ export function createLapicInMemorySessionController(
         })),
       }
     },
-    async complete(nextFinalOptimality) {
-      return completeSession(context, nextFinalOptimality)
+    async complete(nextFinalOptimality, topNCandidates) {
+      return completeSession(context, nextFinalOptimality, topNCandidates)
     },
     async fail(
       failureClass: LapicFailureClass,
