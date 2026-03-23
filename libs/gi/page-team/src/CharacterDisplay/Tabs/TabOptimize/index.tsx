@@ -42,10 +42,7 @@ import {
   useWeapon,
 } from '@genshin-optimizer/gi/db-ui'
 import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
-import {
-  LapicEngineProvider,
-  useLapicSolve,
-} from '@genshin-optimizer/gi/lapic-ui'
+import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
 import { GOSolver, mergeBuilds, mergePlot } from '@genshin-optimizer/gi/solver'
 import { compactArtifacts } from '@genshin-optimizer/gi/solver-tc'
@@ -69,13 +66,8 @@ import {
 } from '@genshin-optimizer/gi/ui'
 import type { UIData } from '@genshin-optimizer/gi/uidata'
 import { uiDataForTeam } from '@genshin-optimizer/gi/uidata'
-import type { NumNode, OptNode } from '@genshin-optimizer/gi/wr'
-import {
-  dynamicData,
-  mergeData,
-  optimize,
-  precompute,
-} from '@genshin-optimizer/gi/wr'
+import type { NumNode } from '@genshin-optimizer/gi/wr'
+import { dynamicData, mergeData, optimize } from '@genshin-optimizer/gi/wr'
 import {
   CheckBox,
   CheckBoxOutlineBlank,
@@ -134,13 +126,7 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
-import {
-  TopNCollector,
-  buildArtifactLookup,
-  buildLapicSolveConfig,
-  mapLapicResultsToBuilds,
-} from './lapicBridge'
-import type { LapicEvalPrepData } from './lapicBridge'
+import type { LapicWorkerOutMsg } from './lapicBridge'
 
 function initBuildStatus(): BuildStatus {
   return {
@@ -331,167 +317,11 @@ export default function TabBuild() {
   useEffect(() => () => cancelToken.current(), [])
   const throwGlobalError = useGlobalError()
 
-  // Lapic solver — prepare evaluation data and orchestration config
-  const lapicCollectorRef = useRef(new TopNCollector(maxBuildsToShow))
-
-  const lapicPrepData: LapicEvalPrepData | undefined = useMemo(() => {
-    if (enginePref !== 'lapic' || !characterKey) return undefined
-
-    const {
-      statFilters,
-      optimizationTarget,
-      mainStatAssumptionLevel,
-      allowPartial,
-    } = buildSetting
-    if (!optimizationTarget) return undefined
-
-    // Compact artifacts to extract stat values
-    const split = compactArtifacts(
-      filteredArts,
-      mainStatAssumptionLevel,
-      allowPartial
-    )
-
-    // Build worker data with dynamic artifact nodes
-    const teamData = getTeamData(
-      database,
-      teamId,
-      teamCharId,
-      mainStatAssumptionLevel,
-      { [teamCharId]: { art: [] } }
-    )
-    if (!teamData) return undefined
-
-    const workerData = uiDataForTeam(teamData.teamData, gender, activeCharKey)[
-      characterKey
-    ]?.target.data![0]
-    if (!workerData) return undefined
-
-    // Mark artifact fields as dynamic
-    Object.assign(workerData, mergeData([workerData, dynamicData]))
-
-    const targetNode = objPathValue(
-      workerData.display ?? {},
-      optimizationTarget
-    ) as NumNode | undefined
-    if (!targetNode) return undefined
-
-    const valueFilter = statFilterToNumNode(workerData, statFilters)
-    const unoptimizedNodes = [...valueFilter.map((x) => x.value), targetNode]
-    const constraintMinimums = valueFilter.map((x) => x.minimum)
-
-    // Optimize nodes (constant folding, deduplication)
-    const optimizedNodes = optimize(
-      unoptimizedNodes,
-      workerData,
-      ({ path: [p] }) => p !== 'dyn'
-    )
-    const optimizedTarget = optimizedNodes.pop()!
-    const constraintNodes = optimizedNodes
-
-    // Generate precomputed evaluation function
-    const allNodes = [...constraintNodes, optimizedTarget]
-    const evalFn = precompute(allNodes, split.base, (f) => f.path[1], 5)
-
-    // Build artifact ID → stat values lookup
-    const artifactLookup = buildArtifactLookup(split.values)
-
-    return {
-      evalFn: evalFn as LapicEvalPrepData['evalFn'],
-      artifactLookup,
-      constraintMinimums,
-      base: split.base,
-    }
-  }, [
-    enginePref,
-    characterKey,
-    buildSetting,
-    filteredArts,
-    database,
-    teamId,
-    teamCharId,
-    gender,
-    activeCharKey,
-  ])
-
-  const lapicConfig = useMemo(() => {
-    // Reset collector for new config
-    lapicCollectorRef.current = new TopNCollector(maxBuildsToShow)
-    return enginePref === 'lapic' && characterKey && optimizationTargetNode
-      ? buildLapicSolveConfig({
-          characterKey,
-          teamId,
-          artifacts: filteredArts,
-          buildSetting,
-          optimizationTarget: optimizationTargetNode as OptNode,
-          maxBuildsToShow,
-          prepData: lapicPrepData,
-          collector: lapicCollectorRef.current,
-        })
-      : null
-  }, [
-    enginePref,
-    characterKey,
-    teamId,
-    filteredArts,
-    buildSetting,
-    optimizationTargetNode,
-    maxBuildsToShow,
-    lapicPrepData,
-  ])
-  const [lapicState, lapicControls] = useLapicSolve(lapicConfig)
-  const lapicStartedAt = useRef<number | undefined>()
-
-  // Reset lapic start time when solve finishes
-  useEffect(() => {
-    if (lapicState.status === 'idle') lapicStartedAt.current = undefined
-  }, [lapicState.status])
-
-  // Store results when lapic solve completes
-  useEffect(() => {
-    if (lapicState.status !== 'completed') return
-    const weaponId = database.teams.getLoadoutWeapon(loadoutDatum).id
-    const builds = mapLapicResultsToBuilds(lapicCollectorRef.current, weaponId)
-    if (builds.length > 0) {
-      database.optConfigs.newOrSetGeneratedBuildList(optConfigId, {
-        builds,
-        buildDate: Date.now(),
-      })
-    }
-    // Notification
-    if (notificationRef.current) {
-      audio.play()
-      if (!tabFocused.current)
-        if (Notification?.permission === 'granted')
-          new Notification('Genshin Optimizer', {
-            body: t('buildCompleted'),
-            icon: './favicon.ico',
-          })
-    }
-  }, [lapicState.status, database, loadoutDatum, optConfigId, t])
+  // Lapic solver — worker ref for cancellation
+  const lapicWorkerRef = useRef<Worker | null>(null)
 
   // Combined generating flag for both engines
-  const legacyGenerating = buildStatus.type !== 'inactive'
-  const lapicGenerating = lapicState.status === 'running'
-  const generatingBuilds = legacyGenerating || lapicGenerating
-
-  // Effective build status for BuildAlert (adapts lapic progress to legacy format)
-  const effectiveBuildStatus: BuildStatus = useMemo(() => {
-    if (enginePref !== 'lapic') return buildStatus
-    if (lapicState.status === 'idle') return buildStatus
-    return {
-      type: lapicState.status === 'running' ? 'active' : 'inactive',
-      tested: lapicState.progress?.completedUnits ?? 0,
-      failed: 0,
-      skipped: 0,
-      total: lapicState.progress?.totalUnits ?? 1,
-      testedPerSecond: 0,
-      skippedPerSecond: 0,
-      startTime: lapicStartedAt.current,
-      finishTime:
-        lapicState.status !== 'running' ? performance.now() : undefined,
-    }
-  }, [enginePref, buildStatus, lapicState])
+  const generatingBuilds = buildStatus.type !== 'inactive'
 
   const generateBuilds = useCallback(async () => {
     const {
@@ -691,6 +521,199 @@ export default function TabBuild() {
     activeCharKey,
     setChartData,
     maxWorkers,
+    loadoutDatum,
+    optConfigId,
+    t,
+    throwGlobalError,
+  ])
+
+  const generateBuildsLapic = useCallback(async () => {
+    const {
+      statFilters,
+      optimizationTarget,
+      mainStatAssumptionLevel,
+      allowPartial,
+      maxBuildsToShow,
+    } = buildSetting
+    if (!characterKey || !optimizationTarget) return
+    if (notificationRef.current) Notification?.requestPermission()
+
+    const split = compactArtifacts(
+      filteredArts,
+      mainStatAssumptionLevel,
+      allowPartial
+    )
+
+    const teamData = getTeamData(
+      database,
+      teamId,
+      teamCharId,
+      mainStatAssumptionLevel,
+      { [teamCharId]: { art: [] } }
+    )
+    if (!teamData) return
+    const workerData = uiDataForTeam(teamData.teamData, gender, activeCharKey)[
+      characterKey
+    ]?.target.data![0]
+    if (!workerData) return
+    Object.assign(workerData, mergeData([workerData, dynamicData]))
+    const targetNode = objPathValue(
+      workerData.display ?? {},
+      optimizationTarget
+    ) as NumNode | undefined
+    if (!targetNode) return
+    const valueFilter = statFilterToNumNode(workerData, statFilters)
+
+    const unoptimizedNodes = [...valueFilter.map((x) => x.value), targetNode]
+    const constraintMinimums = valueFilter.map((x) => x.minimum)
+    const minimum = [...constraintMinimums, -Infinity]
+
+    const nodes = optimize(
+      unoptimizedNodes,
+      workerData,
+      ({ path: [p] }) => p !== 'dyn'
+    )
+
+    setChartData(undefined)
+
+    const worker = new Worker(
+      new URL('./LapicSolveWorker.ts', import.meta.url),
+      { type: 'module' }
+    )
+    lapicWorkerRef.current = worker
+
+    const status: Omit<BuildStatus, 'type'> = {
+      tested: 0,
+      failed: 0,
+      skipped: 0,
+      total: 0,
+      testedPerSecond: 0,
+      skippedPerSecond: 0,
+      startTime: performance.now(),
+    }
+    const statusUpdateTimer = setInterval(
+      () => setBuildStatus({ type: 'active', ...status }),
+      100
+    )
+
+    // Builds-per-second tracking
+    let lastTime = performance.now()
+    let lastTested = 0
+    const bpsTimer = setInterval(() => {
+      const now = performance.now()
+      const elapsed = (now - lastTime) / 1000
+      if (elapsed > 0) {
+        status.testedPerSecond = (status.tested - lastTested) / elapsed
+      }
+      lastTime = now
+      lastTested = status.tested
+    }, 1000)
+
+    const cancellationError = new Error()
+
+    try {
+      const result = await new Promise<
+        Extract<LapicWorkerOutMsg, { type: 'result' }>
+      >((resolve, reject) => {
+        cancelToken.current = () => {
+          worker.postMessage({ type: 'cancel' })
+          setTimeout(() => worker.terminate(), 100)
+          reject(cancellationError)
+        }
+
+        worker.onmessage = (e: MessageEvent<LapicWorkerOutMsg>) => {
+          const msg = e.data
+          if (msg.type === 'progress') {
+            status.tested = msg.tested
+            status.failed = msg.failed
+            status.total = msg.total
+          } else if (msg.type === 'result') {
+            resolve(msg)
+          } else if (msg.type === 'error') {
+            reject(new Error(msg.message))
+          }
+        }
+
+        worker.onerror = (e) => reject(new Error(e.message || 'Worker error'))
+
+        // Send computation data to worker
+        worker.postMessage({
+          type: 'start',
+          nodes,
+          base: split.base,
+          artsBySlot: Object.values(split.values),
+          constraintMinimums: minimum,
+          topN: maxBuildsToShow,
+        })
+      })
+
+      cancelToken.current = () => {}
+      worker.terminate()
+      lapicWorkerRef.current = null
+
+      status.tested = result.tested
+      status.failed = result.failed
+      status.total = result.total
+
+      const weaponId = database.teams.getLoadoutWeapon(loadoutDatum).id
+
+      database.optConfigs.newOrSetGeneratedBuildList(optConfigId, {
+        builds: result.builds.map((build) => ({
+          artifactIds: objKeyMap(allArtifactSlotKeys, (slotKey) =>
+            build.artifactIds.find(
+              (aId) => database.arts.get(aId)?.slotKey === slotKey
+            )
+          ),
+          weaponId,
+        })),
+        buildDate: Date.now(),
+      })
+
+      setTimeout(async () => {
+        if (notificationRef.current) {
+          audio.play()
+          if (!tabFocused.current)
+            if (Notification?.permission === 'granted')
+              new Notification('Genshin Optimizer', {
+                body: t('buildCompleted'),
+                icon: './favicon.ico',
+              })
+            else setTimeout(() => window.alert(t('buildCompleted')), 1)
+        }
+      }, 100)
+    } catch (e) {
+      if (e !== cancellationError) {
+        console.log('Failed to run lapic worker')
+        console.log(e)
+        if (e instanceof Error) throwGlobalError(e)
+      }
+
+      cancelToken.current()
+      status.tested = 0
+      status.failed = 0
+      status.skipped = 0
+      status.total = 0
+    } finally {
+      clearInterval(statusUpdateTimer)
+      clearInterval(bpsTimer)
+      lapicWorkerRef.current?.terminate()
+      lapicWorkerRef.current = null
+      setBuildStatus({
+        type: 'inactive',
+        ...status,
+        finishTime: performance.now(),
+      })
+    }
+  }, [
+    buildSetting,
+    characterKey,
+    filteredArts,
+    database,
+    teamId,
+    teamCharId,
+    gender,
+    activeCharKey,
+    setChartData,
     loadoutDatum,
     optConfigId,
     t,
@@ -981,14 +1004,10 @@ export default function TabBuild() {
                 color={generatingBuilds ? 'error' : 'success'}
                 onClick={
                   generatingBuilds
-                    ? () => {
-                        if (enginePref === 'lapic') lapicControls.cancel()
-                        else cancelToken.current()
-                      }
+                    ? () => cancelToken.current()
                     : () => {
                         if (enginePref === 'lapic') {
-                          lapicStartedAt.current = performance.now()
-                          lapicControls.start()
+                          generateBuildsLapic()
                         } else {
                           generateBuilds()
                         }
@@ -1008,7 +1027,7 @@ export default function TabBuild() {
         {!!characterKey && (
           <BuildAlert
             {...{
-              status: effectiveBuildStatus,
+              status: buildStatus,
               characterName,
               maxBuildsToShow,
             }}
