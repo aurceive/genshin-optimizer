@@ -21,6 +21,15 @@ import type {
   LapicWorkerPauseAckMessage,
   LapicWorkerResultMessage,
 } from './transport'
+import type {
+  LapicPartitionDispatchConfig,
+  LapicPartitionDispatchRequest,
+  LapicPartitionDispatchResponse,
+  LapicPartitionDispatcher,
+} from './partition-dispatch'
+import type { LapicInMemorySessionController } from '../types'
+import type { LapicFrontierJoinPlan } from '../solve/join-plan'
+import { createInProcessPartitionDispatcher } from './partition-dispatch'
 
 // ---------------------------------------------------------------------------
 // MessagePort abstraction
@@ -77,6 +86,45 @@ export type LapicPortWorkerEnvelope =
       readonly kind: 'pause-ack'
       readonly id: number
       readonly result: LapicWorkerPauseAckMessage | undefined
+    }
+  | { readonly kind: 'error'; readonly id: number; readonly message: string }
+
+// ---------------------------------------------------------------------------
+// Bounded-exact envelope types (sent over the port)
+// ---------------------------------------------------------------------------
+
+/**
+ * Serializable partition request sent from coordinator to worker.
+ *
+ * Unlike `LapicPartitionDispatchRequest`, this omits the controller
+ * (which is not serializable). The worker creates its own controller.
+ */
+export interface LapicBoundedExactPortDispatchRequest {
+  readonly partitionIndex: number
+  readonly joinPlanPayload: string
+  readonly frontierBlockIds: readonly string[]
+  readonly initialIncumbentThreshold?: string | undefined
+}
+
+/**
+ * Messages sent from coordinator to bounded-exact worker.
+ */
+export type LapicBoundedExactPortCoordinatorEnvelope =
+  | {
+      readonly kind: 'dispatch-partition'
+      readonly id: number
+      readonly request: LapicBoundedExactPortDispatchRequest
+    }
+  | { readonly kind: 'terminate' }
+
+/**
+ * Messages sent from bounded-exact worker back to coordinator.
+ */
+export type LapicBoundedExactPortWorkerEnvelope =
+  | {
+      readonly kind: 'partition-result'
+      readonly id: number
+      readonly response: LapicPartitionDispatchResponse
     }
   | { readonly kind: 'error'; readonly id: number; readonly message: string }
 
@@ -287,5 +335,232 @@ export function createWorkerEntryHandler(
 
   return () => {
     disposed = true
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bounded-exact MessagePort worker entry handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Configuration for a bounded-exact worker entry handler.
+ *
+ * The dispatcher config provides the evaluator callbacks that
+ * cannot be serialized across MessagePort — the worker thread
+ * must supply them at initialization time.
+ */
+export interface LapicBoundedExactWorkerEntryConfig {
+  /** The message port to listen on and respond through. */
+  readonly port: LapicMessagePortLike
+  /**
+   * Shared partition dispatch config.
+   * Provides the problem definition, evaluators, and other
+   * callbacks that the executor needs.
+   */
+  readonly dispatchConfig: LapicPartitionDispatchConfig
+  /**
+   * Factory for creating a partition controller on the worker side.
+   * Called once per dispatched partition.
+   */
+  readonly createController: (
+    partitionIndex: number
+  ) => LapicInMemorySessionController
+  /**
+   * Deserialize a join plan from its serialized form.
+   * The coordinated solve serializes the join plan before sending
+   * it over the port; this function reverses the serialization.
+   */
+  readonly deserializeJoinPlan: (payload: string) => LapicFrontierJoinPlan
+}
+
+/**
+ * Create a worker-side bounded-exact message handler.
+ *
+ * Listens for `dispatch-partition` messages and runs the full
+ * `executeLapicBoundedExactSolve` for each partition.  Unlike
+ * the flat-index `createWorkerEntryHandler`, this handler
+ * produces certificates, supports branch-and-bound pruning,
+ * and returns the full partition dispatch response.
+ *
+ * Returns a cleanup function that stops listening.
+ */
+export function createBoundedExactWorkerEntryHandler(
+  config: LapicBoundedExactWorkerEntryConfig
+): () => void {
+  const { port } = config
+  let disposed = false
+
+  const dispatcher = createInProcessPartitionDispatcher(config.dispatchConfig)
+
+  async function handleMessage(
+    envelope: LapicBoundedExactPortCoordinatorEnvelope
+  ) {
+    if (disposed) return
+
+    switch (envelope.kind) {
+      case 'dispatch-partition': {
+        try {
+          const controller = config.createController(
+            envelope.request.partitionIndex
+          )
+          controller.awaitCompletion().catch(() => {})
+
+          const response = await dispatcher.dispatch({
+            partitionIndex: envelope.request.partitionIndex,
+            controller,
+            joinPlan: config.deserializeJoinPlan(
+              envelope.request.joinPlanPayload
+            ),
+            frontierBlockIds: envelope.request.frontierBlockIds,
+            initialIncumbentThreshold:
+              envelope.request.initialIncumbentThreshold,
+          })
+
+          const reply: LapicBoundedExactPortWorkerEnvelope = {
+            kind: 'partition-result',
+            id: envelope.id,
+            response,
+          }
+          port.postMessage(reply)
+        } catch (err) {
+          const reply: LapicBoundedExactPortWorkerEnvelope = {
+            kind: 'error',
+            id: envelope.id,
+            message: err instanceof Error ? err.message : String(err),
+          }
+          port.postMessage(reply)
+        }
+        break
+      }
+
+      case 'terminate': {
+        disposed = true
+        await dispatcher.shutdown()
+        port.close?.()
+        break
+      }
+    }
+  }
+
+  if (typeof port.on === 'function') {
+    port.on('message', (data) =>
+      handleMessage(data as LapicBoundedExactPortCoordinatorEnvelope)
+    )
+  } else if (typeof port.addEventListener === 'function') {
+    port.addEventListener('message', (event) =>
+      handleMessage(event.data as LapicBoundedExactPortCoordinatorEnvelope)
+    )
+  }
+
+  return () => {
+    disposed = true
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MessagePort-based partition dispatcher (main thread side)
+// ---------------------------------------------------------------------------
+
+/**
+ * Configuration for a MessagePort-based partition dispatcher.
+ */
+export interface LapicMessagePortPartitionDispatcherConfig {
+  /** The message port to communicate through. */
+  readonly port: LapicMessagePortLike
+  /**
+   * Serialize a join plan for transport over the port.
+   * The default implementation uses `JSON.stringify`.
+   */
+  readonly serializeJoinPlan?: (joinPlan: LapicFrontierJoinPlan) => string
+}
+
+/**
+ * Create a partition dispatcher that sends work to a bounded-exact
+ * worker thread via MessagePort.
+ *
+ * Each `dispatch()` call serializes the partition descriptor,
+ * posts it to the worker, and awaits the matching response.
+ * The worker runs the full executor and returns certificates
+ * and top-N candidates.
+ */
+export function createMessagePortPartitionDispatcher(
+  config: LapicMessagePortPartitionDispatcherConfig
+): LapicPartitionDispatcher {
+  const { port } = config
+  const serializeJoinPlan =
+    config.serializeJoinPlan ?? ((jp) => JSON.stringify(jp))
+  let nextId = 1
+  let terminated = false
+
+  const pending = new Map<
+    number,
+    {
+      resolve: (value: LapicPartitionDispatchResponse) => void
+      reject: (reason: unknown) => void
+    }
+  >()
+
+  function handleMessage(envelope: LapicBoundedExactPortWorkerEnvelope) {
+    const entry = pending.get(envelope.id)
+    if (!entry) return
+
+    pending.delete(envelope.id)
+
+    if (envelope.kind === 'error') {
+      entry.reject(new Error(envelope.message))
+    } else if (envelope.kind === 'partition-result') {
+      entry.resolve(envelope.response)
+    }
+  }
+
+  if (typeof port.on === 'function') {
+    port.on('message', (data) =>
+      handleMessage(data as LapicBoundedExactPortWorkerEnvelope)
+    )
+  } else if (typeof port.addEventListener === 'function') {
+    port.addEventListener('message', (event) =>
+      handleMessage(event.data as LapicBoundedExactPortWorkerEnvelope)
+    )
+  }
+
+  return {
+    dispatch(
+      request: LapicPartitionDispatchRequest
+    ): Promise<LapicPartitionDispatchResponse> {
+      if (terminated)
+        return Promise.reject(new Error('MessagePort dispatcher terminated.'))
+
+      const id = nextId++
+      return new Promise<LapicPartitionDispatchResponse>((resolve, reject) => {
+        pending.set(id, { resolve, reject })
+        const envelope: LapicBoundedExactPortCoordinatorEnvelope = {
+          kind: 'dispatch-partition',
+          id,
+          request: {
+            partitionIndex: request.partitionIndex,
+            joinPlanPayload: serializeJoinPlan(request.joinPlan),
+            frontierBlockIds: request.frontierBlockIds,
+            initialIncumbentThreshold: request.initialIncumbentThreshold,
+          },
+        }
+        port.postMessage(envelope)
+      })
+    },
+
+    async shutdown(): Promise<void> {
+      if (terminated) return
+      terminated = true
+
+      for (const [, entry] of pending) {
+        entry.reject(new Error('MessagePort dispatcher terminated.'))
+      }
+      pending.clear()
+
+      const envelope: LapicBoundedExactPortCoordinatorEnvelope = {
+        kind: 'terminate',
+      }
+      port.postMessage(envelope)
+      port.close?.()
+    },
   }
 }

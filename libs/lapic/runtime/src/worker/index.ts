@@ -46,11 +46,18 @@ export type {
   LapicPortCoordinatorEnvelope,
   LapicPortWorkerEnvelope,
   LapicWorkerEntryConfig,
+  LapicBoundedExactPortDispatchRequest,
+  LapicBoundedExactPortCoordinatorEnvelope,
+  LapicBoundedExactPortWorkerEnvelope,
+  LapicBoundedExactWorkerEntryConfig,
+  LapicMessagePortPartitionDispatcherConfig,
 } from './message-port'
 
 export {
   createMessagePortWorkerHandle,
   createWorkerEntryHandler,
+  createBoundedExactWorkerEntryHandler,
+  createMessagePortPartitionDispatcher,
 } from './message-port'
 
 export type {
@@ -68,6 +75,16 @@ export {
 
 export type { LapicDomainPartition } from './domain-partitioner'
 export { createDomainPartitionedJoinPlans } from './domain-partitioner'
+
+export type {
+  LapicPartitionDispatchRequest,
+  LapicPartitionCompletedResponse,
+  LapicPartitionPausedResponse,
+  LapicPartitionDispatchResponse,
+  LapicPartitionDispatcher,
+  LapicPartitionDispatchConfig,
+} from './partition-dispatch'
+export { createInProcessPartitionDispatcher } from './partition-dispatch'
 
 export type { LapicCoordinatedBoundedExactSolveConfig } from './coordinated-solve'
 export { executeCoordinatedBoundedExactSolve } from './coordinated-solve'

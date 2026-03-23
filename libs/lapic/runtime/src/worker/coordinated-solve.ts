@@ -39,7 +39,6 @@ import { createLapicInMemorySessionController } from '../session/controller'
 import type {
   LapicInMemorySessionController,
   LapicSessionIdentity,
-  LapicSolveCompletionResult,
   LapicTopNCandidateEntry,
 } from '../types'
 import { lapicRuntimeProtocolVersion } from '../types'
@@ -71,6 +70,12 @@ import type { LapicDangerZoneConfig } from '../solve/danger-zone'
 import { createDomainPartitionedJoinPlans } from './domain-partitioner'
 import { createLapicWorkScheduler } from '../scheduler/scheduler'
 import type { LapicWorkUnitEnvelope } from '../types'
+import type {
+  LapicPartitionDispatcher,
+  LapicPartitionDispatchConfig,
+  LapicPartitionCompletedResponse,
+} from './partition-dispatch'
+import { createInProcessPartitionDispatcher } from './partition-dispatch'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +106,19 @@ export interface LapicCoordinatedBoundedExactSolveConfig {
    * executor with zero overhead.
    */
   readonly workerCount: number
+
+  /**
+   * Optional partition dispatcher to use for executing partitions.
+   *
+   * When provided, the coordinated solve dispatches each partition
+   * through this interface instead of calling the executor directly.
+   * This enables transparent switching between in-process execution
+   * and MessagePort-based worker threads.
+   *
+   * When omitted, an in-process dispatcher is created automatically
+   * from the config's evaluator callbacks.
+   */
+  readonly dispatcher?: LapicPartitionDispatcher
 
   /** Progress callback invoked after each partition completes. */
   readonly onPartitionComplete?: (
@@ -160,6 +178,33 @@ function buildMinimalOptions(
     controller: config.controller,
     artifactStore: config.artifactStore,
     evaluateCombination: config.evaluateCombination,
+  }
+}
+
+/** Extract a `LapicPartitionDispatchConfig` from the coordinated solve config. */
+function extractDispatchConfig(
+  config: LapicCoordinatedBoundedExactSolveConfig
+): LapicPartitionDispatchConfig {
+  return {
+    problem: config.problem,
+    artifactStore: config.artifactStore,
+    evaluateCombination: config.evaluateCombination,
+    ...(config.compareEvaluations !== undefined && {
+      compareEvaluations: config.compareEvaluations,
+    }),
+    ...(config.isCombinationFeasible !== undefined && {
+      isCombinationFeasible: config.isCombinationFeasible,
+    }),
+    ...(config.computeUpperBound !== undefined && {
+      computeUpperBound: config.computeUpperBound,
+    }),
+    ...(config.firGraph !== undefined && { firGraph: config.firGraph }),
+    ...(config.dangerZoneConfig !== undefined && {
+      dangerZoneConfig: config.dangerZoneConfig,
+    }),
+    ...(config.maxCombinationCount !== undefined && {
+      maxCombinationCount: config.maxCombinationCount,
+    }),
   }
 }
 
@@ -380,10 +425,16 @@ export async function executeCoordinatedBoundedExactSolve(
   const parentIdentity = (await config.controller.inspectSessionState()).summary
     .identity
 
-  interface PartitionCompletion {
-    readonly completion: LapicSolveCompletionResult
+  // Create the partition dispatcher — use the provided one or default
+  // to in-process (calls executeLapicBoundedExactSolve directly).
+  const dispatcher =
+    config.dispatcher ??
+    createInProcessPartitionDispatcher(extractDispatchConfig(config))
+
+  interface PartitionDispatchOutcome {
+    readonly response: LapicPartitionCompletedResponse
   }
-  const completions: PartitionCompletion[] = []
+  const dispatchOutcomes: PartitionDispatchOutcome[] = []
   // Running best-N candidates across completed partitions.
   // The worst entry's objective value becomes the initial incumbent
   // threshold for the next partition, enabling early pruning.
@@ -402,110 +453,118 @@ export async function executeCoordinatedBoundedExactSolve(
   }
 
   // Dispatch loop — scheduler provides deterministic ordering
-  while (scheduler.queueDepth > 0) {
-    // Check for pause on the parent controller between partitions
-    const parentState = await config.controller.inspectSessionState()
-    if (parentState.summary.solveState === 'pausing') {
-      // Cancel all remaining queued partitions
-      for (const item of scheduler.getItemsByStatus('queued')) {
-        scheduler.cancel(item.workUnit.workUnitId)
-      }
-      config.controller.reachPauseSafePoint()
-      return {
-        paused: true as const,
-        checkpointState: {
-          checkpointKind: 'solve-position' as const,
-          problemDigest: config.problem.problemDigest,
-          visitedCombinationCount: 0,
-          totalCombinationCount: joinPlanResult.value.totalCombinationCount,
-          trackerSnapshot: { topN: config.problem.topN, entries: [] },
-          cursorPosition: { flatIndex: 0 },
-          frontierBlockIds,
-          phase: 'join' as const,
-        },
-      }
-    }
-
-    const scheduledItem = scheduler.dequeue()!
-    const partition = partitionsByWorkUnitId.get(
-      scheduledItem.workUnit.workUnitId
-    )!
-
-    const partitionController = createPartitionController(
-      parentIdentity,
-      partition.partitionIndex,
-      config.artifactStore
-    )
-
-    // Prevent unhandled rejection on the partition controller's
-    // completion promise (we extract the result below).
-    partitionController.awaitCompletion().catch(() => {})
-
-    // Compute the incumbent threshold from the running best-N.
-    // When we have at least topN candidates, the worst entry's
-    // objective value becomes the threshold — any subtree that
-    // can't beat it is provably outside the global top-N.
-    const incumbentThreshold = computeIncumbentThreshold(
-      runningBestCandidates,
-      config.problem.topN
-    )
-
-    try {
-      const outcome = await executeLapicBoundedExactSolve(
-        buildExecutorOptions(
-          config,
-          partitionController,
-          { joinPlan: partition.joinPlan, frontierBlockIds },
-          incumbentThreshold
-        )
-      )
-
-      if ('paused' in outcome && outcome.paused) {
-        // Partition was paused — cancel remaining work and propagate
-        scheduler.cancel(scheduledItem.workUnit.workUnitId)
+  try {
+    while (scheduler.queueDepth > 0) {
+      // Check for pause on the parent controller between partitions
+      const parentState = await config.controller.inspectSessionState()
+      if (parentState.summary.solveState === 'pausing') {
+        // Cancel all remaining queued partitions
         for (const item of scheduler.getItemsByStatus('queued')) {
           scheduler.cancel(item.workUnit.workUnitId)
         }
-        return outcome
+        config.controller.reachPauseSafePoint()
+        return {
+          paused: true as const,
+          checkpointState: {
+            checkpointKind: 'solve-position' as const,
+            problemDigest: config.problem.problemDigest,
+            visitedCombinationCount: 0,
+            totalCombinationCount: joinPlanResult.value.totalCombinationCount,
+            trackerSnapshot: { topN: config.problem.topN, entries: [] },
+            cursorPosition: { flatIndex: 0 },
+            frontierBlockIds,
+            phase: 'join' as const,
+          },
+        }
       }
 
-      scheduler.complete(scheduledItem.workUnit.workUnitId)
-      const completion = outcome as LapicSolveCompletionResult
-      completions.push({ completion })
+      const scheduledItem = scheduler.dequeue()!
+      const partition = partitionsByWorkUnitId.get(
+        scheduledItem.workUnit.workUnitId
+      )!
 
-      // Update running best-N with this partition's candidates
-      if (completion.topNCandidates) {
-        runningBestCandidates = mergeAndTruncateCandidates(
-          runningBestCandidates,
-          completion.topNCandidates,
-          config.problem.topN,
-          config.compareEvaluations
+      const partitionController = createPartitionController(
+        parentIdentity,
+        partition.partitionIndex,
+        config.artifactStore
+      )
+
+      // Prevent unhandled rejection on the partition controller's
+      // completion promise (we extract the result below).
+      partitionController.awaitCompletion().catch(() => {})
+
+      // Compute the incumbent threshold from the running best-N.
+      // When we have at least topN candidates, the worst entry's
+      // objective value becomes the threshold — any subtree that
+      // can't beat it is provably outside the global top-N.
+      const incumbentThreshold = computeIncumbentThreshold(
+        runningBestCandidates,
+        config.problem.topN
+      )
+
+      try {
+        const response = await dispatcher.dispatch({
+          partitionIndex: partition.partitionIndex,
+          controller: partitionController,
+          joinPlan: partition.joinPlan,
+          frontierBlockIds,
+          initialIncumbentThreshold: incumbentThreshold,
+        })
+
+        if (response.kind === 'paused') {
+          // Partition was paused — cancel remaining work and propagate
+          scheduler.cancel(scheduledItem.workUnit.workUnitId)
+          for (const item of scheduler.getItemsByStatus('queued')) {
+            scheduler.cancel(item.workUnit.workUnitId)
+          }
+          return {
+            paused: true as const,
+            checkpointState: response.checkpointState,
+          }
+        }
+
+        scheduler.complete(scheduledItem.workUnit.workUnitId)
+        dispatchOutcomes.push({ response })
+
+        // Update running best-N with this partition's candidates
+        if (response.topNCandidates) {
+          runningBestCandidates = mergeAndTruncateCandidates(
+            runningBestCandidates,
+            response.topNCandidates,
+            config.problem.topN,
+            config.compareEvaluations
+          )
+        }
+
+        config.controller.publishProgress({
+          phase: 'join',
+          completedUnits: partition.partitionIndex + 1,
+          totalUnits: partitions.length,
+        })
+
+        config.onPartitionComplete?.(
+          partition.partitionIndex,
+          partitions.length
         )
+      } catch (error) {
+        scheduler.fail(scheduledItem.workUnit.workUnitId)
+        // Cancel all remaining queued partitions
+        for (const item of scheduler.getItemsByStatus('queued')) {
+          scheduler.cancel(item.workUnit.workUnitId)
+        }
+        throw error
       }
-
-      config.controller.publishProgress({
-        phase: 'join',
-        completedUnits: partition.partitionIndex + 1,
-        totalUnits: partitions.length,
-      })
-
-      config.onPartitionComplete?.(partition.partitionIndex, partitions.length)
-    } catch (error) {
-      scheduler.fail(scheduledItem.workUnit.workUnitId)
-      // Cancel all remaining queued partitions
-      for (const item of scheduler.getItemsByStatus('queued')) {
-        scheduler.cancel(item.workUnit.workUnitId)
-      }
-      throw error
     }
+  } finally {
+    await dispatcher.shutdown()
   }
 
   // --- Cross-partition top-N merge ---
   config.controller.activate('resolve-residual')
 
   // Forward all non-FinalOptimality certificates to the parent controller
-  for (const { completion } of completions) {
-    for (const cert of completion.emittedCertificates) {
+  for (const { response } of dispatchOutcomes) {
+    for (const cert of response.emittedCertificates) {
       if (cert.certKind !== 'FinalOptimalityCert') {
         config.controller.emitCertificate(cert)
       }
@@ -514,9 +573,9 @@ export async function executeCoordinatedBoundedExactSolve(
 
   // Collect all top-N candidates from every partition
   const allCandidates: LapicTopNCandidateEntry[] = []
-  for (const { completion } of completions) {
-    if (completion.topNCandidates) {
-      allCandidates.push(...completion.topNCandidates)
+  for (const { response } of dispatchOutcomes) {
+    if (response.topNCandidates) {
+      allCandidates.push(...response.topNCandidates)
     }
   }
 
