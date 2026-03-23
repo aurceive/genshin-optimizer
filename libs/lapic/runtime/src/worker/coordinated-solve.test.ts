@@ -619,6 +619,89 @@ describe('executeCoordinatedBoundedExactSolve', () => {
     })
   })
 
+  describe('scheduler lifecycle', () => {
+    it('dispatches all partitions through the scheduler and tracks completion', async () => {
+      // With 6 candidates in domain-0, workerCount=3 produces 3 partitions.
+      // The scheduler should dispatch all 3 in index order.
+      const slotIds3 = ['s0', 's1']
+      const domains3 = [
+        {
+          domainId: 'd-0',
+          slotId: 's0',
+          candidates: Array.from({ length: 6 }, (_, j) =>
+            candidate(`c-0-${j}`, 'd-0', 's0')
+          ),
+        },
+        {
+          domainId: 'd-1',
+          slotId: 's1',
+          candidates: Array.from({ length: 3 }, (_, j) =>
+            candidate(`c-1-${j}`, 'd-1', 's1')
+          ),
+        },
+      ]
+      const problem = createProblem({
+        slotIds: slotIds3,
+        domains: domains3,
+        topN: 1,
+      })
+      const { store, controller } = createTestInfra()
+      const calls: Array<[number, number]> = []
+
+      const outcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller,
+        artifactStore: store,
+        evaluateCombination: numericEvaluator,
+        workerCount: 3,
+        onPartitionComplete: (idx, total) => calls.push([idx, total]),
+      })
+
+      const completion = outcome as LapicSolveCompletionResult
+      expect(completion.summary.solveState).toBe('completed')
+      // All 3 partitions should have completed in order
+      expect(calls).toHaveLength(3)
+      expect(calls.map(([idx]) => idx)).toEqual([0, 1, 2])
+      for (const [, total] of calls) {
+        expect(total).toBe(3)
+      }
+    })
+
+    it('propagates executor errors and cancels remaining partitions', async () => {
+      const problem = createProblem({ slotIds, domains, topN: 1 })
+      const { store, controller } = createTestInfra()
+
+      // Make the evaluator throw for candidates in the second partition.
+      // With 4 candidates in domain-0 and workerCount=2:
+      // partition 0 gets rows [0,1], partition 1 gets rows [2,3].
+      const throwOnSecondPartition = (combination: {
+        candidates: readonly LapicCandidateDescriptor[]
+      }) => {
+        for (const c of combination.candidates) {
+          if (c.candidateId === 'cand-0-2' || c.candidateId === 'cand-0-3') {
+            throw new Error('Simulated failure in partition 1')
+          }
+        }
+        return numericEvaluator(combination)
+      }
+
+      const completedPartitions: number[] = []
+      await expect(
+        executeCoordinatedBoundedExactSolve({
+          problem,
+          controller,
+          artifactStore: store,
+          evaluateCombination: throwOnSecondPartition,
+          workerCount: 2,
+          onPartitionComplete: (idx) => completedPartitions.push(idx),
+        })
+      ).rejects.toThrow()
+
+      // Only partition 0 should have completed before the error
+      expect(completedPartitions).toEqual([0])
+    })
+  })
+
   describe('infeasible problems', () => {
     it('completes without optimality when all feasibility checks fail', async () => {
       const problem = createProblem({ slotIds, domains, topN: 1 })

@@ -69,6 +69,8 @@ import type {
 } from '../solve/types'
 import type { LapicDangerZoneConfig } from '../solve/danger-zone'
 import { createDomainPartitionedJoinPlans } from './domain-partitioner'
+import { createLapicWorkScheduler } from '../scheduler/scheduler'
+import type { LapicWorkUnitEnvelope } from '../types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -193,6 +195,38 @@ function buildExecutorOptions(
     ...(initialIncumbentThreshold !== undefined && {
       initialIncumbentThreshold,
     }),
+  }
+}
+
+/**
+ * Create a work unit envelope for a partition.
+ *
+ * All partitions receive equal priority — the scheduler dispatches
+ * them in enqueue (i.e. partition-index) order via the deterministic
+ * tie-break.  This preserves the current sequential execution order
+ * while giving the scheduler lifecycle management, cancellation,
+ * and (future) retry capabilities.
+ */
+function createPartitionWorkUnit(
+  partitionIndex: number,
+  problemDigest: string
+): LapicWorkUnitEnvelope {
+  const idx = String(partitionIndex).padStart(8, '0')
+  return {
+    workUnitId: `partition:${problemDigest}:${partitionIndex}`,
+    kind: 'SolvePartition',
+    determinismClass: 'pure-deterministic',
+    priority: {
+      upperBoundOrderingDigest: '0',
+      uncertaintyGapDigest: '0',
+      residualCostDigest: idx,
+      deterministicTieBreakDigest: idx,
+      costModelVersion: '1.0.0',
+    },
+    retryPolicy: {
+      maxAttempts: 1,
+      replaySafe: true,
+    },
   }
 }
 
@@ -340,7 +374,7 @@ export async function executeCoordinatedBoundedExactSolve(
     return config.controller.complete()
   }
 
-  // --- Execute partitions sequentially with incumbent sharing ---
+  // --- Execute partitions via scheduler with incumbent sharing ---
   config.controller.activate('join')
 
   const parentIdentity = (await config.controller.inspectSessionState()).summary
@@ -355,10 +389,27 @@ export async function executeCoordinatedBoundedExactSolve(
   // threshold for the next partition, enabling early pruning.
   let runningBestCandidates: LapicTopNCandidateEntry[] = []
 
+  // Create scheduler and enqueue all partitions
+  const scheduler = createLapicWorkScheduler()
+  const partitionsByWorkUnitId = new Map<string, (typeof partitions)[number]>()
   for (const partition of partitions) {
+    const workUnit = createPartitionWorkUnit(
+      partition.partitionIndex,
+      config.problem.problemDigest
+    )
+    scheduler.enqueue(workUnit)
+    partitionsByWorkUnitId.set(workUnit.workUnitId, partition)
+  }
+
+  // Dispatch loop — scheduler provides deterministic ordering
+  while (scheduler.queueDepth > 0) {
     // Check for pause on the parent controller between partitions
     const parentState = await config.controller.inspectSessionState()
     if (parentState.summary.solveState === 'pausing') {
+      // Cancel all remaining queued partitions
+      for (const item of scheduler.getItemsByStatus('queued')) {
+        scheduler.cancel(item.workUnit.workUnitId)
+      }
       config.controller.reachPauseSafePoint()
       return {
         paused: true as const,
@@ -374,6 +425,11 @@ export async function executeCoordinatedBoundedExactSolve(
         },
       }
     }
+
+    const scheduledItem = scheduler.dequeue()!
+    const partition = partitionsByWorkUnitId.get(
+      scheduledItem.workUnit.workUnitId
+    )!
 
     const partitionController = createPartitionController(
       parentIdentity,
@@ -394,42 +450,54 @@ export async function executeCoordinatedBoundedExactSolve(
       config.problem.topN
     )
 
-    const outcome = await executeLapicBoundedExactSolve(
-      buildExecutorOptions(
-        config,
-        partitionController,
-        { joinPlan: partition.joinPlan, frontierBlockIds },
-        incumbentThreshold
+    try {
+      const outcome = await executeLapicBoundedExactSolve(
+        buildExecutorOptions(
+          config,
+          partitionController,
+          { joinPlan: partition.joinPlan, frontierBlockIds },
+          incumbentThreshold
+        )
       )
-    )
 
-    if ('paused' in outcome && outcome.paused) {
-      // Partition was paused (its own controller's pause was triggered).
-      // In the current implementation, partition controllers don't receive
-      // external pause requests, so this path is defensive only.
-      return outcome
+      if ('paused' in outcome && outcome.paused) {
+        // Partition was paused — cancel remaining work and propagate
+        scheduler.cancel(scheduledItem.workUnit.workUnitId)
+        for (const item of scheduler.getItemsByStatus('queued')) {
+          scheduler.cancel(item.workUnit.workUnitId)
+        }
+        return outcome
+      }
+
+      scheduler.complete(scheduledItem.workUnit.workUnitId)
+      const completion = outcome as LapicSolveCompletionResult
+      completions.push({ completion })
+
+      // Update running best-N with this partition's candidates
+      if (completion.topNCandidates) {
+        runningBestCandidates = mergeAndTruncateCandidates(
+          runningBestCandidates,
+          completion.topNCandidates,
+          config.problem.topN,
+          config.compareEvaluations
+        )
+      }
+
+      config.controller.publishProgress({
+        phase: 'join',
+        completedUnits: partition.partitionIndex + 1,
+        totalUnits: partitions.length,
+      })
+
+      config.onPartitionComplete?.(partition.partitionIndex, partitions.length)
+    } catch (error) {
+      scheduler.fail(scheduledItem.workUnit.workUnitId)
+      // Cancel all remaining queued partitions
+      for (const item of scheduler.getItemsByStatus('queued')) {
+        scheduler.cancel(item.workUnit.workUnitId)
+      }
+      throw error
     }
-
-    const completion = outcome as LapicSolveCompletionResult
-    completions.push({ completion })
-
-    // Update running best-N with this partition's candidates
-    if (completion.topNCandidates) {
-      runningBestCandidates = mergeAndTruncateCandidates(
-        runningBestCandidates,
-        completion.topNCandidates,
-        config.problem.topN,
-        config.compareEvaluations
-      )
-    }
-
-    config.controller.publishProgress({
-      phase: 'join',
-      completedUnits: partition.partitionIndex + 1,
-      totalUnits: partitions.length,
-    })
-
-    config.onPartitionComplete?.(partition.partitionIndex, partitions.length)
   }
 
   // --- Cross-partition top-N merge ---

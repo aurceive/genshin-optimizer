@@ -70,6 +70,7 @@ export const lapicWorkUnitKinds = [
   'ValidateCertificate',
   'PersistArtifact',
   'ReloadArtifact',
+  'SolvePartition',
 ] as const satisfies readonly LapicWorkUnitKind[]
 
 export const lapicDeterminismClasses = [

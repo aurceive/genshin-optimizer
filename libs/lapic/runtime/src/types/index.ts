@@ -65,6 +65,7 @@ export type LapicWorkUnitKind =
   | 'ValidateCertificate'
   | 'PersistArtifact'
   | 'ReloadArtifact'
+  | 'SolvePartition'
 export type LapicDeterminismClass = 'pure-deterministic' | 'provider-verified'
 export type LapicWorkerBackendKind =
   | 'browser-worker'
