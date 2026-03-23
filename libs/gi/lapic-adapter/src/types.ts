@@ -58,6 +58,36 @@ export interface GiLapicSourceSnapshotDescriptor {
   readonly optConfigSnapshotDigest?: LapicDigest
 }
 
+/**
+ * Full source snapshot package envelope for governed GI exports.
+ * Extends the descriptor with packaging policy metadata per
+ * source-snapshot-packaging.md §3.
+ */
+export interface GiLapicSourceSnapshotPackage {
+  readonly packageKind: 'source-snapshot-package-v1'
+  readonly packageVersion: string
+  readonly adapterKind: 'gi'
+  readonly adapterVersion: GiLapicAdapterSchemaVersion
+  readonly sourceSnapshotDescriptor: GiLapicSourceSnapshotDescriptor
+  readonly sourceSnapshotDigestSet: readonly LapicDigest[]
+  readonly manifestDigest: LapicDigest
+  readonly payloadEntries: readonly GiLapicSnapshotPayloadEntry[]
+  readonly reconstructionHints: readonly string[]
+  readonly packagingPolicyId: string
+}
+
+export interface GiLapicSnapshotPayloadEntry {
+  readonly entryId: string
+  readonly entryClass:
+    | 'inventorySnapshot'
+    | 'entityStateSnapshot'
+    | 'formulaDataSnapshot'
+    | 'statTableSnapshot'
+    | 'auxiliaryAdapterMetadata'
+  readonly contentDigest: LapicDigest
+  readonly description?: string
+}
+
 export interface GiLapicInventorySnapshot {
   readonly artifacts: readonly ICachedArtifact[]
   readonly excludedArtifactIds: readonly string[]
