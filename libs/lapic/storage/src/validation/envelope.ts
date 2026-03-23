@@ -3,10 +3,7 @@ import {
   createLapicSuccessResult,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicValidationResult } from '@genshin-optimizer/lapic/core'
-import type {
-  LapicChecksumMetadata,
-  LapicStorageValidator,
-} from '../types'
+import type { LapicChecksumMetadata, LapicStorageValidator } from '../types'
 import {
   createStorageFailure,
   isLapicCompressionCodec,

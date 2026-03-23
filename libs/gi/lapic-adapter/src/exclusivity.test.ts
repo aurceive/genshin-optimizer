@@ -108,26 +108,17 @@ describe('createGiWeaponExclusiveResourceClaim', () => {
 
 describe('createGiCharacterActorUniquenessClaim', () => {
   test('uses character key as actor ID', () => {
-    const claim = createGiCharacterActorUniquenessClaim(
-      'Hu Tao',
-      'gi-slot-0'
-    )
+    const claim = createGiCharacterActorUniquenessClaim('Hu Tao', 'gi-slot-0')
     expect(claim.actorId).toBe('Hu Tao')
   })
 
   test('uses gi:character-identity family', () => {
-    const claim = createGiCharacterActorUniquenessClaim(
-      'Bennett',
-      'gi-slot-1'
-    )
+    const claim = createGiCharacterActorUniquenessClaim('Bennett', 'gi-slot-1')
     expect(claim.family).toBe(GI_CHARACTER_UNIQUENESS_FAMILY)
   })
 
   test('references correct slot', () => {
-    const claim = createGiCharacterActorUniquenessClaim(
-      'Xingqiu',
-      'gi-slot-2'
-    )
+    const claim = createGiCharacterActorUniquenessClaim('Xingqiu', 'gi-slot-2')
     expect(claim.claimedBySlotId).toBe('gi-slot-2')
   })
 })
@@ -224,8 +215,7 @@ describe('cross-slot conflict detection scenarios', () => {
     const sharedClaims = slot0.resourceClaims.filter((c0) =>
       slot1.resourceClaims.some(
         (c1) =>
-          c1.resourceKind === c0.resourceKind &&
-          c1.resourceId === c0.resourceId
+          c1.resourceKind === c0.resourceKind && c1.resourceId === c0.resourceId
       )
     )
 
@@ -303,8 +293,7 @@ describe('cross-slot conflict detection scenarios', () => {
     const sharedClaims = slot0.resourceClaims.filter((c0) =>
       slot1.resourceClaims.some(
         (c1) =>
-          c1.resourceKind === c0.resourceKind &&
-          c1.resourceId === c0.resourceId
+          c1.resourceKind === c0.resourceKind && c1.resourceId === c0.resourceId
       )
     )
     expect(sharedClaims).toHaveLength(0)

@@ -104,9 +104,7 @@ export function createGiLapicSolveOrchestration(
     engineVersion: config.canonicalIdentity.engineVersion,
     arithmeticPolicyId: config.canonicalIdentity.arithmeticPolicyId,
     artifactStore: config.artifactStore,
-    ...(config.sessionId !== undefined
-      ? { sessionId: config.sessionId }
-      : {}),
+    ...(config.sessionId !== undefined ? { sessionId: config.sessionId } : {}),
     solveFn: async (
       controller: LapicInMemorySessionController,
       artifactStore: LapicArtifactStore
@@ -177,7 +175,9 @@ export function createGiLapicSolveOrchestration(
           : {}),
         ...(config.isCombinationFeasible !== undefined
           ? {
-              isCombinationFeasible: (combination: LapicBoundedExactCandidateCombination) =>
+              isCombinationFeasible: (
+                combination: LapicBoundedExactCandidateCombination
+              ) =>
                 config.isCombinationFeasible!(
                   combination,
                   canonicalExport.value
@@ -187,9 +187,7 @@ export function createGiLapicSolveOrchestration(
         ...(config.maxCombinationCount !== undefined
           ? { maxCombinationCount: config.maxCombinationCount }
           : {}),
-        ...(computeUpperBound !== undefined
-          ? { computeUpperBound }
-          : {}),
+        ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
       })
     },
   })

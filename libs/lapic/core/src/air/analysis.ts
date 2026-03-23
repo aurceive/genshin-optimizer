@@ -514,11 +514,15 @@ class AirAnalysisEngine {
 
     // Bounds
     if (forcedFace === 'then') {
-      if (thenChild.exactLower !== undefined) ann.exactLower = thenChild.exactLower
-      if (thenChild.exactUpper !== undefined) ann.exactUpper = thenChild.exactUpper
+      if (thenChild.exactLower !== undefined)
+        ann.exactLower = thenChild.exactLower
+      if (thenChild.exactUpper !== undefined)
+        ann.exactUpper = thenChild.exactUpper
     } else if (forcedFace === 'else') {
-      if (elseChild.exactLower !== undefined) ann.exactLower = elseChild.exactLower
-      if (elseChild.exactUpper !== undefined) ann.exactUpper = elseChild.exactUpper
+      if (elseChild.exactLower !== undefined)
+        ann.exactLower = elseChild.exactLower
+      if (elseChild.exactUpper !== undefined)
+        ann.exactUpper = elseChild.exactUpper
     } else {
       // Both branches possible
       if (

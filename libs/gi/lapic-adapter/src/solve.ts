@@ -110,7 +110,9 @@ export async function executeGiLapicBoundedCurrentOnlySolve(
       : {}),
     ...(options.isCombinationFeasible !== undefined
       ? {
-          isCombinationFeasible: (combination: LapicBoundedExactCandidateCombination) =>
+          isCombinationFeasible: (
+            combination: LapicBoundedExactCandidateCombination
+          ) =>
             options.isCombinationFeasible!(combination, canonicalExport.value),
         }
       : {}),

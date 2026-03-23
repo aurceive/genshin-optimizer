@@ -41,9 +41,7 @@ export function createGiLapicAdapterRequest(
     ...(input.giContext !== undefined ? { giContext: input.giContext } : {}),
     ...(input.requestedPotentialSolveModes !== undefined
       ? {
-          requestedPotentialSolveModes: [
-            ...input.requestedPotentialSolveModes,
-          ],
+          requestedPotentialSolveModes: [...input.requestedPotentialSolveModes],
         }
       : {}),
   }
@@ -111,9 +109,8 @@ export function buildGiLapicCanonicalExport(
       featureSchemaVersion: giLapicAdapterSchemaVersion,
       filterTransformationLog: uniqueStrings(
         (
-          input.problem.adapterMetadata.metadata[
-            'filterTransformationLog'
-          ] ?? ''
+          input.problem.adapterMetadata.metadata['filterTransformationLog'] ??
+          ''
         )
           .split(',')
           .filter(Boolean)
@@ -123,9 +120,8 @@ export function buildGiLapicCanonicalExport(
       ),
       replayReconstructionHints: uniqueStrings(
         (
-          input.problem.adapterMetadata.metadata[
-            'replayReconstructionHints'
-          ] ?? ''
+          input.problem.adapterMetadata.metadata['replayReconstructionHints'] ??
+          ''
         )
           .split(',')
           .filter(Boolean)

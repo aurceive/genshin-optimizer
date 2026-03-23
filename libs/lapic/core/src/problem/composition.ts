@@ -22,10 +22,7 @@ import type {
   LapicObjectiveId,
   LapicSlotId,
 } from '../identity'
-import type {
-  LapicCanonicalObjective,
-  LapicValidationResult,
-} from '../types'
+import type { LapicCanonicalObjective, LapicValidationResult } from '../types'
 
 // ---------------------------------------------------------------------------
 // Weight descriptor

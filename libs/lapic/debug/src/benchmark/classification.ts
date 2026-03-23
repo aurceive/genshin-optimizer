@@ -96,8 +96,7 @@ export async function createLapicSolveSliceHarnessReport(
           const finalCert = certificates.find(
             (cert) => cert.certKind === 'FinalOptimalityCert'
           )!
-          const finalPayload =
-            finalCert.payload as LapicFinalOptimalityPayload
+          const finalPayload = finalCert.payload as LapicFinalOptimalityPayload
           return {
             winnerStateId: finalPayload.winningStateId,
             winnerDigest: finalCert.evidenceDigest,

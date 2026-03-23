@@ -27,8 +27,7 @@ export const GI_ARTIFACT_RESOURCE_KIND = 'gi:artifact' as const
 export const GI_WEAPON_RESOURCE_KIND = 'gi:weapon' as const
 
 /** GI actor uniqueness family for character identity. */
-export const GI_CHARACTER_UNIQUENESS_FAMILY =
-  'gi:character-identity' as const
+export const GI_CHARACTER_UNIQUENESS_FAMILY = 'gi:character-identity' as const
 
 // ---------------------------------------------------------------------------
 // Artifact Claims

@@ -1,7 +1,5 @@
 import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
-import type {
-  LapicCanonicalProblem,
-} from '@genshin-optimizer/lapic/core'
+import type { LapicCanonicalProblem } from '@genshin-optimizer/lapic/core'
 import type {
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
@@ -306,8 +304,7 @@ function extractTopNEntries(
       candidateIds: [],
       evaluation: {
         objectiveValue: 'final-optimality',
-        evidenceDigest:
-          completion.finalOptimality.winnerDigest ?? 'final',
+        evidenceDigest: completion.finalOptimality.winnerDigest ?? 'final',
       },
     })
   }

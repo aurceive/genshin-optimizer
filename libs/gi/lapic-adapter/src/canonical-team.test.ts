@@ -294,9 +294,9 @@ describe('buildGiTeamCanonicalProblem', () => {
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
-      expect(
-        result.value.provenance.compatibilitySignatureSchemaVersion
-      ).toBe(lapicCompatibilitySignatureSchemaVersion)
+      expect(result.value.provenance.compatibilitySignatureSchemaVersion).toBe(
+        lapicCompatibilitySignatureSchemaVersion
+      )
     })
 
     test('enriches slot provenance with exclusive resource claims', () => {
@@ -363,9 +363,7 @@ describe('buildGiTeamCanonicalProblem', () => {
           hard: true,
         },
       ]
-      const result = buildGiTeamCanonicalProblem(
-        makeInput(1, { constraints })
-      )
+      const result = buildGiTeamCanonicalProblem(makeInput(1, { constraints }))
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
@@ -374,9 +372,7 @@ describe('buildGiTeamCanonicalProblem', () => {
 
     test('passes objective through', () => {
       const objective = makeObjective()
-      const result = buildGiTeamCanonicalProblem(
-        makeInput(1, { objective })
-      )
+      const result = buildGiTeamCanonicalProblem(makeInput(1, { objective }))
       expect(result.ok).toBe(true)
       if (!result.ok) return
 
