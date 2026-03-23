@@ -42,7 +42,10 @@ import {
   useWeapon,
 } from '@genshin-optimizer/gi/db-ui'
 import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
-import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
+import {
+  LapicEngineProvider,
+  useLapicSolve,
+} from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
 import { GOSolver, mergeBuilds, mergePlot } from '@genshin-optimizer/gi/solver'
 import { compactArtifacts } from '@genshin-optimizer/gi/solver-tc'
@@ -66,7 +69,7 @@ import {
 } from '@genshin-optimizer/gi/ui'
 import type { UIData } from '@genshin-optimizer/gi/uidata'
 import { uiDataForTeam } from '@genshin-optimizer/gi/uidata'
-import type { NumNode } from '@genshin-optimizer/gi/wr'
+import type { NumNode, OptNode } from '@genshin-optimizer/gi/wr'
 import { dynamicData, mergeData, optimize } from '@genshin-optimizer/gi/wr'
 import {
   CheckBox,
@@ -126,6 +129,7 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
+import { buildLapicSolveConfig } from './lapicBridge'
 
 function initBuildStatus(): BuildStatus {
   return {
@@ -158,7 +162,6 @@ export default function TabBuild() {
   notificationRef.current = notification
 
   const [buildStatus, setBuildStatus] = useState(() => initBuildStatus())
-  const generatingBuilds = buildStatus.type !== 'inactive'
 
   const [maxWorkers, nativeThreads, setMaxWorkers] = useNumWorkers()
 
@@ -316,6 +319,60 @@ export default function TabBuild() {
   //terminate worker when component unmounts
   useEffect(() => () => cancelToken.current(), [])
   const throwGlobalError = useGlobalError()
+
+  // Lapic solver
+  const lapicConfig = useMemo(
+    () =>
+      enginePref === 'lapic' && characterKey && optimizationTargetNode
+        ? buildLapicSolveConfig({
+            characterKey,
+            teamId,
+            artifacts: filteredArts,
+            buildSetting,
+            optimizationTarget: optimizationTargetNode as OptNode,
+            maxBuildsToShow,
+          })
+        : null,
+    [
+      enginePref,
+      characterKey,
+      teamId,
+      filteredArts,
+      buildSetting,
+      optimizationTargetNode,
+      maxBuildsToShow,
+    ]
+  )
+  const [lapicState, lapicControls] = useLapicSolve(lapicConfig)
+  const lapicStartedAt = useRef<number | undefined>()
+
+  // Reset lapic start time when solve finishes
+  useEffect(() => {
+    if (lapicState.status === 'idle') lapicStartedAt.current = undefined
+  }, [lapicState.status])
+
+  // Combined generating flag for both engines
+  const legacyGenerating = buildStatus.type !== 'inactive'
+  const lapicGenerating = lapicState.status === 'running'
+  const generatingBuilds = legacyGenerating || lapicGenerating
+
+  // Effective build status for BuildAlert (adapts lapic progress to legacy format)
+  const effectiveBuildStatus: BuildStatus = useMemo(() => {
+    if (enginePref !== 'lapic') return buildStatus
+    if (lapicState.status === 'idle') return buildStatus
+    return {
+      type: lapicState.status === 'running' ? 'active' : 'inactive',
+      tested: lapicState.progress?.completedUnits ?? 0,
+      failed: 0,
+      skipped: 0,
+      total: lapicState.progress?.totalUnits ?? 1,
+      testedPerSecond: 0,
+      skippedPerSecond: 0,
+      startTime: lapicStartedAt.current,
+      finishTime:
+        lapicState.status !== 'running' ? performance.now() : undefined,
+    }
+  }, [enginePref, buildStatus, lapicState])
 
   const generateBuilds = useCallback(async () => {
     const {
@@ -805,8 +862,18 @@ export default function TabBuild() {
                 color={generatingBuilds ? 'error' : 'success'}
                 onClick={
                   generatingBuilds
-                    ? () => cancelToken.current()
-                    : generateBuilds
+                    ? () => {
+                        if (enginePref === 'lapic') lapicControls.cancel()
+                        else cancelToken.current()
+                      }
+                    : () => {
+                        if (enginePref === 'lapic') {
+                          lapicStartedAt.current = performance.now()
+                          lapicControls.start()
+                        } else {
+                          generateBuilds()
+                        }
+                      }
                 }
                 startIcon={generatingBuilds ? <Close /> : <TrendingUp />}
                 sx={{ borderRadius: '0px 4px 4px 0px' }}
@@ -821,7 +888,11 @@ export default function TabBuild() {
         <ScalesWith />
         {!!characterKey && (
           <BuildAlert
-            {...{ status: buildStatus, characterName, maxBuildsToShow }}
+            {...{
+              status: effectiveBuildStatus,
+              characterName,
+              maxBuildsToShow,
+            }}
           />
         )}
         {optimizationTarget && (
