@@ -2,48 +2,105 @@
  * Bridge between GI optimization UI data and the lapic orchestration config.
  *
  * Constructs a `GiLapicSolveOrchestrationConfig` from the same data
- * that TabOptimize already collects for the legacy GOSolver.
- *
- * The evaluator is currently a stub — it returns a fixed score for every
- * combination. The normalization input is a structural template that the
- * adapter enriches with actual candidate domains from the inventory.
+ * that TabOptimize already collects for the legacy GOSolver, and provides
+ * a real evaluator that uses precomputed OptNode evaluation.
  */
 
 import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { GiLapicSolveOrchestrationConfig } from '@genshin-optimizer/gi/lapic-adapter'
 import { createGiLapicOrchestrationConfigFromUi } from '@genshin-optimizer/gi/lapic-adapter'
+import type { ArtifactBuildData, DynStat } from '@genshin-optimizer/gi/solver'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 
 // ---------------------------------------------------------------------------
-// Stub evaluator
+// Evaluator factory
 // ---------------------------------------------------------------------------
 
 /**
- * Placeholder evaluator that returns a fixed score.
- *
- * TODO: Replace with a proper GI stat evaluator that bridges
- * `LapicBoundedExactCandidateCombination` → GI NumNode evaluation.
+ * Precomputed data needed by the evaluator, produced outside the bridge
+ * (in TabOptimize) using the same `optimize()` + `precompute()` pipeline
+ * as the legacy GOSolver.
  */
-const stubEvaluator = (
-  _combination: never,
-  _canonicalExport: never
-): {
-  ok: true
-  value: {
-    objectiveValue: string
-    evidenceDigest: string
-    orderingKey: readonly string[]
+export interface LapicEvalPrepData {
+  /** Compiled evaluation function: artifacts → [objective, ...constraints] */
+  readonly evalFn: (
+    slots: readonly { readonly values: Readonly<Record<string, number>> }[]
+  ) => number[]
+  /** Map from artifact ID → compacted stat values */
+  readonly artifactLookup: ReadonlyMap<
+    string,
+    { readonly values: Readonly<Record<string, number>> }
+  >
+  /** Minimum thresholds for constraint nodes (same order as evalFn output after index 0) */
+  readonly constraintMinimums: readonly number[]
+  /** Base stats dictionary from compactArtifacts */
+  readonly base: DynStat
+}
+
+const EMPTY_ART: { readonly values: Record<string, number> } = { values: {} }
+
+/**
+ * Creates a real GI evaluator for the lapic solver.
+ *
+ * The returned function looks up each candidate's artifact stats and
+ * evaluates the precomputed optimization target formula.
+ */
+function createGiLapicEvaluator(prep: LapicEvalPrepData) {
+  return (
+    combination: {
+      readonly candidates: readonly { readonly candidateId: string }[]
+    },
+    _canonicalExport: unknown
+  ) => {
+    // Build slot array from combination candidates
+    const slots = combination.candidates.map((c) => {
+      const art = prep.artifactLookup.get(c.candidateId)
+      return art ?? EMPTY_ART
+    })
+
+    try {
+      const results = prep.evalFn(slots)
+      const objectiveValue = results[0]
+
+      // Check constraints (indices 1..N correspond to constraint nodes)
+      for (let i = 0; i < prep.constraintMinimums.length; i++) {
+        if (results[i + 1] < prep.constraintMinimums[i]) {
+          // Infeasible — return a very low score so the solver deprioritizes
+          return {
+            ok: true as const,
+            value: {
+              objectiveValue: '-Infinity',
+              evidenceDigest: 'gi-evaluator:constraint-violated',
+              orderingKey: ['-Infinity'],
+            },
+            diagnostics: [],
+          }
+        }
+      }
+
+      const scoreStr = objectiveValue.toString()
+      return {
+        ok: true as const,
+        value: {
+          objectiveValue: scoreStr,
+          evidenceDigest: 'gi-evaluator:v1',
+          orderingKey: [scoreStr],
+        },
+        diagnostics: [],
+      }
+    } catch {
+      return {
+        ok: true as const,
+        value: {
+          objectiveValue: '-Infinity',
+          evidenceDigest: 'gi-evaluator:error',
+          orderingKey: ['-Infinity'],
+        },
+        diagnostics: [],
+      }
+    }
   }
-  diagnostics: readonly never[]
-} => ({
-  ok: true,
-  value: {
-    objectiveValue: '0',
-    evidenceDigest: 'gi-stub-evaluator',
-    orderingKey: ['0'],
-  },
-  diagnostics: [],
-})
+}
 
 // ---------------------------------------------------------------------------
 // Normalization input template
@@ -122,6 +179,31 @@ function createNormalizationInputTemplate(topN: number) {
 }
 
 // ---------------------------------------------------------------------------
+// Artifact lookup builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the artifact lookup map from compacted artifacts.
+ *
+ * Maps artifact ID → `{values: Record<string, number>}` for fast
+ * stat retrieval in the evaluator.
+ */
+export function buildArtifactLookup(
+  compactedBySlot: Record<string, readonly ArtifactBuildData[]>
+): Map<string, { readonly values: Readonly<Record<string, number>> }> {
+  const lookup = new Map<
+    string,
+    { readonly values: Readonly<Record<string, number>> }
+  >()
+  for (const slotArts of Object.values(compactedBySlot)) {
+    for (const art of slotArts) {
+      if (art.id) lookup.set(art.id, art)
+    }
+  }
+  return lookup
+}
+
+// ---------------------------------------------------------------------------
 // Config builder
 // ---------------------------------------------------------------------------
 
@@ -132,6 +214,8 @@ export interface LapicBridgeInput {
   readonly buildSetting: OptConfig
   readonly optimizationTarget: OptNode
   readonly maxBuildsToShow: number
+  /** Precomputed evaluation data; if absent, uses stub evaluator */
+  readonly prepData?: LapicEvalPrepData
 }
 
 /**
@@ -148,17 +232,27 @@ export function buildLapicSolveConfig(
       input.maxBuildsToShow
     )
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const evaluator = input.prepData
+      ? createGiLapicEvaluator(input.prepData)
+      : // Fallback stub evaluator
+        () => ({
+          ok: true as const,
+          value: {
+            objectiveValue: '0',
+            evidenceDigest: 'gi-stub-evaluator',
+            orderingKey: ['0'],
+          },
+          diagnostics: [],
+        })
+
     return createGiLapicOrchestrationConfigFromUi({
       problemId: `${input.characterKey}:${input.teamId}`,
       artifacts: [...input.artifacts],
       optimizationTarget: input.optimizationTarget,
       optConfig: input.buildSetting,
       topN: input.maxBuildsToShow,
-      // The adapter enriches this template with actual candidate domains
       normalizationInput: normalizationInput as never,
-      // Stub evaluator — to be replaced with GI stat bridge
-      evaluateCombination: stubEvaluator as never,
+      evaluateCombination: evaluator as never,
     })
   } catch {
     return null

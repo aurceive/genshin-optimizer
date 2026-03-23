@@ -70,7 +70,12 @@ import {
 import type { UIData } from '@genshin-optimizer/gi/uidata'
 import { uiDataForTeam } from '@genshin-optimizer/gi/uidata'
 import type { NumNode, OptNode } from '@genshin-optimizer/gi/wr'
-import { dynamicData, mergeData, optimize } from '@genshin-optimizer/gi/wr'
+import {
+  dynamicData,
+  mergeData,
+  optimize,
+  precompute,
+} from '@genshin-optimizer/gi/wr'
 import {
   CheckBox,
   CheckBoxOutlineBlank,
@@ -129,7 +134,8 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
-import { buildLapicSolveConfig } from './lapicBridge'
+import { buildArtifactLookup, buildLapicSolveConfig } from './lapicBridge'
+import type { LapicEvalPrepData } from './lapicBridge'
 
 function initBuildStatus(): BuildStatus {
   return {
@@ -320,7 +326,87 @@ export default function TabBuild() {
   useEffect(() => () => cancelToken.current(), [])
   const throwGlobalError = useGlobalError()
 
-  // Lapic solver
+  // Lapic solver — prepare evaluation data and orchestration config
+  const lapicPrepData: LapicEvalPrepData | undefined = useMemo(() => {
+    if (enginePref !== 'lapic' || !characterKey) return undefined
+
+    const {
+      statFilters,
+      optimizationTarget,
+      mainStatAssumptionLevel,
+      allowPartial,
+    } = buildSetting
+    if (!optimizationTarget) return undefined
+
+    // Compact artifacts to extract stat values
+    const split = compactArtifacts(
+      filteredArts,
+      mainStatAssumptionLevel,
+      allowPartial
+    )
+
+    // Build worker data with dynamic artifact nodes
+    const teamData = getTeamData(
+      database,
+      teamId,
+      teamCharId,
+      mainStatAssumptionLevel,
+      { [teamCharId]: { art: [] } }
+    )
+    if (!teamData) return undefined
+
+    const workerData = uiDataForTeam(teamData.teamData, gender, activeCharKey)[
+      characterKey
+    ]?.target.data![0]
+    if (!workerData) return undefined
+
+    // Mark artifact fields as dynamic
+    Object.assign(workerData, mergeData([workerData, dynamicData]))
+
+    const targetNode = objPathValue(
+      workerData.display ?? {},
+      optimizationTarget
+    ) as NumNode | undefined
+    if (!targetNode) return undefined
+
+    const valueFilter = statFilterToNumNode(workerData, statFilters)
+    const unoptimizedNodes = [...valueFilter.map((x) => x.value), targetNode]
+    const constraintMinimums = valueFilter.map((x) => x.minimum)
+
+    // Optimize nodes (constant folding, deduplication)
+    const optimizedNodes = optimize(
+      unoptimizedNodes,
+      workerData,
+      ({ path: [p] }) => p !== 'dyn'
+    )
+    const optimizedTarget = optimizedNodes.pop()!
+    const constraintNodes = optimizedNodes
+
+    // Generate precomputed evaluation function
+    const allNodes = [...constraintNodes, optimizedTarget]
+    const evalFn = precompute(allNodes, split.base, (f) => f.path[1], 5)
+
+    // Build artifact ID → stat values lookup
+    const artifactLookup = buildArtifactLookup(split.values)
+
+    return {
+      evalFn: evalFn as LapicEvalPrepData['evalFn'],
+      artifactLookup,
+      constraintMinimums,
+      base: split.base,
+    }
+  }, [
+    enginePref,
+    characterKey,
+    buildSetting,
+    filteredArts,
+    database,
+    teamId,
+    teamCharId,
+    gender,
+    activeCharKey,
+  ])
+
   const lapicConfig = useMemo(
     () =>
       enginePref === 'lapic' && characterKey && optimizationTargetNode
@@ -331,6 +417,7 @@ export default function TabBuild() {
             buildSetting,
             optimizationTarget: optimizationTargetNode as OptNode,
             maxBuildsToShow,
+            prepData: lapicPrepData,
           })
         : null,
     [
@@ -341,6 +428,7 @@ export default function TabBuild() {
       buildSetting,
       optimizationTargetNode,
       maxBuildsToShow,
+      lapicPrepData,
     ]
   )
   const [lapicState, lapicControls] = useLapicSolve(lapicConfig)
