@@ -62,14 +62,6 @@ export interface LapicWorkerResultEntry {
 }
 
 /**
- * Pause request sent from coordinator to worker.
- */
-export interface LapicWorkerPauseMessage {
-  readonly tag: 'PauseAtSafePoint'
-  readonly sessionId: string
-}
-
-/**
  * Pause acknowledgment from worker.
  */
 export interface LapicWorkerPauseAckMessage {
@@ -81,20 +73,6 @@ export interface LapicWorkerPauseAckMessage {
   readonly evaluatedCount: number
   readonly visitedCount: number
 }
-
-/**
- * Union of all coordinator-to-worker messages.
- */
-export type LapicCoordinatorMessage =
-  | LapicWorkerDispatchMessage
-  | LapicWorkerPauseMessage
-
-/**
- * Union of all worker-to-coordinator messages.
- */
-export type LapicWorkerMessage =
-  | LapicWorkerResultMessage
-  | LapicWorkerPauseAckMessage
 
 // ---------------------------------------------------------------------------
 // Transport interface
@@ -148,48 +126,4 @@ export interface LapicInProcessWorkResult {
   readonly topCandidates: readonly LapicWorkerResultEntry[]
   readonly evaluatedCount: number
   readonly visitedCount: number
-}
-
-// ---------------------------------------------------------------------------
-// In-process transport
-// ---------------------------------------------------------------------------
-
-/**
- * Create an in-process transport that executes work synchronously
- * in the calling thread. Used for testing and small problems.
- *
- * The `executor` callback is invoked for each dispatched partition.
- * It runs the evaluate/insert loop over [startFlatIndex, endFlatIndex).
- */
-export function createInProcessTransport(
-  executor: LapicInProcessWorkExecutor
-): LapicWorkerTransport {
-  return {
-    backendKind: 'in-process',
-
-    async dispatch(
-      message: LapicWorkerDispatchMessage
-    ): Promise<LapicWorkerResultMessage> {
-      const result = executor(message.startFlatIndex, message.endFlatIndex)
-
-      return {
-        tag: 'WorkComplete',
-        sessionId: message.sessionId,
-        partitionIndex: message.partitionIndex,
-        topCandidates: result.topCandidates,
-        evaluatedCount: result.evaluatedCount,
-        visitedCount: result.visitedCount,
-      }
-    },
-
-    async requestPauseAll(): Promise<readonly LapicWorkerPauseAckMessage[]> {
-      // In-process transport completes synchronously, so there are
-      // never active workers to pause.
-      return []
-    },
-
-    async shutdown(): Promise<void> {
-      // No resources to release in the in-process backend.
-    },
-  }
 }

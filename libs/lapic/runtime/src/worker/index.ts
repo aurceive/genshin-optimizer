@@ -23,16 +23,11 @@ export type {
   LapicWorkerDispatchMessage,
   LapicWorkerResultMessage,
   LapicWorkerResultEntry,
-  LapicWorkerPauseMessage,
   LapicWorkerPauseAckMessage,
-  LapicCoordinatorMessage,
-  LapicWorkerMessage,
   LapicWorkerTransport,
   LapicInProcessWorkExecutor,
   LapicInProcessWorkResult,
 } from './transport'
-
-export { createInProcessTransport } from './transport'
 
 // --- Worker pool ---
 
