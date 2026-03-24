@@ -136,7 +136,8 @@ export interface LapicCoordinatedBoundedExactSolveConfig {
  * Returns the worst (N-th) candidate's objective value when we have
  * at least `topN` candidates, or `undefined` otherwise.
  */
-function computeIncumbentThreshold(
+/** @internal Exported for unit testing. */
+export function computeIncumbentThreshold(
   candidates: readonly LapicTopNCandidateEntry[],
   topN: number
 ): string | undefined {
@@ -149,7 +150,8 @@ function computeIncumbentThreshold(
  * Merge new candidates into the running best set, sort by evaluation,
  * and truncate to the top N.
  */
-function mergeAndTruncateCandidates(
+/** @internal Exported for unit testing. */
+export function mergeAndTruncateCandidates(
   existing: readonly LapicTopNCandidateEntry[],
   incoming: readonly LapicTopNCandidateEntry[],
   topN: number,
@@ -246,11 +248,11 @@ function buildExecutorOptions(
 /**
  * Create a work unit envelope for a partition.
  *
- * All partitions receive equal priority — the scheduler dispatches
- * them in enqueue (i.e. partition-index) order via the deterministic
- * tie-break.  This preserves the current sequential execution order
- * while giving the scheduler lifecycle management, cancellation,
- * and (future) retry capabilities.
+ * All partitions receive equal priority with the partition index
+ * encoded in `residualCostDigest` and `deterministicTieBreakDigest`.
+ * Because the scheduler orders by these digests lexicographically,
+ * partitions are dispatched in ascending index order — matching the
+ * current sequential execution contract.
  */
 function createPartitionWorkUnit(
   partitionIndex: number,
@@ -275,12 +277,11 @@ function createPartitionWorkUnit(
   }
 }
 
-let partitionSequence = 0
-
 function createPartitionController(
   parentIdentity: LapicSessionIdentity,
   partitionIndex: number,
-  artifactStore: LapicArtifactStore
+  artifactStore: LapicArtifactStore,
+  sequenceCounter: { value: number }
 ): LapicInMemorySessionController {
   return createLapicInMemorySessionController({
     identity: {
@@ -289,7 +290,7 @@ function createPartitionController(
       engineVersion: parentIdentity.engineVersion,
       arithmeticPolicyId: parentIdentity.arithmeticPolicyId,
       runtimeProtocolVersion: lapicRuntimeProtocolVersion,
-      createdAtLogicalTimestamp: String(Date.now() + ++partitionSequence),
+      createdAtLogicalTimestamp: String(Date.now() + ++sequenceCounter.value),
     },
     artifactStore,
   })
@@ -440,6 +441,10 @@ export async function executeCoordinatedBoundedExactSolve(
   // threshold for the next partition, enabling early pruning.
   let runningBestCandidates: LapicTopNCandidateEntry[] = []
 
+  // Partition-local sequence counter — scoped to this coordinated
+  // solve invocation to avoid global mutable state.
+  const sequenceCounter = { value: 0 }
+
   // Create scheduler and enqueue all partitions
   const scheduler = createLapicWorkScheduler()
   const partitionsByWorkUnitId = new Map<string, (typeof partitions)[number]>()
@@ -463,6 +468,10 @@ export async function executeCoordinatedBoundedExactSolve(
           scheduler.cancel(item.workUnit.workUnitId)
         }
         config.controller.reachPauseSafePoint()
+        // Checkpoint represents progress up to this point: zero
+        // visited combinations because no partition is mid-execution
+        // (the pause was detected between partitions).  Resuming from
+        // this checkpoint restarts the coordinated solve from scratch.
         return {
           paused: true as const,
           checkpointState: {
@@ -486,7 +495,8 @@ export async function executeCoordinatedBoundedExactSolve(
       const partitionController = createPartitionController(
         parentIdentity,
         partition.partitionIndex,
-        config.artifactStore
+        config.artifactStore,
+        sequenceCounter
       )
 
       // Prevent unhandled rejection on the partition controller's
@@ -552,7 +562,12 @@ export async function executeCoordinatedBoundedExactSolve(
         for (const item of scheduler.getItemsByStatus('queued')) {
           scheduler.cancel(item.workUnit.workUnitId)
         }
-        throw error
+        const wrapped = new Error(
+          `Partition ${partition.partitionIndex}/${partitions.length} failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+        throw wrapped
       }
     }
   } finally {
@@ -641,12 +656,4 @@ export async function executeCoordinatedBoundedExactSolve(
     )
 
   return config.controller.complete(globalOptimality.value, mergedCandidates)
-}
-
-/**
- * Reset the internal partition sequence counter.
- * Only used in tests to ensure deterministic IDs.
- */
-export function resetPartitionSequenceForTesting(): void {
-  partitionSequence = 0
 }

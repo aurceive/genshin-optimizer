@@ -497,7 +497,7 @@ describe('LapicPartitionDispatcher', () => {
         dispatcher.dispatch({
           partitionIndex: 0,
           controller: dummyController,
-          joinPlan: { totalCombinationCount: 0, domainJoinSteps: [] },
+          joinPlan: { totalCombinationCount: 0, entries: [] },
           frontierBlockIds: [],
         })
       ).rejects.toThrow('terminated')

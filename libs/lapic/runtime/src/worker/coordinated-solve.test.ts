@@ -13,11 +13,15 @@ import {
   createLapicSolveRequest,
 } from '../builders'
 import { createLapicInMemorySessionController } from '../session'
-import type { LapicSolveCompletionResult } from '../types'
+import type {
+  LapicSolveCompletionResult,
+  LapicTopNCandidateEntry,
+} from '../types'
 import { executeLapicBoundedExactSolve } from '../solve/executor'
 import {
   executeCoordinatedBoundedExactSolve,
-  resetPartitionSequenceForTesting,
+  mergeAndTruncateCandidates,
+  computeIncumbentThreshold,
 } from './coordinated-solve'
 
 // ---------------------------------------------------------------------------
@@ -182,10 +186,6 @@ function numericEvaluator(combination: {
 // ---------------------------------------------------------------------------
 
 describe('executeCoordinatedBoundedExactSolve', () => {
-  beforeEach(() => {
-    resetPartitionSequenceForTesting()
-  })
-
   const slotIds = ['slot-0', 'slot-1']
   const domains = slotIds.map((slotId, i) => ({
     domainId: `domain-${i}`,
@@ -695,7 +695,7 @@ describe('executeCoordinatedBoundedExactSolve', () => {
           workerCount: 2,
           onPartitionComplete: (idx) => completedPartitions.push(idx),
         })
-      ).rejects.toThrow()
+      ).rejects.toThrow(/Partition 1\/2 failed/)
 
       // Only partition 0 should have completed before the error
       expect(completedPartitions).toEqual([0])
@@ -776,5 +776,108 @@ describe('domain-partitioner', () => {
     expect(multiCompletion.finalOptimality!.winnerStateId).toBe(
       singleCompletion.finalOptimality!.winnerStateId
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Unit tests for merge helpers
+// ---------------------------------------------------------------------------
+
+function entry(
+  stateId: string,
+  objectiveValue: string
+): LapicTopNCandidateEntry {
+  return {
+    stateId,
+    candidates: [],
+    evaluation: {
+      objectiveValue,
+      evidenceDigest: `eval:${objectiveValue}`,
+      orderingKey: [objectiveValue],
+    },
+  }
+}
+
+describe('mergeAndTruncateCandidates', () => {
+  it('merges two sets and keeps top N', () => {
+    const a = [entry('a1', '0000003.0000'), entry('a2', '0000001.0000')]
+    const b = [entry('b1', '0000004.0000'), entry('b2', '0000002.0000')]
+    const result = mergeAndTruncateCandidates(a, b, 3)
+    expect(result.map((e) => e.stateId)).toEqual(['b1', 'a1', 'b2'])
+  })
+
+  it('returns empty when both inputs are empty', () => {
+    expect(mergeAndTruncateCandidates([], [], 5)).toEqual([])
+  })
+
+  it('handles topN larger than total candidates', () => {
+    const a = [entry('a1', '0000002.0000')]
+    const result = mergeAndTruncateCandidates(a, [], 10)
+    expect(result).toHaveLength(1)
+    expect(result[0]!.stateId).toBe('a1')
+  })
+
+  it('truncates to exactly topN', () => {
+    const entries = Array.from({ length: 10 }, (_, i) =>
+      entry(`e${i}`, String(i).padStart(12, '0'))
+    )
+    const result = mergeAndTruncateCandidates(entries, [], 3)
+    expect(result).toHaveLength(3)
+  })
+
+  it('handles duplicate objective values stably', () => {
+    const a = [entry('a1', '0000005.0000'), entry('a2', '0000005.0000')]
+    const b = [entry('b1', '0000005.0000')]
+    const result = mergeAndTruncateCandidates(a, b, 2)
+    expect(result).toHaveLength(2)
+  })
+
+  it('uses custom comparator when provided', () => {
+    const a = [entry('a1', '0000001.0000')]
+    const b = [entry('b1', '0000002.0000')]
+    // Reverse comparator: lower objective value is better
+    const reverseComparator = (
+      leftEval: { objectiveValue: string },
+      rightEval: { objectiveValue: string }
+    ): -1 | 0 | 1 => {
+      const l = Number(leftEval.objectiveValue)
+      const r = Number(rightEval.objectiveValue)
+      if (l < r) return 1
+      if (l > r) return -1
+      return 0
+    }
+    const result = mergeAndTruncateCandidates(a, b, 2, reverseComparator)
+    expect(result[0]!.stateId).toBe('a1')
+    expect(result[1]!.stateId).toBe('b1')
+  })
+})
+
+describe('computeIncumbentThreshold', () => {
+  it('returns undefined when fewer candidates than topN', () => {
+    const candidates = [entry('a', '0000010.0000')]
+    expect(computeIncumbentThreshold(candidates, 3)).toBeUndefined()
+  })
+
+  it('returns undefined for empty candidates', () => {
+    expect(computeIncumbentThreshold([], 1)).toBeUndefined()
+  })
+
+  it('returns worst candidate value when count equals topN', () => {
+    const candidates = [
+      entry('a', '0000010.0000'),
+      entry('b', '0000005.0000'),
+      entry('c', '0000001.0000'),
+    ]
+    expect(computeIncumbentThreshold(candidates, 3)).toBe('0000001.0000')
+  })
+
+  it('returns worst candidate value when count exceeds topN', () => {
+    const candidates = [
+      entry('a', '0000010.0000'),
+      entry('b', '0000005.0000'),
+      entry('c', '0000003.0000'),
+      entry('d', '0000001.0000'),
+    ]
+    expect(computeIncumbentThreshold(candidates, 3)).toBe('0000001.0000')
   })
 })

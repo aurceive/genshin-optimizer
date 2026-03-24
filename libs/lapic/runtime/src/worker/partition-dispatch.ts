@@ -35,7 +35,6 @@ import type { LapicSolveCheckpointState } from '../solve/checkpoint-state'
 import type { LapicDangerZoneConfig } from '../solve/danger-zone'
 import type {
   LapicInMemorySessionController,
-  LapicSolveCompletionResult,
   LapicTopNCandidateEntry,
 } from '../types'
 import { executeLapicBoundedExactSolve } from '../solve/executor'
@@ -180,16 +179,14 @@ export function createInProcessPartitionDispatcher(
         }),
       })
 
-      if ('paused' in outcome && outcome.paused) {
+      if ('paused' in outcome) {
         return { kind: 'paused', checkpointState: outcome.checkpointState }
       }
 
-      // After the paused-check above, outcome is a completion result.
-      const completion = outcome as LapicSolveCompletionResult
       return {
         kind: 'completed',
-        topNCandidates: completion.topNCandidates,
-        emittedCertificates: completion.emittedCertificates,
+        topNCandidates: outcome.topNCandidates,
+        emittedCertificates: outcome.emittedCertificates,
       }
     },
 
