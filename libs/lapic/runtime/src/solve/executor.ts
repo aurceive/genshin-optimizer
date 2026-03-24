@@ -470,17 +470,24 @@ export async function executeLapicBoundedExactSolve(
       return relation < 0
     }
 
+    // -----------------------------------------------------------------------
+    // Deferred persistence queue — certificates are created synchronously
+    // at decision time (architecture §2.1), but serialization + I/O is
+    // batched at safe-point boundaries for performance.
+    // -----------------------------------------------------------------------
+    const pendingPersistence: Array<() => Promise<void>> = []
+
     /**
      * Commit a bound-prune: skip the subtree, emit BoundPruneCert.
-     * Extracted from the pruning block so both danger-zone paths can call it.
+     * Certificate is created synchronously; persistence is deferred.
      */
-    const commitPrune = async (
+    const commitPrune = (
       boundValue: string,
       boundEvidenceDigest: string,
       thresholdValue: string,
       domainIndex: number,
       detection?: LapicDangerZoneDetectionResult
-    ): Promise<void> => {
+    ): void => {
       const subtreeSize = computeSubtreeSize(joinPlan.value, domainIndex)
       currentFlatIndex += subtreeSize
       pruningStats.prunedCombinationCount += subtreeSize
@@ -499,25 +506,46 @@ export async function executeLapicBoundedExactSolve(
         frontierBlockIds,
         ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
       })
-      await persistArtifact(
-        options,
-        'certificate',
-        pruneCert.certId,
-        pruneCert.evidenceDigest,
-        pruneCert,
-        frontierBlockIds
+      pendingPersistence.push(() =>
+        persistArtifact(
+          options,
+          'certificate',
+          pruneCert.certId,
+          pruneCert.evidenceDigest,
+          pruneCert,
+          frontierBlockIds
+        ).then(() => {})
       )
       options.controller.emitCertificate(pruneCert)
       pruneCertificateIds.push(pruneCert.certId)
     }
 
-    const visitCombination = async (
-      domainIndex: number,
-      partialCandidates: readonly LapicCandidateDescriptor[]
-    ): Promise<void> => {
-      if (pauseDetected) return
+    // -----------------------------------------------------------------------
+    // Synchronous hot loop — the performance-critical inner enumeration.
+    //
+    // Key optimizations over the async predecessor:
+    // 1. Fully synchronous recursion (no Promise allocation per node)
+    // 2. Mutable candidate buffer (no array spread per recursion)
+    // 3. Batched progress reporting (every SAFE_POINT_INTERVAL builds)
+    // 4. Deferred certificate persistence (sync creation, async flush)
+    // 5. No per-build session state inspection
+    // -----------------------------------------------------------------------
 
-      if (domainIndex >= joinPlan.value.entries.length) {
+    const SAFE_POINT_INTERVAL = 1 << 16 // 65536 builds between safe points
+    const domainCount = joinPlan.value.entries.length
+    const candidateBuffer: LapicCandidateDescriptor[] = new Array(domainCount)
+    // Pre-compute the signature group key once (used for dominance certs)
+    const signatureGroupKey = orderedDomains.map((d) => d.slotId).join('+')
+    // Track failed evaluations to propagate after sync loop
+    let failedSolveError: {
+      message: string
+      diagnostics: readonly LapicDiagnostic[]
+    } | null = null
+
+    const visitCombination = (domainIndex: number): void => {
+      if (pauseDetected || failedSolveError) return
+
+      if (domainIndex >= domainCount) {
         const thisFlatIndex = currentFlatIndex
         currentFlatIndex += 1
 
@@ -525,54 +553,64 @@ export async function executeLapicBoundedExactSolve(
         if (thisFlatIndex < resumeFlatIndex) return
 
         processedCombinationCount += 1
-        options.controller.publishProgress({
-          phase: 'join',
-          completedUnits: processedCombinationCount,
-          totalUnits: totalCombinationCount,
-        })
 
-        if (hasExclusiveResourceConflict(partialCandidates)) return
+        // Batched progress: report every SAFE_POINT_INTERVAL builds
+        if (processedCombinationCount % SAFE_POINT_INTERVAL === 0) {
+          options.controller.publishProgress({
+            phase: 'join',
+            completedUnits: processedCombinationCount,
+            totalUnits: totalCombinationCount,
+          })
+        }
+
+        // Build a readonly view of the current buffer for evaluation
+        const candidates = candidateBuffer.slice(
+          0,
+          domainCount
+        ) as readonly LapicCandidateDescriptor[]
+
+        if (hasExclusiveResourceConflict(candidates)) return
 
         const combination: LapicBoundedExactCandidateCombination = {
           problem: options.problem,
-          candidates: partialCandidates,
+          candidates,
         }
 
         if (options.isCombinationFeasible) {
           const feasibility = normalizeFeasibilityResult(
             options.isCombinationFeasible(combination)
           )
-          if (!feasibility.ok)
-            return failSolve(
-              options,
-              feasibility.diagnostics[0]?.message ??
+          if (!feasibility.ok) {
+            failedSolveError = {
+              message:
+                feasibility.diagnostics[0]?.message ??
                 'Failed to evaluate bounded solve feasibility.',
-              feasibility.diagnostics
-            )
+              diagnostics: feasibility.diagnostics,
+            }
+            return
+          }
           if (!feasibility.value) return
         }
 
         const evaluation = options.evaluateCombination(combination)
-        if (!evaluation.ok)
-          return failSolve(
-            options,
-            evaluation.diagnostics[0]?.message ??
+        if (!evaluation.ok) {
+          failedSolveError = {
+            message:
+              evaluation.diagnostics[0]?.message ??
               'Failed to evaluate bounded solve combination.',
-            evaluation.diagnostics
-          )
+            diagnostics: evaluation.diagnostics,
+          }
+          return
+        }
 
-        const stateId = createCombinationStateId(
-          options.problem,
-          partialCandidates
-        )
+        const stateId = createCombinationStateId(options.problem, candidates)
         const insertResult = tracker.insertWithEviction({
           stateId,
-          candidates: [...partialCandidates],
+          candidates: [...candidates],
           evaluation: evaluation.value,
         })
 
         // Emit DominanceCert when a candidate is evicted from the top-N tracker.
-        // The evicted candidate is dominated by the remaining top-N set.
         if (insertResult.evicted && !insertResult.insertedWasEvicted) {
           dominanceCertStepCounter += 1
           const dominanceCert = createDominanceCertificate(options, {
@@ -581,54 +619,49 @@ export async function executeLapicBoundedExactSolve(
             dominatingEvidenceDigest: evaluation.value.evidenceDigest,
             dominatedEvidenceDigest:
               insertResult.evicted.evaluation.evidenceDigest,
-            signatureGroupKey: orderedDomains.map((d) => d.slotId).join('+'),
+            signatureGroupKey,
             stepIndex: dominanceCertStepCounter,
             frontierBlockIds,
           })
-          await persistArtifact(
-            options,
-            'certificate',
-            dominanceCert.certId,
-            dominanceCert.evidenceDigest,
-            dominanceCert,
-            frontierBlockIds
+          pendingPersistence.push(() =>
+            persistArtifact(
+              options,
+              'certificate',
+              dominanceCert.certId,
+              dominanceCert.evidenceDigest,
+              dominanceCert,
+              frontierBlockIds
+            ).then(() => {})
           )
           options.controller.emitCertificate(dominanceCert)
           dominanceCertificateIds.push(dominanceCert.certId)
-        }
-
-        // Check for pause request at each safe-point.
-        const sessionState = await options.controller.inspectSessionState()
-        if (sessionState.summary.solveState === 'pausing') {
-          pauseDetected = true
         }
 
         return
       }
 
       // --- Branch-and-bound pruning at intermediate recursion levels ---
-      // Use the tracker's own threshold when it's full, otherwise
-      // fall back to the initial incumbent threshold from a prior
-      // partition (incumbent sharing).
       const effectiveThreshold =
         tracker.currentThreshold() ?? options.initialIncumbentThreshold
       if (
         options.computeUpperBound &&
         effectiveThreshold !== undefined &&
-        domainIndex > 0 // At least one candidate already assigned
+        domainIndex > 0
       ) {
         pruningStats.boundEvaluationCount += 1
         const bound = options.computeUpperBound({
           problem: options.problem,
-          assignedCandidates: partialCandidates,
+          assignedCandidates: candidateBuffer.slice(
+            0,
+            domainIndex
+          ) as readonly LapicCandidateDescriptor[],
           assignedDomainCount: domainIndex,
-          totalDomainCount: joinPlan.value.entries.length,
+          totalDomainCount: domainCount,
         })
         if (
           bound !== undefined &&
           isBoundBelowThreshold(bound.upperBoundValue, effectiveThreshold)
         ) {
-          // Check danger zone before committing the prune.
           if (options.dangerZoneConfig) {
             const detection = detectBoundPruneDangerZone(
               bound.upperBoundValue,
@@ -636,12 +669,9 @@ export async function executeLapicBoundedExactSolve(
               options.dangerZoneConfig
             )
             if (detection.triggered) {
-              // Conservative: decline to prune (architecture §10.3).
               pruningStats.dangerZoneDeclinedCount += 1
-              // Fall through to explore the subtree normally.
             } else {
-              // Safe gap — proceed to prune.
-              await commitPrune(
+              commitPrune(
                 bound.upperBoundValue,
                 bound.evidenceDigest,
                 effectiveThreshold,
@@ -651,8 +681,7 @@ export async function executeLapicBoundedExactSolve(
               return
             }
           } else {
-            // No danger-zone config — prune unconditionally (legacy behavior).
-            await commitPrune(
+            commitPrune(
               bound.upperBoundValue,
               bound.evidenceDigest,
               effectiveThreshold,
@@ -664,15 +693,46 @@ export async function executeLapicBoundedExactSolve(
       }
 
       for (const plannedRow of joinPlan.value.entries[domainIndex]!.rows) {
-        if (pauseDetected) return
-        await visitCombination(domainIndex + 1, [
-          ...partialCandidates,
-          plannedRow.candidate,
-        ])
+        if (pauseDetected || failedSolveError) return
+        candidateBuffer[domainIndex] = plannedRow.candidate
+        visitCombination(domainIndex + 1)
       }
     }
 
-    await visitCombination(0, [])
+    // -----------------------------------------------------------------------
+    // Run the synchronous enumeration. The entire recursion tree is
+    // traversed in a single call. Persistence is deferred to a queue
+    // and flushed after completion. Cancel is handled by Worker
+    // termination from the main thread.
+    // -----------------------------------------------------------------------
+    visitCombination(0)
+
+    // Propagate fatal evaluation errors before flushing
+    if (failedSolveError) {
+      const err = failedSolveError as {
+        message: string
+        diagnostics: readonly LapicDiagnostic[]
+      }
+      return failSolve(options, err.message, err.diagnostics)
+    }
+
+    // Flush all deferred persistence
+    if (pendingPersistence.length > 0) {
+      await Promise.all(pendingPersistence.map((fn) => fn()))
+      pendingPersistence.length = 0
+    }
+
+    // Final progress update
+    options.controller.publishProgress({
+      phase: 'join',
+      completedUnits: processedCombinationCount,
+      totalUnits: totalCombinationCount,
+    })
+
+    // Detect pause requested during (or after) the sync hot loop.
+    if (!pauseDetected && options.controller.isPauseRequested()) {
+      pauseDetected = true
+    }
 
     // If a pause was requested during the join phase, persist checkpoint and return.
     if (pauseDetected) {

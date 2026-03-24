@@ -291,6 +291,8 @@ export interface LapicInMemorySessionController extends LapicPublicSolveHandle {
   publishTrace(tag: LapicTraceEvent['tag'], eventDigest?: LapicDigest): void
   publishArtifact(artifactRef: LapicArtifactRef): void
   emitCertificate(certificate: LapicCertificate): void
+  /** Synchronous pause-state query for hot-loop polling. */
+  isPauseRequested(): boolean
   reachPauseSafePoint(): void
   resume(phase?: LapicActivePhase): void
   complete(

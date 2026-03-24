@@ -124,6 +124,9 @@ export function createLapicInMemorySessionController(
     async requestPause() {
       return requestPause(context)
     },
+    isPauseRequested() {
+      return context.internalState === 'pausing'
+    },
     reachPauseSafePoint() {
       reachPauseSafePoint(context)
     },
