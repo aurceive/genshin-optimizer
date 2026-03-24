@@ -45,7 +45,6 @@ import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
 import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
 import { GOSolver, mergeBuilds, mergePlot } from '@genshin-optimizer/gi/solver'
-import { compactArtifacts } from '@genshin-optimizer/gi/solver-tc'
 import { getCharStat } from '@genshin-optimizer/gi/stats'
 import {
   ArtifactLevelSlider,
@@ -57,17 +56,13 @@ import {
   HitModeToggle,
   NoArtWarning,
   ReactionToggle,
-  getTeamData,
   resolveInfo,
-  statFilterToNumNode,
   useGlobalError,
   useNumWorkers,
   useTeamData,
 } from '@genshin-optimizer/gi/ui'
-import type { UIData } from '@genshin-optimizer/gi/uidata'
-import { uiDataForTeam } from '@genshin-optimizer/gi/uidata'
 import type { NumNode } from '@genshin-optimizer/gi/wr'
-import { dynamicData, mergeData, optimize } from '@genshin-optimizer/gi/wr'
+import { optimize } from '@genshin-optimizer/gi/wr'
 import {
   CheckBox,
   CheckBoxOutlineBlank,
@@ -127,6 +122,7 @@ import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
 import type { LapicWorkerOutMsg } from './lapicBridge'
+import { prepareOptimizationData } from './prepareOptimizationData'
 
 function initBuildStatus(): BuildStatus {
   return {
@@ -324,57 +320,28 @@ export default function TabBuild() {
   const generatingBuilds = buildStatus.type !== 'inactive'
 
   const generateBuilds = useCallback(async () => {
-    const {
-      artSetExclusion,
-      plotBase,
-      statFilters,
-      optimizationTarget,
-      mainStatAssumptionLevel,
-      allowPartial,
-      maxBuildsToShow,
-    } = buildSetting
-    if (!characterKey || !optimizationTarget) return
+    const { artSetExclusion, plotBase, maxBuildsToShow } = buildSetting
+    if (!characterKey || !buildSetting.optimizationTarget) return
     if (notificationRef.current) Notification?.requestPermission()
 
-    const split = compactArtifacts(
+    const prep = prepareOptimizationData({
+      buildSetting,
+      characterKey,
       filteredArts,
-      mainStatAssumptionLevel,
-      allowPartial
-    )
-
-    const teamData = getTeamData(
       database,
       teamId,
       teamCharId,
-      mainStatAssumptionLevel,
-      {
-        [teamCharId]: {
-          art: [],
-        },
-      }
-    )
-    if (!teamData) return
-    const workerData = uiDataForTeam(teamData.teamData, gender, activeCharKey)[
-      characterKey
-    ]?.target.data![0]
-    if (!workerData) return
-    Object.assign(workerData, mergeData([workerData, dynamicData])) // Mark art fields as dynamic
-    const unoptimizedOptimizationTargetNode = objPathValue(
-      workerData.display ?? {},
-      optimizationTarget
-    ) as NumNode | undefined
-    if (!unoptimizedOptimizationTargetNode) return
-    const targetNode = unoptimizedOptimizationTargetNode
-    const valueFilter = statFilterToNumNode(workerData, statFilters)
+      gender,
+      activeCharKey,
+    })
+    if (!prep) return
+    const { split, workerData, targetNode, valueFilter } = prep
 
     setChartData(undefined)
 
     const cancelled = new Promise<void>((r) => (cancelToken.current = r))
 
-    const unoptimizedNodes = [
-      ...valueFilter.map((x) => x.value),
-      unoptimizedOptimizationTargetNode,
-    ]
+    const unoptimizedNodes = [...valueFilter.map((x) => x.value), targetNode]
     const minimum = [...valueFilter.map((x) => x.minimum), -Infinity]
     const plotBaseNumNode: NumNode =
       plotBase && objPathValue(workerData.display ?? {}, plotBase)
@@ -528,41 +495,22 @@ export default function TabBuild() {
   ])
 
   const generateBuildsLapic = useCallback(async () => {
-    const {
-      statFilters,
-      optimizationTarget,
-      mainStatAssumptionLevel,
-      allowPartial,
-      maxBuildsToShow,
-    } = buildSetting
-    if (!characterKey || !optimizationTarget) return
+    const { maxBuildsToShow } = buildSetting
+    if (!characterKey || !buildSetting.optimizationTarget) return
     if (notificationRef.current) Notification?.requestPermission()
 
-    const split = compactArtifacts(
+    const prep = prepareOptimizationData({
+      buildSetting,
+      characterKey,
       filteredArts,
-      mainStatAssumptionLevel,
-      allowPartial
-    )
-
-    const teamData = getTeamData(
       database,
       teamId,
       teamCharId,
-      mainStatAssumptionLevel,
-      { [teamCharId]: { art: [] } }
-    )
-    if (!teamData) return
-    const workerData = uiDataForTeam(teamData.teamData, gender, activeCharKey)[
-      characterKey
-    ]?.target.data![0]
-    if (!workerData) return
-    Object.assign(workerData, mergeData([workerData, dynamicData]))
-    const targetNode = objPathValue(
-      workerData.display ?? {},
-      optimizationTarget
-    ) as NumNode | undefined
-    if (!targetNode) return
-    const valueFilter = statFilterToNumNode(workerData, statFilters)
+      gender,
+      activeCharKey,
+    })
+    if (!prep) return
+    const { split, workerData, targetNode, valueFilter } = prep
 
     const unoptimizedNodes = [...valueFilter.map((x) => x.value), targetNode]
     const constraintMinimums = valueFilter.map((x) => x.minimum)
@@ -631,6 +579,10 @@ export default function TabBuild() {
             resolve(msg)
           } else if (msg.type === 'error') {
             reject(new Error(msg.message))
+          } else if (msg.type === 'diagnostic') {
+            if (msg.severity === 'error' || msg.severity === 'warning') {
+              console.warn(`[lapic] ${msg.severity}: ${msg.message}`)
+            }
           }
         }
 
@@ -728,8 +680,6 @@ export default function TabBuild() {
     t,
     throwGlobalError,
   ])
-
-  const characterName = (
     <CharacterName characterKey={characterKey} gender={gender} />
   )
 

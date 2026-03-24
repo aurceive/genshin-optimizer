@@ -86,7 +86,15 @@ export interface LapicWorkerErrorMsg {
   readonly message: string
 }
 
+export interface LapicWorkerDiagnosticMsg {
+  readonly type: 'diagnostic'
+  readonly severity: 'error' | 'warning' | 'info'
+  readonly code: string
+  readonly message: string
+}
+
 export type LapicWorkerOutMsg =
   | LapicWorkerProgressMsg
   | LapicWorkerResultMsg
   | LapicWorkerErrorMsg
+  | LapicWorkerDiagnosticMsg

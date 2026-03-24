@@ -304,6 +304,34 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     })
   })
 
+  // 5b. Subscribe to diagnostics and forward to main thread
+  orchestration.handle.subscribeDiagnostics((event) => {
+    if ('failureClass' in event) {
+      // LapicFailureRecord
+      const severity = event.diagnostics.some((d) => d.severity === 'error')
+        ? 'error'
+        : event.diagnostics.some((d) => d.severity === 'warning')
+          ? 'warning'
+          : 'info'
+      postMessage({
+        type: 'diagnostic',
+        severity,
+        code: event.failureClass,
+        message: event.message,
+      })
+    } else {
+      // LapicTraceEvent — only forward non-routine tags
+      if (event.tag === 'ReportFailure') {
+        postMessage({
+          type: 'diagnostic',
+          severity: 'warning',
+          code: event.tag,
+          message: `Trace: ${event.tag} [${event.eventDigest}]`,
+        })
+      }
+    }
+  })
+
   // 6. Start the solve
   const outcome = await orchestration.start()
 
