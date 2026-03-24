@@ -61,6 +61,7 @@ import {
   useNumWorkers,
   useTeamData,
 } from '@genshin-optimizer/gi/ui'
+import type { UIData } from '@genshin-optimizer/gi/uidata'
 import type { NumNode } from '@genshin-optimizer/gi/wr'
 import { optimize } from '@genshin-optimizer/gi/wr'
 import {
@@ -574,6 +575,7 @@ export default function TabBuild() {
           if (msg.type === 'progress') {
             status.tested = msg.tested
             status.failed = msg.failed
+            status.skipped = msg.skipped
             status.total = msg.total
           } else if (msg.type === 'result') {
             resolve(msg)
@@ -670,17 +672,19 @@ export default function TabBuild() {
     characterKey,
     filteredArts,
     database,
+    maxWorkers,
     teamId,
     teamCharId,
     gender,
     activeCharKey,
     setChartData,
-    maxWorkers,
     loadoutDatum,
     optConfigId,
     t,
     throwGlobalError,
   ])
+
+  const characterName = (
     <CharacterName characterKey={characterKey} gender={gender} />
   )
 

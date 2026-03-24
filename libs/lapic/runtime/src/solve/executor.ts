@@ -493,6 +493,15 @@ export async function executeLapicBoundedExactSolve(
       pruningStats.prunedCombinationCount += subtreeSize
       pruningStats.prunedSubtreeCount += 1
 
+      // Report progress after pruning (large subtrees can skip millions)
+      options.controller.publishProgress({
+        phase: 'join',
+        completedUnits:
+          processedCombinationCount + pruningStats.prunedCombinationCount,
+        totalUnits: totalCombinationCount,
+        skippedUnits: pruningStats.prunedCombinationCount,
+      })
+
       pruneCertStepCounter += 1
       const dangerZoneRecord = detection
         ? buildDangerZoneRecord(detection, false)
@@ -558,8 +567,10 @@ export async function executeLapicBoundedExactSolve(
         if (processedCombinationCount % SAFE_POINT_INTERVAL === 0) {
           options.controller.publishProgress({
             phase: 'join',
-            completedUnits: processedCombinationCount,
+            completedUnits:
+              processedCombinationCount + pruningStats.prunedCombinationCount,
             totalUnits: totalCombinationCount,
+            skippedUnits: pruningStats.prunedCombinationCount,
           })
         }
 
@@ -725,8 +736,10 @@ export async function executeLapicBoundedExactSolve(
     // Final progress update
     options.controller.publishProgress({
       phase: 'join',
-      completedUnits: processedCombinationCount,
+      completedUnits:
+        processedCombinationCount + pruningStats.prunedCombinationCount,
       totalUnits: totalCombinationCount,
+      skippedUnits: pruningStats.prunedCombinationCount,
     })
 
     // Detect pause requested during (or after) the sync hot loop.

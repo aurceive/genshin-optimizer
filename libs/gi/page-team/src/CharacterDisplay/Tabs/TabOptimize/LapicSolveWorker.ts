@@ -288,10 +288,12 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 5. Subscribe to progress
   let totalCombinations = 0
   let evaluatedCount = 0
+  let skippedCount = 0
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
-      evaluatedCount = event.completedUnits
+      evaluatedCount = event.completedUnits - (event.skippedUnits ?? 0)
+      skippedCount = event.skippedUnits ?? 0
       if (event.totalUnits !== undefined) {
         totalCombinations = event.totalUnits
       }
@@ -300,6 +302,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
       type: 'progress',
       tested: evaluatedCount,
       failed: failedCount,
+      skipped: skippedCount,
       total: totalCombinations,
     })
   })

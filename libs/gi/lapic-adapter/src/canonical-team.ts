@@ -17,6 +17,7 @@ import type {
   LapicCanonicalObjective,
   LapicCanonicalProblem,
   LapicCandidateDomain,
+  LapicCompatibilitySignatureSchemaVersion,
   LapicDigest,
   LapicEngineVersion,
   LapicFrameDescriptor,
@@ -108,7 +109,7 @@ export interface GiTeamCanonicalProblemInput {
    * Compatibility signature schema version for provenance.
    * @default 'v1'
    */
-  readonly compatibilitySignatureSchemaVersion?: string
+  readonly compatibilitySignatureSchemaVersion?: LapicCompatibilitySignatureSchemaVersion
 }
 
 // ---------------------------------------------------------------------------

@@ -157,6 +157,8 @@ export interface LapicProgressEvent {
   readonly phase: LapicActivePhase
   readonly completedUnits: number
   readonly totalUnits?: number
+  /** Combinations skipped by B&B pruning (included in completedUnits). */
+  readonly skippedUnits?: number
 }
 
 export interface LapicTraceEvent {

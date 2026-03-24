@@ -113,13 +113,15 @@ export function createLapicProgressEvent(
   sessionId: string,
   phase: LapicActivePhase,
   completedUnits: number,
-  totalUnits?: number
+  totalUnits?: number,
+  skippedUnits?: number
 ): LapicProgressEvent {
   return {
     sessionId,
     phase,
     completedUnits,
     ...(totalUnits !== undefined ? { totalUnits } : {}),
+    ...(skippedUnits !== undefined ? { skippedUnits } : {}),
   }
 }
 

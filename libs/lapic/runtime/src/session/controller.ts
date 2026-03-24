@@ -79,7 +79,8 @@ export function createLapicInMemorySessionController(
         context.options.identity.sessionId,
         event.phase,
         event.completedUnits,
-        event.totalUnits
+        event.totalUnits,
+        event.skippedUnits
       )
       const validation = validateLapicProgressEvent(progressEvent)
       if (!validation.ok)

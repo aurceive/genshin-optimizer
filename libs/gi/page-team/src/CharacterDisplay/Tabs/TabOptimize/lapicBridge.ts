@@ -66,6 +66,7 @@ export interface LapicWorkerProgressMsg {
   readonly type: 'progress'
   readonly tested: number
   readonly failed: number
+  readonly skipped: number
   readonly total: number
 }
 
