@@ -603,7 +603,7 @@ export default function TabBuild() {
           })),
           optConfig: buildSetting,
           topN: maxBuildsToShow,
-          workerCount: 1,
+          workerCount: maxWorkers,
           problemId: `${characterKey}:${teamId}`,
         })
       })
@@ -675,6 +675,7 @@ export default function TabBuild() {
     gender,
     activeCharKey,
     setChartData,
+    maxWorkers,
     loadoutDatum,
     optConfigId,
     t,

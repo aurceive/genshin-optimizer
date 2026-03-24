@@ -445,6 +445,15 @@ export async function executeCoordinatedBoundedExactSolve(
   // solve invocation to avoid global mutable state.
   const sequenceCounter = { value: 0 }
 
+  // Pre-compute aggregate combination count for progress forwarding.
+  // Each partition's joinPlan.totalCombinationCount gives the upper-bound
+  // combination count for that partition; the sum is the global total.
+  const totalCombinationsAll = partitions.reduce(
+    (sum, p) => sum + p.joinPlan.totalCombinationCount,
+    0
+  )
+  let completedCombinationsBefore = 0
+
   // Create scheduler and enqueue all partitions
   const scheduler = createLapicWorkScheduler()
   const partitionsByWorkUnitId = new Map<string, (typeof partitions)[number]>()
@@ -503,6 +512,24 @@ export async function executeCoordinatedBoundedExactSolve(
       // completion promise (we extract the result below).
       partitionController.awaitCompletion().catch(() => {})
 
+      // Forward partition-level combination progress to the parent
+      // controller so that subscribers (e.g. the UI) see granular
+      // updates instead of only partition-completion jumps.
+      const offset = completedCombinationsBefore
+      let lastPartitionCompletedUnits = 0
+      const unsubPartitionProgress = partitionController.subscribeProgress(
+        (event) => {
+          if (event.phase === 'join') {
+            lastPartitionCompletedUnits = event.completedUnits
+            config.controller.publishProgress({
+              phase: 'join',
+              completedUnits: offset + event.completedUnits,
+              totalUnits: totalCombinationsAll,
+            })
+          }
+        }
+      )
+
       // Compute the incumbent threshold from the running best-N.
       // When we have at least topN candidates, the worst entry's
       // objective value becomes the threshold — any subtree that
@@ -520,6 +547,8 @@ export async function executeCoordinatedBoundedExactSolve(
           frontierBlockIds,
           initialIncumbentThreshold: incumbentThreshold,
         })
+
+        unsubPartitionProgress.unsubscribe()
 
         if (response.kind === 'paused') {
           // Partition was paused — cancel remaining work and propagate
@@ -546,10 +575,16 @@ export async function executeCoordinatedBoundedExactSolve(
           )
         }
 
+        // Advance the combination offset for the next partition.
+        // Use actual evaluated count (from last progress event) rather
+        // than the theoretical totalCombinationCount, which would
+        // inflate the running total when B&B prunes large subtrees.
+        completedCombinationsBefore += lastPartitionCompletedUnits
+
         config.controller.publishProgress({
           phase: 'join',
-          completedUnits: partition.partitionIndex + 1,
-          totalUnits: partitions.length,
+          completedUnits: completedCombinationsBefore,
+          totalUnits: totalCombinationsAll,
         })
 
         config.onPartitionComplete?.(
@@ -557,6 +592,7 @@ export async function executeCoordinatedBoundedExactSolve(
           partitions.length
         )
       } catch (error) {
+        unsubPartitionProgress.unsubscribe()
         scheduler.fail(scheduledItem.workUnit.workUnitId)
         // Cancel all remaining queued partitions
         for (const item of scheduler.getItemsByStatus('queued')) {
