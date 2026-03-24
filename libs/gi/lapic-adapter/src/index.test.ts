@@ -654,9 +654,9 @@ describe('gi lapic adapter', () => {
       request.giContext.optimizationRequest.topN = 1
       request.normalizationInput.topN = 1
 
-      // sum_frac is unsupported → compilation returns ok: false
+      // Use a truly unknown operation → compilation returns ok: false
       const unsupportedTarget: OptNode = {
-        operation: 'sum_frac',
+        operation: 'totally_unknown_op',
         operands: [
           { operation: 'const', operands: [], value: 100, info: {} } as OptNode,
           { operation: 'const', operands: [], value: 50, info: {} } as OptNode,

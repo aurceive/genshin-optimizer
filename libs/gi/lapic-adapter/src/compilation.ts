@@ -3,9 +3,9 @@
  *
  * Walks a GI `OptNode` DAG and produces an equivalent `LapicFirGraph`
  * via the hash-consing builder. Supports the core operator set
- * (const, read, add, mul, min, max, res, threshold with constant
- * threshold). Operations without an F-IR equivalent (sum_frac,
- * threshold with expression threshold) produce compilation errors.
+ * (const, read, add, mul, min, max, res, sum_frac, threshold with
+ * constant threshold). Operations without an F-IR equivalent
+ * (threshold with expression threshold) produce compilation errors.
  */
 
 import type { ConstantNode, OptNode, ReadNode } from '@genshin-optimizer/gi/wr'
@@ -129,14 +129,17 @@ class OptNodeFirCompiler {
       case 'threshold':
         return this.compileThreshold(node)
 
-      case 'sum_frac':
-        this.errors.push({
-          kind: 'unsupported-operation',
-          operation: 'sum_frac',
-          message:
-            'sum_frac (x/(x+c)) requires division, which has no F-IR equivalent',
-        })
-        return this.builder.constant(0)
+      case 'sum_frac': {
+        const ops = node.operands as readonly OptNode[]
+        const numeratorId = this.compile(ops[0]!)
+        if (ops.length === 2) {
+          return this.builder.sumFrac(numeratorId, this.compile(ops[1]!))
+        }
+        // N operands: sum_frac([x, c1, c2, ...]) = x / (x + c1 + c2 + ...)
+        const addendIds = ops.slice(1).map((op) => this.compile(op as OptNode))
+        const addendId = this.builder.add(...addendIds)
+        return this.builder.sumFrac(numeratorId, addendId)
+      }
 
       default:
         this.errors.push({

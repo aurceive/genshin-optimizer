@@ -74,6 +74,32 @@ export function createLapicFirPartialIntervalEnv(
   globalConstants?: ReadonlyMap<LapicFirVariableId, number>
 ): Map<LapicFirVariableId, LapicInterval> {
   const env = new Map<LapicFirVariableId, LapicInterval>()
+  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
+  fillLapicFirPartialIntervalEnv(
+    env,
+    assignedCandidates,
+    domainVariableMaps,
+    domainMapById,
+    domainEnvelopes,
+    globalConstants
+  )
+  return env
+}
+
+/**
+ * Fill an existing interval environment for F-IR evaluation.
+ * Clears the map and fills it in-place — avoids per-call Map allocation
+ * in hot paths (B&B bound evaluation).
+ */
+export function fillLapicFirPartialIntervalEnv(
+  env: Map<LapicFirVariableId, LapicInterval>,
+  assignedCandidates: readonly LapicCandidateDescriptor[],
+  domainVariableMaps: readonly LapicFirDomainVariableMap[],
+  domainMapById: ReadonlyMap<string, LapicFirDomainVariableMap>,
+  domainEnvelopes: LapicFirDomainEnvelopes,
+  globalConstants?: ReadonlyMap<LapicFirVariableId, number>
+): void {
+  env.clear()
 
   // 1. Global constants as point intervals
   if (globalConstants) {
@@ -82,13 +108,12 @@ export function createLapicFirPartialIntervalEnv(
     }
   }
 
-  // 2. Collect assigned domain IDs
-  const assignedDomainIds = new Set<string>()
-  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
+  // 2. Assigned candidates → point intervals
+  // Track assigned domains via small array (typically ≤ 5 domains)
+  const assignedDomainIds: string[] = []
 
-  // 3. Assigned candidates → point intervals
   for (const candidate of assignedCandidates) {
-    assignedDomainIds.add(candidate.domainId)
+    assignedDomainIds.push(candidate.domainId)
     const dvm = domainMapById.get(candidate.domainId)
     if (!dvm) continue
     const vars = dvm.candidateVariables.get(candidate.candidateId)
@@ -98,15 +123,13 @@ export function createLapicFirPartialIntervalEnv(
     }
   }
 
-  // 4. Unassigned domains → envelope intervals
+  // 3. Unassigned domains → envelope intervals
   for (const dvm of domainVariableMaps) {
-    if (assignedDomainIds.has(dvm.domainId)) continue
+    if (assignedDomainIds.includes(dvm.domainId)) continue
     const envelopes = domainEnvelopes.get(dvm.domainId)
     if (!envelopes) continue
     for (const [varId, iv] of envelopes) {
       env.set(varId, iv)
     }
   }
-
-  return env
 }

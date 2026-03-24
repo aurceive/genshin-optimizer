@@ -41,6 +41,7 @@ export type LapicFirOperatorKind =
   | 'bilinearKernel'
   | 'multilinearKernel'
   | 'saturatingKernel'
+  | 'sumFrac'
 
 // ---------------------------------------------------------------------------
 // Node definitions (discriminated union on `operator`)
@@ -170,6 +171,20 @@ export interface LapicFirSaturatingKernelNode extends LapicFirNodeBase {
   readonly cap: number
 }
 
+/**
+ * Sum-fraction kernel: numerator / (numerator + addend).
+ *
+ * Models GI's `sum_frac` operation, used for EM reaction scaling
+ * and defense ratios. The function f(x, c) = x / (x + c) is
+ * monotone increasing in x (for c > 0) and monotone decreasing
+ * in c (for x > 0), enabling tight interval bounds.
+ */
+export interface LapicFirSumFracNode extends LapicFirNodeBase {
+  readonly operator: 'sumFrac'
+  readonly numeratorId: LapicFirNodeId
+  readonly addendId: LapicFirNodeId
+}
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -189,6 +204,7 @@ export type LapicFirNode =
   | LapicFirBilinearKernelNode
   | LapicFirMultilinearKernelNode
   | LapicFirSaturatingKernelNode
+  | LapicFirSumFracNode
 
 // ---------------------------------------------------------------------------
 // Graph container
@@ -237,5 +253,7 @@ export function lapicFirNodeChildIds(
       return [node.resId]
     case 'bilinearKernel':
       return [node.leftId, node.rightId]
+    case 'sumFrac':
+      return [node.numeratorId, node.addendId]
   }
 }

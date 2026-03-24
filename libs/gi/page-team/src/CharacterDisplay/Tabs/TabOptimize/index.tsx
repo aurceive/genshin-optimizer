@@ -596,7 +596,7 @@ export default function TabBuild() {
           artsBySlot: Object.values(split.values),
           constraintMinimums: minimum,
           artifacts: filteredArts,
-          optimizationTarget: targetNode,
+          optimizationTarget: nodes[nodes.length - 1],
           constraints: valueFilter.map((x) => ({
             value: x.value,
             minimum: x.minimum,

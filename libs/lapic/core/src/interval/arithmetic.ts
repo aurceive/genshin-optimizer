@@ -184,6 +184,36 @@ export function lapicIntervalSaturate(
   return lapicInterval(Math.min(iv.lo, cap), Math.min(iv.hi, cap))
 }
 
+/**
+ * Sum-fraction: x / (x + c).
+ *
+ * Monotone increasing in x (for c > 0), monotone decreasing in c (for x > 0).
+ * For game stats (x ≥ 0, c > 0):
+ *   upper bound = x_hi / (x_hi + c_lo)
+ *   lower bound = x_lo / (x_lo + c_hi)
+ */
+export function lapicIntervalSumFrac(
+  numerator: LapicInterval,
+  addend: LapicInterval
+): LapicInterval {
+  if (lapicIntervalIsEmpty(numerator) || lapicIntervalIsEmpty(addend))
+    return LAPIC_INTERVAL_EMPTY
+
+  // Evaluate at corners to handle all monotonicity cases correctly
+  const v1 = sumFracPoint(numerator.lo, addend.lo)
+  const v2 = sumFracPoint(numerator.lo, addend.hi)
+  const v3 = sumFracPoint(numerator.hi, addend.lo)
+  const v4 = sumFracPoint(numerator.hi, addend.hi)
+
+  return lapicInterval(Math.min(v1, v2, v3, v4), Math.max(v1, v2, v3, v4))
+}
+
+function sumFracPoint(x: number, c: number): number {
+  const denom = x + c
+  if (denom === 0) return 0
+  return x / denom
+}
+
 // ---------------------------------------------------------------------------
 // Resistance transform (Genshin)
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ export * from './types'
 export { LapicFirGraphBuilder } from './builders'
 export { validateLapicFirGraph } from './validation'
 export {
+  createLapicFirCachedIntervalEvaluator,
   evaluateLapicFirIntervals,
   type LapicFirIntervalEnv,
   type LapicFirIntervalEvalResult,

@@ -159,6 +159,16 @@ export function createGiLapicSolveOrchestration(
         ? firCompilation.result.graph
         : undefined
 
+      // Diagnostic: report FIR compilation failure so B&B absence is traceable
+      if (firCompilation && !firCompilation.ok) {
+        const errMsgs = firCompilation.errors
+          .map((e) => `${e.operation}: ${e.message}`)
+          .join('; ')
+        console.warn(
+          `[lapic] FIR compilation failed — B&B pruning disabled. Errors: ${errMsgs}`
+        )
+      }
+
       // 4. Auto-wire FIR-bound provider
       const computeUpperBound =
         config.computeUpperBound ??

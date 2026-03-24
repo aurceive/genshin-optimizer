@@ -231,6 +231,8 @@ function compileNode(
       return compileThresholdSelect(ctx, node)
     case 'resistanceTransform':
       return compileResistance(ctx, node)
+    case 'sumFrac':
+      return compileSumFrac(ctx, node)
     case 'piecewiseAffineKernel':
       return compilePiecewiseAffine(ctx, node)
     default: {
@@ -609,6 +611,49 @@ function compileResistance(
   // for all non-negative res, and ≤ 1 - res/2 trivially for negative res.
   // Constraint: y ≤ 1 - r/2  →  y + r/2 ≤ 1
   addConstraint(ctx, [1, 0.5], [yIdx, rIdx], -Infinity, 1)
+}
+
+/**
+ * Sum-fraction: y = x / (x + c), relaxed via interval bounds.
+ *
+ * The function is concave in x (for c > 0) and convex in c (for x > 0).
+ * We use a conservative bound: allocate y with interval-evaluated bounds
+ * and constrain y ≤ 1 (since x/(x+c) < 1 for c > 0).
+ */
+function compileSumFrac(
+  ctx: BuilderCtx,
+  node: LapicFirNode & {
+    operator: 'sumFrac'
+    numeratorId: string
+    addendId: string
+  }
+): void {
+  const nb = nodeBound(ctx, node.numeratorId)
+  const ab = nodeBound(ctx, node.addendId)
+
+  const evalSF = (x: number, c: number): number => {
+    const denom = x + c
+    if (denom === 0) return 0
+    return x / denom
+  }
+
+  // Evaluate at corners to find tight bounds
+  const values = [
+    evalSF(nb.lo, ab.lo),
+    evalSF(nb.lo, ab.hi),
+    evalSF(nb.hi, ab.lo),
+    evalSF(nb.hi, ab.hi),
+  ]
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+
+  const yIdx = allocVar(ctx, `sf_${node.nodeId}`, lo, hi)
+  ctx.nodeVarIdx.set(node.nodeId, yIdx)
+  ctx.nodeBounds.set(node.nodeId, { lo, hi })
+  ctx.relaxedNodes.add(node.nodeId)
+
+  // y ≤ 1 (x/(x+c) < 1 for any c > 0)
+  addConstraint(ctx, [1], [yIdx], -Infinity, 1)
 }
 
 /**

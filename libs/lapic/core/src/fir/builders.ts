@@ -239,6 +239,23 @@ export class LapicFirGraphBuilder {
     return nodeId
   }
 
+  sumFrac(
+    numeratorId: LapicFirNodeId,
+    addendId: LapicFirNodeId
+  ): LapicFirNodeId {
+    const desc = `sumFrac:${numeratorId},${addendId}`
+    const nodeId = contentHash(desc)
+    if (!this.nodeMap.has(nodeId)) {
+      this.nodeMap.set(nodeId, {
+        nodeId,
+        operator: 'sumFrac',
+        numeratorId,
+        addendId,
+      })
+    }
+    return nodeId
+  }
+
   // -- Build ----------------------------------------------------------------
 
   build(rootId: LapicFirNodeId): LapicFirGraph {

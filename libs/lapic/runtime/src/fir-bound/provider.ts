@@ -1,10 +1,14 @@
 import {
-  evaluateLapicFirIntervals,
+  createLapicFirCachedIntervalEvaluator,
   lapicIntervalIsEmpty,
+} from '@genshin-optimizer/lapic/core'
+import type {
+  LapicFirVariableId,
+  LapicInterval,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicBoundedExactUpperBoundEvaluator } from '../solve/types'
 import {
-  createLapicFirPartialIntervalEnv,
+  fillLapicFirPartialIntervalEnv,
   precomputeDomainEnvelopes,
 } from './env-factory'
 import type { LapicFirBoundProviderConfig } from './types'
@@ -14,10 +18,14 @@ import type { LapicFirBoundProviderConfig } from './types'
  * and per-domain variable mappings.
  *
  * The returned callback:
- * 1. Builds an interval environment from the partial combination
+ * 1. Fills an interval environment from the partial combination
  *    (point values for assigned candidates, envelopes for unassigned domains)
  * 2. Evaluates the F-IR graph with interval arithmetic
  * 3. Returns `rootBound.hi` as the admissible upper bound
+ *
+ * All internal state (topological order, bounds buffer, env Map,
+ * domain lookup) is pre-allocated once and reused on every call.
+ * This eliminates per-call allocations in the B&B hot loop.
  *
  * Returns `undefined` when the bound is empty or non-finite
  * (no useful pruning information).
@@ -28,25 +36,32 @@ export function createLapicFirBoundProvider(
   const { graph, domainVariableMaps, globalConstants } = config
   const format = config.formatUpperBound ?? String
 
-  // Pre-compute domain envelopes once (domains are fixed during a solve)
+  // Pre-compute once at creation — reused for every bound evaluation
   const domainEnvelopes = precomputeDomainEnvelopes(domainVariableMaps)
+  const cachedEval = createLapicFirCachedIntervalEvaluator(graph)
+  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
+  const env = new Map<LapicFirVariableId, LapicInterval>()
 
   return (partial) => {
-    const env = createLapicFirPartialIntervalEnv(
+    // Fill env in-place (clear + refill, no new Map)
+    fillLapicFirPartialIntervalEnv(
+      env,
       partial.assignedCandidates,
       domainVariableMaps,
+      domainMapById,
       domainEnvelopes,
       globalConstants
     )
 
-    const result = evaluateLapicFirIntervals(graph, env)
+    // Evaluate using cached evaluator (no DFS, no bounds Map allocation)
+    const rootBound = cachedEval(env)
 
-    if (lapicIntervalIsEmpty(result.rootBound)) return undefined
-    if (!Number.isFinite(result.rootBound.hi)) return undefined
+    if (lapicIntervalIsEmpty(rootBound)) return undefined
+    if (!Number.isFinite(rootBound.hi)) return undefined
 
     return {
-      upperBoundValue: format(result.rootBound.hi),
-      evidenceDigest: `fir-interval-bound:${result.rootBound.lo}:${result.rootBound.hi}`,
+      upperBoundValue: format(rootBound.hi),
+      evidenceDigest: `fir-interval-bound:${rootBound.lo}:${rootBound.hi}`,
     }
   }
 }

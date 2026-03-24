@@ -150,6 +150,12 @@ function evaluateNodeScalar(
     case 'saturatingKernel':
       return Math.min(childValue(values, node.childId), node.cap)
 
+    case 'sumFrac': {
+      const num = childValue(values, node.numeratorId)
+      const add = childValue(values, node.addendId)
+      return num / (num + add)
+    }
+
     default: {
       const _exhaustive: never = node
       throw new Error(

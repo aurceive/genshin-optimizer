@@ -12,13 +12,17 @@
 import {
   lapicIntervalAdd,
   lapicIntervalAffine,
+  lapicIntervalMax,
   lapicIntervalMaxN,
+  lapicIntervalMin,
   lapicIntervalMinN,
+  lapicIntervalMul,
   lapicIntervalNeg,
   lapicIntervalPiecewiseAffine,
   lapicIntervalProduct,
   lapicIntervalResistanceTransform,
   lapicIntervalSaturate,
+  lapicIntervalSumFrac,
   lapicIntervalThresholdSelect,
 } from '../interval/arithmetic'
 import type { LapicInterval } from '../interval/types'
@@ -84,11 +88,13 @@ export function evaluateLapicFirIntervals(
 
   topoVisit(graph.rootId)
 
+  const getBound = (id: LapicFirNodeId): LapicInterval =>
+    bounds.get(id) ?? LAPIC_INTERVAL_EMPTY
+
   // Evaluate in topological order (children before parents)
   for (const nodeId of order) {
     const node = graph.nodes.get(nodeId)!
-    const iv = evaluateNode(node, bounds, env)
-    bounds.set(nodeId, iv)
+    bounds.set(nodeId, evaluateNode(node, getBound, env))
   }
 
   return {
@@ -98,12 +104,73 @@ export function evaluateLapicFirIntervals(
 }
 
 // ---------------------------------------------------------------------------
+// Cached interval evaluator
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a cached interval evaluator that pre-computes topological
+ * order once and reuses evaluation buffers across calls.
+ *
+ * This is the hot-path evaluator for B&B bound checks —
+ * called millions of times per solve. It eliminates per-call
+ * allocations (DFS traversal, Map, Set, Array) by caching them
+ * at construction time and mutating a pre-allocated bounds array.
+ */
+export function createLapicFirCachedIntervalEvaluator(
+  graph: LapicFirGraph
+): (env: LapicFirIntervalEnv) => LapicInterval {
+  // Pre-compute topological order once
+  const order: LapicFirNodeId[] = []
+  const visited = new Set<LapicFirNodeId>()
+
+  function topoVisit(nodeId: LapicFirNodeId): void {
+    if (visited.has(nodeId)) return
+    visited.add(nodeId)
+    const node = graph.nodes.get(nodeId)
+    if (!node) return
+    for (const childId of lapicFirNodeChildIds(node)) {
+      topoVisit(childId)
+    }
+    order.push(nodeId)
+  }
+  topoVisit(graph.rootId)
+
+  const nodeCount = order.length
+  if (nodeCount === 0) return () => LAPIC_INTERVAL_EMPTY
+
+  // Pre-resolve nodes and build index map
+  const nodes: LapicFirNode[] = new Array(nodeCount)
+  const nodeToIdx = new Map<LapicFirNodeId, number>()
+  for (let i = 0; i < nodeCount; i++) {
+    nodes[i] = graph.nodes.get(order[i]!)!
+    nodeToIdx.set(order[i]!, i)
+  }
+
+  // Pre-allocate bounds buffer (mutated on each call)
+  const boundsArr: LapicInterval[] = new Array(nodeCount)
+  const rootIdx = nodeCount - 1
+
+  // Stable closure for child bound lookup (no per-call allocation)
+  const getBound = (id: LapicFirNodeId): LapicInterval => {
+    const idx = nodeToIdx.get(id)
+    return idx !== undefined ? boundsArr[idx] : LAPIC_INTERVAL_EMPTY
+  }
+
+  return (env: LapicFirIntervalEnv): LapicInterval => {
+    for (let i = 0; i < nodeCount; i++) {
+      boundsArr[i] = evaluateNode(nodes[i]!, getBound, env)
+    }
+    return boundsArr[rootIdx]!
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Per-node evaluation
 // ---------------------------------------------------------------------------
 
 function evaluateNode(
   node: LapicFirNode,
-  bounds: ReadonlyMap<LapicFirNodeId, LapicInterval>,
+  getBound: (id: LapicFirNodeId) => LapicInterval,
   env: LapicFirIntervalEnv
 ): LapicInterval {
   switch (node.operator) {
@@ -113,74 +180,76 @@ function evaluateNode(
     case 'read':
       return env.get(node.variableId) ?? { lo: -Infinity, hi: Infinity }
 
-    case 'add':
-      return lapicIntervalAdd(
-        childBound(bounds, node.childIds[0]!),
-        node.childIds
-          .slice(1)
-          .reduce(
-            (acc, id) => lapicIntervalAdd(acc, childBound(bounds, id)),
-            lapicIntervalPoint(0)
-          )
-      )
+    case 'add': {
+      const ids = node.childIds
+      let acc = getBound(ids[0]!)
+      for (let i = 1; i < ids.length; i++) {
+        acc = lapicIntervalAdd(acc, getBound(ids[i]!))
+      }
+      return acc
+    }
 
-    case 'mul':
-      return lapicIntervalProduct(
-        node.childIds.map((id) => childBound(bounds, id))
-      )
+    case 'mul': {
+      const ids = node.childIds
+      if (ids.length === 2)
+        return lapicIntervalMul(getBound(ids[0]!), getBound(ids[1]!))
+      return lapicIntervalProduct(ids.map((id) => getBound(id)))
+    }
 
-    case 'min':
-      return lapicIntervalMinN(
-        node.childIds.map((id) => childBound(bounds, id))
-      )
+    case 'min': {
+      const ids = node.childIds
+      if (ids.length === 2)
+        return lapicIntervalMin(getBound(ids[0]!), getBound(ids[1]!))
+      return lapicIntervalMinN(ids.map((id) => getBound(id)))
+    }
 
-    case 'max':
-      return lapicIntervalMaxN(
-        node.childIds.map((id) => childBound(bounds, id))
-      )
+    case 'max': {
+      const ids = node.childIds
+      if (ids.length === 2)
+        return lapicIntervalMax(getBound(ids[0]!), getBound(ids[1]!))
+      return lapicIntervalMaxN(ids.map((id) => getBound(id)))
+    }
 
     case 'neg':
-      return lapicIntervalNeg(childBound(bounds, node.childId))
+      return lapicIntervalNeg(getBound(node.childId))
 
     case 'affineForm':
       return lapicIntervalAffine(
         node.bias,
         node.terms.map((t) => ({
           coeff: t.coeff,
-          interval: childBound(bounds, t.childId),
+          interval: getBound(t.childId),
         }))
       )
 
     case 'thresholdSelect':
       return lapicIntervalThresholdSelect(
-        childBound(bounds, node.guardId),
+        getBound(node.guardId),
         node.threshold,
-        childBound(bounds, node.thenId),
-        childBound(bounds, node.elseId)
+        getBound(node.thenId),
+        getBound(node.elseId)
       )
 
     case 'resistanceTransform':
-      return lapicIntervalResistanceTransform(childBound(bounds, node.resId))
+      return lapicIntervalResistanceTransform(getBound(node.resId))
 
     case 'piecewiseAffineKernel':
-      return lapicIntervalPiecewiseAffine(
-        childBound(bounds, node.childId),
-        node.segments
-      )
+      return lapicIntervalPiecewiseAffine(getBound(node.childId), node.segments)
 
     case 'bilinearKernel':
-      return lapicIntervalProduct([
-        childBound(bounds, node.leftId),
-        childBound(bounds, node.rightId),
-      ])
+      return lapicIntervalMul(getBound(node.leftId), getBound(node.rightId))
 
     case 'multilinearKernel':
-      return lapicIntervalProduct(
-        node.childIds.map((id) => childBound(bounds, id))
-      )
+      return lapicIntervalProduct(node.childIds.map((id) => getBound(id)))
 
     case 'saturatingKernel':
-      return lapicIntervalSaturate(childBound(bounds, node.childId), node.cap)
+      return lapicIntervalSaturate(getBound(node.childId), node.cap)
+
+    case 'sumFrac':
+      return lapicIntervalSumFrac(
+        getBound(node.numeratorId),
+        getBound(node.addendId)
+      )
 
     default: {
       const _exhaustive: never = node
@@ -189,11 +258,4 @@ function evaluateNode(
       )
     }
   }
-}
-
-function childBound(
-  bounds: ReadonlyMap<LapicFirNodeId, LapicInterval>,
-  childId: LapicFirNodeId
-): LapicInterval {
-  return bounds.get(childId) ?? LAPIC_INTERVAL_EMPTY
 }

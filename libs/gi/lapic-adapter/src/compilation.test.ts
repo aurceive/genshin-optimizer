@@ -224,16 +224,6 @@ describe('GI OptNode → F-IR compiler', () => {
   })
 
   describe('unsupported operations', () => {
-    it('reports sum_frac as unsupported', () => {
-      const tree = sumFracNode(readNode(['em']), constNode(1400))
-      const outcome = compileGiOptNodeToFir(tree)
-      expect(outcome.ok).toBe(false)
-      if (!outcome.ok) {
-        expect(outcome.errors).toHaveLength(1)
-        expect(outcome.errors[0]!.operation).toBe('sum_frac')
-      }
-    })
-
     it('reports unknown operation', () => {
       const tree = { operation: 'foobar', operands: [] } as unknown as OptNode
       const outcome = compileGiOptNodeToFir(tree)
@@ -244,16 +234,36 @@ describe('GI OptNode → F-IR compiler', () => {
     })
 
     it('collects multiple errors from different subtrees', () => {
-      // add(sum_frac(...), sum_frac(...))
+      // add(unknown_op(...), unknown_op(...))
       const tree = addNode(
-        sumFracNode(readNode(['em']), constNode(1400)),
-        sumFracNode(readNode(['em']), constNode(2800))
+        { operation: 'foobar', operands: [] } as unknown as OptNode,
+        { operation: 'bazqux', operands: [] } as unknown as OptNode
       )
       const outcome = compileGiOptNodeToFir(tree)
       expect(outcome.ok).toBe(false)
       if (!outcome.ok) {
         expect(outcome.errors.length).toBeGreaterThanOrEqual(2)
       }
+    })
+  })
+
+  describe('sum_frac compilation', () => {
+    it('compiles sum_frac(read, const) to sumFrac F-IR node', () => {
+      const tree = sumFracNode(readNode(['em']), constNode(1400))
+      const outcome = compileGiOptNodeToFir(tree)
+      expect(outcome.ok).toBe(true)
+      if (!outcome.ok) return
+      const root = outcome.result.graph.nodes.get(outcome.result.graph.rootId)
+      expect(root?.operator).toBe('sumFrac')
+    })
+
+    it('compiles nested sum_frac in add', () => {
+      const tree = addNode(
+        sumFracNode(readNode(['em']), constNode(1400)),
+        sumFracNode(readNode(['em']), constNode(2800))
+      )
+      const outcome = compileGiOptNodeToFir(tree)
+      expect(outcome.ok).toBe(true)
     })
   })
 
