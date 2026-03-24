@@ -515,16 +515,16 @@ export async function executeLapicBoundedExactSolve(
         frontierBlockIds,
         ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
       })
-      pendingPersistence.push(() =>
-        persistArtifact(
+      pendingPersistence.push(async () => {
+        await persistArtifact(
           options,
           'certificate',
           pruneCert.certId,
           pruneCert.evidenceDigest,
           pruneCert,
           frontierBlockIds
-        ).then(() => {})
-      )
+        )
+      })
       options.controller.emitCertificate(pruneCert)
       pruneCertificateIds.push(pruneCert.certId)
     }
@@ -572,6 +572,12 @@ export async function executeLapicBoundedExactSolve(
             totalUnits: totalCombinationCount,
             skippedUnits: pruningStats.prunedCombinationCount,
           })
+
+          // Cooperative pause: check at safe-point boundaries
+          if (options.controller.isPauseRequested()) {
+            pauseDetected = true
+            return
+          }
         }
 
         // Build a readonly view of the current buffer for evaluation
@@ -634,16 +640,16 @@ export async function executeLapicBoundedExactSolve(
             stepIndex: dominanceCertStepCounter,
             frontierBlockIds,
           })
-          pendingPersistence.push(() =>
-            persistArtifact(
+          pendingPersistence.push(async () => {
+            await persistArtifact(
               options,
               'certificate',
               dominanceCert.certId,
               dominanceCert.evidenceDigest,
               dominanceCert,
               frontierBlockIds
-            ).then(() => {})
-          )
+            )
+          })
           options.controller.emitCertificate(dominanceCert)
           dominanceCertificateIds.push(dominanceCert.certId)
         }

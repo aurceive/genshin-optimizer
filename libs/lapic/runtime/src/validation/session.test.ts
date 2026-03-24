@@ -83,6 +83,54 @@ describe('lapic runtime session validation', () => {
     expect(result.ok).toBe(false)
   })
 
+  it('rejects a progress event with negative skippedUnits', () => {
+    const result = validateLapicProgressEvent({
+      sessionId: 'session-id',
+      phase: 'join',
+      completedUnits: 10,
+      totalUnits: 100,
+      skippedUnits: -1,
+    })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('rejects a progress event with skippedUnits > completedUnits', () => {
+    const result = validateLapicProgressEvent({
+      sessionId: 'session-id',
+      phase: 'join',
+      completedUnits: 5,
+      totalUnits: 100,
+      skippedUnits: 6,
+    })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('rejects a progress event with non-integer skippedUnits', () => {
+    const result = validateLapicProgressEvent({
+      sessionId: 'session-id',
+      phase: 'join',
+      completedUnits: 10,
+      totalUnits: 100,
+      skippedUnits: 3.5,
+    })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('accepts a valid progress event with skippedUnits', () => {
+    const result = validateLapicProgressEvent({
+      sessionId: 'session-id',
+      phase: 'join',
+      completedUnits: 10,
+      totalUnits: 100,
+      skippedUnits: 5,
+    })
+
+    expect(result.ok).toBe(true)
+  })
+
   it('rejects a trace event with an unsupported tag', () => {
     const result = validateLapicTraceEvent({
       sessionId: 'session-id',

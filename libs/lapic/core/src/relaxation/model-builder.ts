@@ -633,7 +633,10 @@ function compileSumFrac(
 
   const evalSF = (x: number, c: number): number => {
     const denom = x + c
-    if (denom === 0) return 0
+    if (denom === 0)
+      throw new Error(
+        'sumFrac: denominator is zero (x + c = 0). Target is unsupported.'
+      )
     return x / denom
   }
 
@@ -654,6 +657,57 @@ function compileSumFrac(
 
   // y ≤ 1 (x/(x+c) < 1 for any c > 0)
   addConstraint(ctx, [1], [yIdx], -Infinity, 1)
+
+  // Structural constraints connecting y to x (numerator).
+  // f(x) = x/(x+c) is concave in x for c > 0.
+  // - Secant (chord) gives a valid lower bound
+  // - Tangent at endpoint gives a valid upper bound
+  // Both are admissible across the full interval box [xL,xH]×[cL,cH].
+  const xIdx = nodeIdx(ctx, node.numeratorId)
+  const cL = ab.lo
+  const cH = ab.hi
+
+  if (isFinite(nb.lo) && isFinite(nb.hi) && nb.hi > nb.lo && cL > 0) {
+    // Secant lower bound (using c = cH for tightest lower envelope):
+    //   f(x, c) ≥ f(x, cH) ≥ secant_cH(x)  for all c ∈ [cL, cH]
+    const fSecL = nb.lo / (nb.lo + cH)
+    const fSecH = nb.hi / (nb.hi + cH)
+    const sSlope = (fSecH - fSecL) / (nb.hi - nb.lo)
+    // y - sSlope·x ≥ fSecL - sSlope·xL
+    addConstraint(
+      ctx,
+      [1, -sSlope],
+      [yIdx, xIdx],
+      fSecL - sSlope * nb.lo,
+      Infinity
+    )
+
+    // Tangent upper bounds (using c = cL for tightest upper envelope):
+    //   f(x, c) ≤ f(x, cL) ≤ tangent_cL(x)  for all c ∈ [cL, cH]
+    // f'(x, cL) = cL / (x + cL)²
+
+    // Tangent at xL:
+    const fTanL = nb.lo / (nb.lo + cL)
+    const dTanL = cL / (nb.lo + cL) ** 2
+    addConstraint(
+      ctx,
+      [1, -dTanL],
+      [yIdx, xIdx],
+      -Infinity,
+      fTanL - dTanL * nb.lo
+    )
+
+    // Tangent at xH:
+    const fTanH = nb.hi / (nb.hi + cL)
+    const dTanH = cL / (nb.hi + cL) ** 2
+    addConstraint(
+      ctx,
+      [1, -dTanH],
+      [yIdx, xIdx],
+      -Infinity,
+      fTanH - dTanH * nb.hi
+    )
+  }
 }
 
 /**

@@ -248,6 +248,16 @@ export function validateLapicProgressEvent(
       ['totalUnits']
     )
 
+  if (
+    event.skippedUnits !== undefined &&
+    (!isNonNegativeInteger(event.skippedUnits) ||
+      event.skippedUnits > event.completedUnits)
+  )
+    return createRuntimeFailure(
+      'Skipped units must be a non-negative integer <= completed units.',
+      ['skippedUnits']
+    )
+
   return createLapicSuccessResult(event)
 }
 

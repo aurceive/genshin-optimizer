@@ -146,7 +146,9 @@ export function createLapicFirCachedIntervalEvaluator(
     nodeToIdx.set(order[i]!, i)
   }
 
-  // Pre-allocate bounds buffer (mutated on each call)
+  // Pre-allocate bounds buffer (mutated in-place on each call).
+  // @remarks Not reentrant — callers must not invoke the returned evaluator
+  // concurrently or recursively.
   const boundsArr: LapicInterval[] = new Array(nodeCount)
   const rootIdx = nodeCount - 1
 

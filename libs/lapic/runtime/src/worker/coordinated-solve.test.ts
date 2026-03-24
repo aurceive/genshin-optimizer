@@ -881,3 +881,62 @@ describe('computeIncumbentThreshold', () => {
     expect(computeIncumbentThreshold(candidates, 3)).toBe('0000001.0000')
   })
 })
+
+// ---------------------------------------------------------------------------
+// A-8: Progress forwarding from partitions to parent
+// ---------------------------------------------------------------------------
+
+describe('coordinated solve — progress forwarding', () => {
+  const slotIds = ['slot-0', 'slot-1']
+  const domains = slotIds.map((slotId, i) => ({
+    domainId: `domain-${i}`,
+    slotId,
+    candidates: Array.from({ length: 4 }, (_, j) =>
+      candidate(`cand-${i}-${j}`, `domain-${i}`, slotId)
+    ),
+  }))
+
+  it('forwards partition progress events to parent controller', async () => {
+    const problem = createProblem({ slotIds, domains, topN: 1 })
+    const { store, controller } = createTestInfra()
+
+    const progressPhases: string[] = []
+    controller.subscribeProgress((event) => {
+      progressPhases.push(event.phase)
+    })
+
+    await executeCoordinatedBoundedExactSolve({
+      problem,
+      controller,
+      artifactStore: store,
+      evaluateCombination: numericEvaluator,
+      workerCount: 2,
+    })
+
+    // Should have received join progress events (from partition executor)
+    expect(progressPhases).toContain('join')
+  })
+
+  it('aggregated progress covers all combinations across partitions', async () => {
+    const problem = createProblem({ slotIds, domains, topN: 1 })
+    const { store, controller } = createTestInfra()
+
+    let maxCompleted = 0
+    controller.subscribeProgress((event) => {
+      if (event.phase === 'join' && event.completedUnits > maxCompleted) {
+        maxCompleted = event.completedUnits
+      }
+    })
+
+    await executeCoordinatedBoundedExactSolve({
+      problem,
+      controller,
+      artifactStore: store,
+      evaluateCombination: numericEvaluator,
+      workerCount: 2,
+    })
+
+    // Total combinations: 4 × 4 = 16. Aggregated progress should reach 16.
+    expect(maxCompleted).toBe(16)
+  })
+})

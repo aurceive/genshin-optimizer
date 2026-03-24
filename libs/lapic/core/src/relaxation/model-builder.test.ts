@@ -375,6 +375,88 @@ describe('buildLinearModelFromFir', () => {
     })
   })
 
+  describe('sumFrac (concave envelope relaxation)', () => {
+    it('emits secant + tangent constraints for sumFrac', () => {
+      const b = new LapicFirGraphBuilder()
+      const x = b.read('x')
+      const c = b.read('c')
+      const root = b.sumFrac(x, c)
+      const graph = b.build(root)
+
+      const vb = bounds(['x', 100, 200], ['c', 50, 100])
+      const result = buildLinearModelFromFir(graph, vb, 'test-sumfrac')
+
+      // 3 variables: x, c, y (sumFrac result)
+      expect(result.model.variables).toHaveLength(3)
+      // 1 (y ≤ 1) + 1 secant + 2 tangent = 4 constraints
+      expect(result.model.constraints).toHaveLength(4)
+      expect(result.relaxedNodeIds.has(graph.rootId)).toBe(true)
+      expect(validateLinearModel(result.model).ok).toBe(true)
+    })
+
+    it('LP upper bound is tighter than interval bound', () => {
+      const b = new LapicFirGraphBuilder()
+      const x = b.read('x')
+      const c = b.read('c')
+      const root = b.sumFrac(x, c)
+      const graph = b.build(root)
+
+      const vb = bounds(['x', 100, 500], ['c', 200, 400])
+      const result = buildLinearModelFromFir(graph, vb, 'test-sf-tight')
+
+      const intervalResult = evaluateLapicFirIntervals(graph, vb)
+      const yVar =
+        result.model.variables[result.nodeVariableIndex.get(graph.rootId)!]!
+
+      // LP bounds should be within interval bounds
+      expect(yVar.lowerBound).toBeGreaterThanOrEqual(
+        intervalResult.rootBound.lo - 1e-9
+      )
+      expect(yVar.upperBound).toBeLessThanOrEqual(
+        intervalResult.rootBound.hi + 1e-9
+      )
+    })
+
+    it('concrete scalar point falls within LP bounds', () => {
+      const b = new LapicFirGraphBuilder()
+      const x = b.read('x')
+      const c = b.read('c')
+      const root = b.sumFrac(x, c)
+      const graph = b.build(root)
+
+      const vb = bounds(['x', 100, 500], ['c', 200, 400])
+      const result = buildLinearModelFromFir(graph, vb, 'test-sf-point')
+      const yVar =
+        result.model.variables[result.nodeVariableIndex.get(graph.rootId)!]!
+
+      // Concrete: 300 / (300 + 300) = 0.5
+      const scalarResult = evaluateLapicFirScalar(
+        graph,
+        new Map<LapicFirVariableId, number>([
+          ['x', 300],
+          ['c', 300],
+        ])
+      )
+      expect(scalarResult.rootValue).toBeGreaterThanOrEqual(
+        yVar.lowerBound - 1e-9
+      )
+      expect(scalarResult.rootValue).toBeLessThanOrEqual(yVar.upperBound + 1e-9)
+    })
+
+    it('skips structural constraints when xL === xH (point interval)', () => {
+      const b = new LapicFirGraphBuilder()
+      const root = b.sumFrac(b.read('x'), b.read('c'))
+      const graph = b.build(root)
+
+      const vb = bounds(['x', 200, 200], ['c', 50, 100])
+      const result = buildLinearModelFromFir(graph, vb, 'test-sf-point-x')
+
+      // Only y ≤ 1 (no secant/tangent since xL === xH)
+      expect(result.model.constraints).toHaveLength(1)
+      expect(validateLinearModel(result.model).ok).toBe(true)
+    })
+  })
+
   describe('mul operator edge cases', () => {
     it('handles empty product as constant 1', () => {
       // Can't build empty mul via builder, so test unary

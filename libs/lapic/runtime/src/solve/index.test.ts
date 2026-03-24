@@ -1443,3 +1443,97 @@ describe('executor danger-zone integration', () => {
     })
   })
 })
+
+// ---------------------------------------------------------------------------
+// A-2: Sync hot loop pause and progress tests
+// ---------------------------------------------------------------------------
+
+describe('sync hot loop — pause detection', () => {
+  it('detects pause requested during join and returns checkpoint', async () => {
+    const { store, controller } = createController()
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+    let evaluationCount = 0
+
+    const outcome = await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        evaluationCount += 1
+        // Request pause after first evaluation
+        if (evaluationCount === 1) {
+          controller.requestPause()
+        }
+        const key = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    // Should return a pause result, not a completion
+    expect('paused' in outcome && outcome.paused).toBe(true)
+  })
+})
+
+describe('sync hot loop — progress events', () => {
+  it('publishes final join progress with skippedUnits field', async () => {
+    const { store, controller } = createController()
+    const progressEvents: Array<{
+      phase: string
+      completedUnits: number
+      skippedUnits?: number
+    }> = []
+    const scores: Record<string, string> = {
+      'flower-a|plume-a': '0010',
+      'flower-a|plume-b': '0020',
+      'flower-b|plume-a': '0030',
+      'flower-b|plume-b': '0005',
+    }
+
+    controller.subscribeProgress((event) => {
+      progressEvents.push({
+        phase: event.phase,
+        completedUnits: event.completedUnits,
+        skippedUnits: event.skippedUnits,
+      })
+    })
+
+    await executeLapicBoundedExactSolve({
+      problem: createProblem(),
+      controller,
+      artifactStore: store,
+      evaluateCombination({ candidates }) {
+        const key = candidates
+          .map((candidate) => candidate.candidateId)
+          .join('|')
+        return createLapicSuccessResult({
+          objectiveValue: scores[key]!,
+          evidenceDigest: `evidence:${key}`,
+          orderingKey: [scores[key]!],
+        })
+      },
+      maxCombinationCount: 16,
+    })
+
+    // Should have at least one join progress event
+    const joinEvents = progressEvents.filter((e) => e.phase === 'join')
+    expect(joinEvents.length).toBeGreaterThan(0)
+
+    // Last join event should have 4 completed (2 flowers × 2 plumes)
+    const lastJoin = joinEvents[joinEvents.length - 1]!
+    expect(lastJoin.completedUnits).toBe(4)
+    // skippedUnits should be present (0 since no pruning in this test)
+    expect(lastJoin.skippedUnits).toBe(0)
+  })
+})

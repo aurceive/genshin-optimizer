@@ -109,11 +109,10 @@ export function fillLapicFirPartialIntervalEnv(
   }
 
   // 2. Assigned candidates → point intervals
-  // Track assigned domains via small array (typically ≤ 5 domains)
-  const assignedDomainIds: string[] = []
+  const assignedDomainIds = new Set<string>()
 
   for (const candidate of assignedCandidates) {
-    assignedDomainIds.push(candidate.domainId)
+    assignedDomainIds.add(candidate.domainId)
     const dvm = domainMapById.get(candidate.domainId)
     if (!dvm) continue
     const vars = dvm.candidateVariables.get(candidate.candidateId)
@@ -125,7 +124,7 @@ export function fillLapicFirPartialIntervalEnv(
 
   // 3. Unassigned domains → envelope intervals
   for (const dvm of domainVariableMaps) {
-    if (assignedDomainIds.includes(dvm.domainId)) continue
+    if (assignedDomainIds.has(dvm.domainId)) continue
     const envelopes = domainEnvelopes.get(dvm.domainId)
     if (!envelopes) continue
     for (const [varId, iv] of envelopes) {

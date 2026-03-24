@@ -153,7 +153,12 @@ function evaluateNodeScalar(
     case 'sumFrac': {
       const num = childValue(values, node.numeratorId)
       const add = childValue(values, node.addendId)
-      return num / (num + add)
+      const denom = num + add
+      if (denom === 0)
+        throw new Error(
+          'sumFrac: denominator is zero (x + c = 0). Target is unsupported.'
+        )
+      return num / denom
     }
 
     default: {

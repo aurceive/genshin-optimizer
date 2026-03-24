@@ -1,7 +1,10 @@
 import { lapicInterval, lapicIntervalPoint } from '../interval/types'
 import { LapicFirGraphBuilder } from './builders'
 import { runLapicGoldenHarness } from './golden-harness'
-import { evaluateLapicFirIntervals } from './interval-eval'
+import {
+  createLapicFirCachedIntervalEvaluator,
+  evaluateLapicFirIntervals,
+} from './interval-eval'
 import { evaluateLapicFirScalar } from './scalar-eval'
 import { lapicFirNodeChildIds } from './types'
 import type { LapicFirNode } from './types'
@@ -568,6 +571,152 @@ describe('evaluateLapicFirIntervals', () => {
     expect(result.rootBound.lo).toBeCloseTo(3780)
     expect(result.rootBound.hi).toBeCloseTo(8100)
   })
+
+  it('evaluates sumFrac: x/(x+c) with positive intervals', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const c = b.read('c')
+    const root = b.sumFrac(x, c)
+    const g = b.build(root)
+
+    const env = new Map([
+      ['x', lapicInterval(100, 200)],
+      ['c', lapicInterval(50, 100)],
+    ])
+    const result = evaluateLapicFirIntervals(g, env)
+    // Corner evals: 100/(100+50)=0.667, 100/(100+100)=0.5,
+    //               200/(200+50)=0.8,   200/(200+100)=0.667
+    expect(result.rootBound.lo).toBeCloseTo(0.5)
+    expect(result.rootBound.hi).toBeCloseTo(0.8)
+  })
+
+  it('evaluates sumFrac: point intervals yield point result', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const c = b.read('c')
+    const root = b.sumFrac(x, c)
+    const g = b.build(root)
+
+    const env = new Map([
+      ['x', lapicIntervalPoint(300)],
+      ['c', lapicIntervalPoint(200)],
+    ])
+    const result = evaluateLapicFirIntervals(g, env)
+    // 300 / (300 + 200) = 0.6
+    expect(result.rootBound.lo).toBeCloseTo(0.6)
+    expect(result.rootBound.hi).toBeCloseTo(0.6)
+  })
+
+  it('evaluates sumFrac: x=0 yields 0', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.sumFrac(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    const env = new Map([
+      ['x', lapicIntervalPoint(0)],
+      ['c', lapicInterval(50, 100)],
+    ])
+    const result = evaluateLapicFirIntervals(g, env)
+    // 0 / (0 + c) = 0 for any c > 0
+    expect(result.rootBound.lo).toBeCloseTo(0)
+    expect(result.rootBound.hi).toBeCloseTo(0)
+  })
+
+  it('evaluates sumFrac: throws when denom=0 is possible', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.sumFrac(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    const env = new Map([
+      ['x', lapicIntervalPoint(0)],
+      ['c', lapicIntervalPoint(0)],
+    ])
+    expect(() => evaluateLapicFirIntervals(g, env)).toThrow(
+      /denominator is zero/
+    )
+  })
+})
+
+// =========================================================================
+// Cached Interval Evaluator
+// =========================================================================
+
+describe('createLapicFirCachedIntervalEvaluator', () => {
+  it('produces same bounds as evaluateLapicFirIntervals', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const y = b.read('y')
+    const root = b.mul(x, y)
+    const g = b.build(root)
+
+    const env = new Map([
+      ['x', lapicInterval(2, 5)],
+      ['y', lapicInterval(3, 7)],
+    ])
+
+    const fullResult = evaluateLapicFirIntervals(g, env)
+    const cached = createLapicFirCachedIntervalEvaluator(g)
+    const cachedBound = cached(env)
+
+    expect(cachedBound.lo).toBe(fullResult.rootBound.lo)
+    expect(cachedBound.hi).toBe(fullResult.rootBound.hi)
+  })
+
+  it('can be reused with different environments', () => {
+    const b = new LapicFirGraphBuilder()
+    const x = b.read('x')
+    const c = b.read('c')
+    const root = b.sumFrac(x, c)
+    const g = b.build(root)
+
+    const cached = createLapicFirCachedIntervalEvaluator(g)
+
+    const env1 = new Map([
+      ['x', lapicInterval(100, 200)],
+      ['c', lapicInterval(50, 100)],
+    ])
+    const env2 = new Map([
+      ['x', lapicInterval(0, 1000)],
+      ['c', lapicInterval(200, 300)],
+    ])
+
+    const r1 = cached(env1)
+    const r2 = cached(env2)
+
+    // Different environments should give different results
+    expect(r1.lo).not.toBe(r2.lo)
+    expect(r1.hi).not.toBe(r2.hi)
+
+    // Verify against full evaluator
+    expect(r1.lo).toBe(evaluateLapicFirIntervals(g, env1).rootBound.lo)
+    expect(r2.lo).toBe(evaluateLapicFirIntervals(g, env2).rootBound.lo)
+  })
+
+  it('handles complex graph with multiple operators', () => {
+    const b = new LapicFirGraphBuilder()
+    const atk = b.read('atk')
+    const dmg = b.read('dmg')
+    const res = b.read('res')
+    const root = b.mul(
+      atk,
+      b.add(b.constant(1), dmg),
+      b.resistanceTransform(res)
+    )
+    const g = b.build(root)
+
+    const env = new Map([
+      ['atk', lapicInterval(2000, 3000)],
+      ['dmg', lapicInterval(0.4, 0.8)],
+      ['res', lapicInterval(0.1, 0.1)],
+    ])
+
+    const cached = createLapicFirCachedIntervalEvaluator(g)
+    const result = cached(env)
+    const full = evaluateLapicFirIntervals(g, env)
+
+    expect(result.lo).toBeCloseTo(full.rootBound.lo)
+    expect(result.hi).toBeCloseTo(full.rootBound.hi)
+  })
 })
 
 // =========================================================================
@@ -819,6 +968,53 @@ describe('evaluateLapicFirScalar', () => {
     const result = evaluateLapicFirScalar(g, env)
     // 2000 * 1.466 * 1.5 * 0.9 = 3958.2
     expect(result.rootValue).toBeCloseTo(3958.2, 0)
+  })
+
+  it('evaluates sumFrac: x/(x+c)', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.sumFrac(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    // 300 / (300 + 200) = 0.6
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['x', 300],
+        ['c', 200],
+      ])
+    )
+    expect(result.rootValue).toBeCloseTo(0.6)
+  })
+
+  it('evaluates sumFrac: x=0 with c>0 yields 0', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.sumFrac(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    const result = evaluateLapicFirScalar(
+      g,
+      new Map([
+        ['x', 0],
+        ['c', 100],
+      ])
+    )
+    expect(result.rootValue).toBe(0)
+  })
+
+  it('evaluates sumFrac: throws when denom=0', () => {
+    const b = new LapicFirGraphBuilder()
+    const root = b.sumFrac(b.read('x'), b.read('c'))
+    const g = b.build(root)
+
+    expect(() =>
+      evaluateLapicFirScalar(
+        g,
+        new Map([
+          ['x', 0],
+          ['c', 0],
+        ])
+      )
+    ).toThrow(/denominator is zero/)
   })
 })
 

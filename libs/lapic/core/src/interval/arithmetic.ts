@@ -210,7 +210,10 @@ export function lapicIntervalSumFrac(
 
 function sumFracPoint(x: number, c: number): number {
   const denom = x + c
-  if (denom === 0) return 0
+  if (denom === 0)
+    throw new Error(
+      'sumFrac: denominator is zero (x + c = 0). Target is unsupported.'
+    )
   return x / denom
 }
 
