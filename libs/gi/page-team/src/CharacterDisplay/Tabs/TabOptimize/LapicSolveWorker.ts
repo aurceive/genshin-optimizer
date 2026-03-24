@@ -17,6 +17,7 @@ import {
 import type {
   GiLapicSolveOrchestration,
   GiLapicCanonicalExport,
+  GiLapicCandidateVariableExtractor,
 } from '@genshin-optimizer/gi/lapic-adapter'
 import type {
   LapicBoundedExactCandidateCombination,
@@ -181,6 +182,21 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     }
   }
 
+  // Build candidate variable extractor for B&B pruning.
+  // Maps each artifact's stat values to F-IR variable IDs ('dyn:{statKey}')
+  // so the interval-arithmetic bound provider can compute admissible upper bounds.
+  const candidateVariableExtractor: GiLapicCandidateVariableExtractor = (
+    candidateId: string
+  ) => {
+    const art = artifactById.get(candidateId)
+    if (!art) return new Map()
+    const variables = new Map<string, number>()
+    for (const [statKey, value] of Object.entries(art.values)) {
+      variables.set(`dyn:${statKey}`, value)
+    }
+    return variables
+  }
+
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
   let failedCount = 0
 
@@ -259,6 +275,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     optConfig,
     normalizationInput,
     evaluateCombination,
+    candidateVariableExtractor,
     topN,
   })
 
