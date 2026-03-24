@@ -638,12 +638,22 @@ export default function TabBuild() {
 
         // Send computation data to worker
         worker.postMessage({
-          type: 'start',
-          nodes,
+          type: 'init',
+          optimizedNodes: nodes,
           base: split.base,
           artsBySlot: Object.values(split.values),
           constraintMinimums: minimum,
+          artifacts: filteredArts,
+          optimizationTarget: targetNode,
+          constraints: valueFilter.map((x) => ({
+            value: x.value,
+            minimum: x.minimum,
+          })),
+          optConfig: buildSetting,
           topN: maxBuildsToShow,
+          workerCount: 1,
+          problemId: `${characterKey}:${teamId}`,
+          characterKey,
         })
       })
 

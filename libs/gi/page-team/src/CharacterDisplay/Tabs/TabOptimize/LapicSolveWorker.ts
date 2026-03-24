@@ -1,145 +1,319 @@
 /**
- * Web Worker for lapic engine computation.
+ * Web Worker for the lapic optimization engine.
  *
- * Receives optimized formula nodes and compacted artifact data,
- * evaluates all combinations using `precompute()`, and returns
- * the top-N builds.
- *
- * This runs heavy computation off the main thread to keep the UI
- * responsive — mirroring the approach used by the legacy GOSolver.
+ * Runs the full lapic orchestration pipeline off the main thread:
+ * 1. Reconstructs the GI stat evaluator via `precompute()`
+ * 2. Builds a proper normalization input for GI artifact optimization
+ * 3. Runs `createGiLapicSolveOrchestration()` with coordinated solve
+ *    (domain partitioning, B&B pruning, incumbent sharing)
+ * 4. Forwards progress events and top-N results to the main thread
  */
 
-import type { ArtifactBuildData, DynStat } from '@genshin-optimizer/gi/solver'
-import type { OptNode } from '@genshin-optimizer/gi/wr'
+import type { ArtifactBuildData } from '@genshin-optimizer/gi/solver'
+import {
+  createGiLapicOrchestrationConfigFromUi,
+  createGiLapicSolveOrchestration,
+} from '@genshin-optimizer/gi/lapic-adapter'
+import type {
+  GiLapicSolveOrchestration,
+  GiLapicCanonicalExport,
+} from '@genshin-optimizer/gi/lapic-adapter'
+import type {
+  LapicBoundedExactCandidateCombination,
+  LapicBoundedExactCombinationEvaluation,
+} from '@genshin-optimizer/lapic/runtime'
+import type {
+  LapicProblemNormalizationInput,
+  LapicValidationResult,
+} from '@genshin-optimizer/lapic/core'
 import { precompute } from '@genshin-optimizer/gi/wr'
+import type { OptNode, ReadNode } from '@genshin-optimizer/gi/wr'
 import type {
   LapicWorkerInMsg,
   LapicWorkerOutMsg,
-  LapicWorkerStartMsg,
+  LapicWorkerInitMsg,
 } from './lapicBridge'
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
 
-let cancelled = false
+// ---------------------------------------------------------------------------
+// GI artifact slot normalization
+// ---------------------------------------------------------------------------
+
+const GI_ARTIFACT_SLOTS = [
+  'flower',
+  'plume',
+  'sands',
+  'goblet',
+  'circlet',
+] as const
+
+/**
+ * Build a `LapicProblemNormalizationInput` for single-character
+ * artifact optimization with 5 artifact slots.
+ *
+ * The `itemDomains` field is intentionally empty because the
+ * canonical export builder overrides it with domains derived
+ * from the GI adapter context (filtered artifacts by slot).
+ */
+function createGiArtifactNormalizationInput(
+  topN: number
+): LapicProblemNormalizationInput {
+  return {
+    teamLayout: {
+      teamKind: 'gi-single',
+      slotCount: 5,
+      slotIds: [...GI_ARTIFACT_SLOTS],
+      slotRoleTaxonomy: ['artifact'],
+      slotRequirements: Object.fromEntries(
+        GI_ARTIFACT_SLOTS.map((s) => [s, 'required' as const])
+      ) as Record<string, 'required'>,
+      slotOrderSemantics: 'semantic',
+      frameAxisKind: 'none',
+    },
+    slotDescriptors: GI_ARTIFACT_SLOTS.map((slotId) => ({
+      slotId,
+      slotRole: `artifact-${slotId}`,
+      participationMode: 'optimizedBuild' as const,
+      occupantDomainId: `gi:${slotId}`,
+      equipmentOwnershipModel: 'hard-reserved-inventory' as const,
+      contributesToObjective: true,
+      contributesToConstraints: true,
+      mayRemainEmpty: false,
+    })),
+    sharedTeamContext: {
+      adapterSemanticMode: 'gi-legacy-compatibility',
+      aggregateFacts: {},
+      metadata: {},
+    },
+    itemDomains: [],
+    compatibilityRules: [],
+    objective: {
+      objectiveId: 'gi-optimization-target',
+      objectiveKind: 'single-slot',
+      expressionDigest: 'gi-precompute-target',
+      targetSlotIds: [...GI_ARTIFACT_SLOTS],
+      frameIds: [],
+    },
+    constraints: [],
+    topN,
+    orderingPolicy: {
+      tieBreakDimensions: ['value'],
+      canonicalCandidateOrdering: ['value'],
+    },
+    adapterMetadata: {
+      adapterKind: 'gi-wr',
+      adapterVersion: '0.1.0-draft',
+      sourceSnapshotDigests: [],
+      declaredUnsupportedFeatures: [],
+      metadata: {},
+    },
+    provenance: {
+      teamLayoutDigest: 'gi-single-character',
+      sharedTeamContextDigest: 'gi-default',
+      crossSlotRuleDescriptorVersion: '0.1.0-draft',
+      compatibilitySignatureSchemaVersion: '0.1.0-draft',
+      slotProvenance: [],
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Worker entry point
+// ---------------------------------------------------------------------------
+
+let orchestration: GiLapicSolveOrchestration | null = null
 
 onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
   const msg = e.data
 
   if (msg.type === 'cancel') {
-    cancelled = true
+    orchestration?.handle.requestCancel().catch(() => {})
     return
   }
 
-  if (msg.type === 'start') {
-    cancelled = false
-    try {
-      solve(msg)
-    } catch (err) {
+  if (msg.type === 'init') {
+    runSolve(msg).catch((err) => {
       postMessage({
         type: 'error',
         message: err instanceof Error ? err.message : String(err),
       })
-    }
+    })
   }
 }
 
-function solve(msg: LapicWorkerStartMsg): void {
-  const { nodes, base, artsBySlot, constraintMinimums, topN } = msg
+async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
+  const {
+    optimizedNodes,
+    base,
+    artsBySlot,
+    constraintMinimums,
+    artifacts,
+    optimizationTarget,
+    constraints,
+    optConfig,
+    topN,
+    workerCount,
+    problemId,
+  } = msg
 
-  // Sort slot arrays by length (smallest first for cache-friendly inner loops)
-  const arts = artsBySlot.slice().sort((a, b) => a.length - b.length)
-
-  // Compile the evaluation function (same pipeline as legacy ComputeWorker)
+  // 1. Build evaluator from precompute()
+  const slotCount = artsBySlot.length
   const compute = precompute(
-    nodes as OptNode[],
-    base as DynStat,
-    (f) => f.path[1],
-    arts.length
+    optimizedNodes as OptNode[],
+    base,
+    (f: ReadNode<number>) => f.path[1],
+    slotCount
   )
 
-  // Count total combinations
-  let total = 1
-  for (const slotArts of arts) total *= slotArts.length
-
-  // Top-N build collector
-  let builds: Array<{ value: number; artifactIds: string[] }> = []
-  let threshold = -Infinity
-
-  const buffer = new Array<ArtifactBuildData>(arts.length)
-  let testedBatch = 0
-  let failedBatch = 0
-  let testedTotal = 0
-
-  function refresh(force: boolean): void {
-    if (builds.length >= 1000 || force) {
-      builds.sort((a, b) => b.value - a.value)
-      builds = builds.slice(0, topN)
-      threshold = Math.max(threshold, builds[topN - 1]?.value ?? -Infinity)
+  // Build lookup: candidateId → ArtifactBuildData
+  const artifactById = new Map<string, ArtifactBuildData>()
+  for (const slotArts of artsBySlot) {
+    for (const art of slotArts) {
+      if (art.id) artifactById.set(art.id, art)
     }
   }
 
-  function report(): void {
-    refresh(false)
-    testedTotal += testedBatch
-    postMessage({
-      type: 'progress',
-      tested: testedTotal,
-      failed: failedBatch,
-      total,
-    })
-    testedBatch = 0
-    failedBatch = 0
-  }
-
-  const permute = (i: number): void => {
-    if (cancelled) return
-
-    if (i < 0) {
-      const result = compute(buffer)
-
-      // Check constraints (first N entries in result)
-      for (let c = 0; c < constraintMinimums.length; c++) {
-        if (result[c] < constraintMinimums[c]) {
-          failedBatch++
-          return
+  // 2. Create the lapic evaluator (maps candidate combinations → scores)
+  const evaluateCombination = (
+    combination: LapicBoundedExactCandidateCombination,
+    _canonicalExport: GiLapicCanonicalExport
+  ): LapicValidationResult<LapicBoundedExactCombinationEvaluation> => {
+    const buffer: ArtifactBuildData[] = []
+    for (const candidate of combination.candidates) {
+      const art = artifactById.get(candidate.candidateId)
+      if (!art) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              severity: 'error',
+              code: 'ARTIFACT_NOT_FOUND',
+              message: `Artifact not found: ${candidate.candidateId}`,
+              path: ['candidateId'],
+            },
+          ],
         }
       }
+      buffer.push(art)
+    }
 
-      // Objective value is at index constraintMinimums.length
-      const value = result[constraintMinimums.length]
-      if (value >= threshold) {
-        builds.push({
-          value,
-          artifactIds: buffer
-            .map((x) => x.id)
-            .filter((id): id is string => !!id),
-        })
+    const result = compute(
+      buffer as readonly {
+        readonly values: Readonly<Record<string, number>>
+      }[] & { length: typeof slotCount }
+    )
+
+    // Check constraints (first N entries in result)
+    for (let c = 0; c < constraintMinimums.length; c++) {
+      if (result[c] < constraintMinimums[c]) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              severity: 'error',
+              code: 'CONSTRAINT_VIOLATED',
+              message: `Constraint ${c} violated: ${result[c]} < ${constraintMinimums[c]}`,
+              path: ['constraint', String(c)],
+            },
+          ],
+        }
       }
-      return
     }
 
-    for (const art of arts[i]) {
-      buffer[i] = art
-      permute(i - 1)
-    }
+    // Objective value is at index constraintMinimums.length
+    const objectiveValue = result[constraintMinimums.length]
 
-    // Progress reporting at the innermost iteration level
-    if (i === 0) {
-      testedBatch += arts[0].length
-      if (testedBatch > 1 << 16) report()
+    return {
+      ok: true,
+      value: {
+        objectiveValue: String(objectiveValue),
+        evidenceDigest: `gi-precompute:${objectiveValue}`,
+      },
+      diagnostics: [],
     }
   }
 
-  permute(arts.length - 1)
+  // 3. Build orchestration config via the adapter's config factory
+  const normalizationInput = createGiArtifactNormalizationInput(topN)
 
-  // Final result
-  testedTotal += testedBatch
-  refresh(true)
+  const config = createGiLapicOrchestrationConfigFromUi({
+    problemId,
+    artifacts,
+    optimizationTarget: optimizationTarget as OptNode,
+    constraints: constraints.map((c) => ({
+      value: c.value as OptNode,
+      min: c.minimum,
+    })),
+    optConfig,
+    normalizationInput,
+    evaluateCombination,
+    topN,
+  })
+
+  // 4. Create orchestration
+  orchestration = createGiLapicSolveOrchestration({
+    ...config,
+    workerCount,
+  })
+
+  // 5. Subscribe to progress
+  let totalCombinations = 0
+  let evaluatedCount = 0
+  const failedCount = 0
+
+  orchestration.handle.subscribeProgress((event) => {
+    if (event.phase === 'join') {
+      evaluatedCount = event.completedUnits
+      if (event.totalUnits !== undefined) {
+        totalCombinations = event.totalUnits
+      }
+    }
+    postMessage({
+      type: 'progress',
+      tested: evaluatedCount,
+      failed: failedCount,
+      total: totalCombinations,
+    })
+  })
+
+  // 6. Start the solve
+  const outcome = await orchestration.start()
+
+  // 7. Map results to the expected format
+  if (outcome.state === 'completed' && outcome.solveOutcome) {
+    const solveResult = outcome.solveOutcome
+    if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
+      const builds = solveResult.topNCandidates.map((entry) => ({
+        value: parseFloat(entry.evaluation.objectiveValue),
+        artifactIds: entry.candidates.map((c) => c.candidateId),
+      }))
+
+      postMessage({
+        type: 'result',
+        builds,
+        tested: evaluatedCount,
+        failed: failedCount,
+        total: totalCombinations,
+      })
+      return
+    }
+  }
+
+  if (outcome.state === 'failed') {
+    postMessage({
+      type: 'error',
+      message: outcome.error?.message ?? 'Lapic solve failed',
+    })
+    return
+  }
+
+  // Cancelled, paused, or no results
   postMessage({
     type: 'result',
-    builds: builds.slice(0, topN),
-    tested: testedTotal,
-    failed: failedBatch,
-    total,
+    builds: [],
+    tested: evaluatedCount,
+    failed: failedCount,
+    total: totalCombinations,
   })
 }
