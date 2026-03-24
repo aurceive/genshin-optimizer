@@ -133,7 +133,14 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
   }
 
   if (msg.type === 'init') {
-    runSolve(msg).catch((err) => {
+    // Cancel any in-flight orchestration before starting a new one
+    const prev = orchestration
+    orchestration = null
+    const start = async () => {
+      if (prev) await prev.handle.requestCancel().catch(() => {})
+      return runSolve(msg)
+    }
+    start().catch((err) => {
       postMessage({
         type: 'error',
         message: err instanceof Error ? err.message : String(err),
@@ -175,6 +182,8 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   }
 
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
+  let failedCount = 0
+
   const evaluateCombination = (
     combination: LapicBoundedExactCandidateCombination,
     _canonicalExport: GiLapicCanonicalExport
@@ -183,6 +192,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     for (const candidate of combination.candidates) {
       const art = artifactById.get(candidate.candidateId)
       if (!art) {
+        failedCount++
         return {
           ok: false,
           diagnostics: [
@@ -207,6 +217,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     // Check constraints (first N entries in result)
     for (let c = 0; c < constraintMinimums.length; c++) {
       if (result[c] < constraintMinimums[c]) {
+        failedCount++
         return {
           ok: false,
           diagnostics: [
@@ -260,7 +271,6 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 5. Subscribe to progress
   let totalCombinations = 0
   let evaluatedCount = 0
-  const failedCount = 0
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {

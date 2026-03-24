@@ -1,6 +1,6 @@
 /**
  * Message protocol between the GI optimization UI and the lapic
- * engine Web Worker (`LapicExecutorWorker.ts`).
+ * engine Web Worker (`LapicSolveWorker.ts`).
  *
  * The Worker runs the full lapic orchestration pipeline internally:
  * - Builds a GI canonical export from the adapter request
@@ -50,8 +50,6 @@ export interface LapicWorkerInitMsg {
   readonly workerCount: number
   /** Problem identifier (e.g., "characterKey:teamId") */
   readonly problemId: string
-  /** Character key */
-  readonly characterKey: string
 }
 
 export interface LapicWorkerCancelMsg {

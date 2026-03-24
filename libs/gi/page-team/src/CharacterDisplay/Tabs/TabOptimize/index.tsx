@@ -653,7 +653,6 @@ export default function TabBuild() {
           topN: maxBuildsToShow,
           workerCount: 1,
           problemId: `${characterKey}:${teamId}`,
-          characterKey,
         })
       })
 
