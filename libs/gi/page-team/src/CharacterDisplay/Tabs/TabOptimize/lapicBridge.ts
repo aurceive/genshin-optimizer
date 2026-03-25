@@ -7,11 +7,20 @@
  * - Compiles the formula via `precompute()`
  * - Runs `executeCoordinatedBoundedExactSolve()` with B&B pruning
  * - Returns top-N candidates with artifact IDs
+ *
+ * Progress and diagnostic events use canonical runtime types
+ * (`LapicProgressEvent`, `LapicFailureRecord`, `LapicTraceEvent`)
+ * to stay aligned with the lapic session lifecycle protocol.
  */
 
 import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { ArtifactBuildData, DynStat } from '@genshin-optimizer/gi/solver'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
+import type {
+  LapicFailureRecord,
+  LapicProgressEvent,
+  LapicTraceEvent,
+} from '@genshin-optimizer/lapic/runtime'
 
 // ---------------------------------------------------------------------------
 // Main → Worker messages
@@ -56,18 +65,23 @@ export interface LapicWorkerCancelMsg {
   readonly type: 'cancel'
 }
 
-export type LapicWorkerInMsg = LapicWorkerInitMsg | LapicWorkerCancelMsg
+export interface LapicWorkerPauseMsg {
+  readonly type: 'pause'
+}
+
+export type LapicWorkerInMsg =
+  | LapicWorkerInitMsg
+  | LapicWorkerCancelMsg
+  | LapicWorkerPauseMsg
 
 // ---------------------------------------------------------------------------
 // Worker → Main messages
 // ---------------------------------------------------------------------------
 
+/** Forwards a canonical `LapicProgressEvent` from the runtime. */
 export interface LapicWorkerProgressMsg {
   readonly type: 'progress'
-  readonly tested: number
-  readonly failed: number
-  readonly skipped: number
-  readonly total: number
+  readonly event: LapicProgressEvent
 }
 
 export interface LapicWorkerResultMsg {
@@ -87,11 +101,19 @@ export interface LapicWorkerErrorMsg {
   readonly message: string
 }
 
+/** Forwards a canonical diagnostic from the runtime session. */
 export interface LapicWorkerDiagnosticMsg {
   readonly type: 'diagnostic'
-  readonly severity: 'error' | 'warning' | 'info'
-  readonly code: string
-  readonly message: string
+  readonly event: LapicTraceEvent | LapicFailureRecord
+}
+
+/**
+ * Status change notification from the Worker to the main thread.
+ * Enables the UI to track the session lifecycle state machine.
+ */
+export interface LapicWorkerStatusMsg {
+  readonly type: 'status'
+  readonly status: 'running' | 'completed' | 'paused' | 'failed' | 'cancelled'
 }
 
 export type LapicWorkerOutMsg =
@@ -99,3 +121,4 @@ export type LapicWorkerOutMsg =
   | LapicWorkerResultMsg
   | LapicWorkerErrorMsg
   | LapicWorkerDiagnosticMsg
+  | LapicWorkerStatusMsg

@@ -37,6 +37,12 @@ import type {
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
 
+// Track evaluated and failed counts outside subscriptions for result reporting
+let evaluatedCount = 0
+let failedCount = 0
+let skippedCount = 0
+let totalCombinations = 0
+
 // ---------------------------------------------------------------------------
 // GI artifact slot normalization
 // ---------------------------------------------------------------------------
@@ -133,6 +139,11 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
     return
   }
 
+  if (msg.type === 'pause') {
+    orchestration?.handle.requestPause().catch(() => {})
+    return
+  }
+
   if (msg.type === 'init') {
     // Cancel any in-flight orchestration before starting a new one
     const prev = orchestration
@@ -198,7 +209,10 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   }
 
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
-  let failedCount = 0
+  failedCount = 0
+  evaluatedCount = 0
+  skippedCount = 0
+  totalCombinations = 0
 
   const evaluateCombination = (
     combination: LapicBoundedExactCandidateCombination,
@@ -295,12 +309,11 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     workerCount,
   })
 
-  // 5. Subscribe to progress (throttled to avoid flooding the main thread)
-  let totalCombinations = 0
-  let evaluatedCount = 0
-  let skippedCount = 0
+  // 5. Subscribe to progress — forward canonical LapicProgressEvent objects
   let lastProgressPostTime = 0
   const PROGRESS_THROTTLE_MS = 500
+
+  postMessage({ type: 'status', status: 'running' })
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
@@ -313,42 +326,13 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     const now = performance.now()
     if (now - lastProgressPostTime >= PROGRESS_THROTTLE_MS) {
       lastProgressPostTime = now
-      postMessage({
-        type: 'progress',
-        tested: evaluatedCount,
-        failed: failedCount,
-        skipped: skippedCount,
-        total: totalCombinations,
-      })
+      postMessage({ type: 'progress', event })
     }
   })
 
-  // 5b. Subscribe to diagnostics and forward to main thread
+  // 5b. Subscribe to diagnostics — forward canonical events directly
   orchestration.handle.subscribeDiagnostics((event) => {
-    if ('failureClass' in event) {
-      // LapicFailureRecord
-      const severity = event.diagnostics.some((d) => d.severity === 'error')
-        ? 'error'
-        : event.diagnostics.some((d) => d.severity === 'warning')
-          ? 'warning'
-          : 'info'
-      postMessage({
-        type: 'diagnostic',
-        severity,
-        code: event.failureClass,
-        message: event.message,
-      })
-    } else {
-      // LapicTraceEvent — only forward non-routine tags
-      if (event.tag === 'ReportFailure') {
-        postMessage({
-          type: 'diagnostic',
-          severity: 'warning',
-          code: event.tag,
-          message: `Trace: ${event.tag} [${event.eventDigest}]`,
-        })
-      }
-    }
+    postMessage({ type: 'diagnostic', event })
   })
 
   // 6. Start the solve
@@ -358,10 +342,13 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // Flush final progress unconditionally (throttle may have suppressed it)
   postMessage({
     type: 'progress',
-    tested: evaluatedCount,
-    failed: failedCount,
-    skipped: skippedCount,
-    total: totalCombinations,
+    event: {
+      sessionId: orchestration.sessionId,
+      phase: 'join',
+      completedUnits: evaluatedCount + skippedCount,
+      totalUnits: totalCombinations || undefined,
+      skippedUnits: skippedCount || undefined,
+    },
   })
 
   if (outcome.state === 'completed' && outcome.solveOutcome) {
@@ -372,6 +359,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
         artifactIds: entry.candidates.map((c) => c.candidateId),
       }))
 
+      postMessage({ type: 'status', status: 'completed' })
       postMessage({
         type: 'result',
         builds,
@@ -384,11 +372,20 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   }
 
   if (outcome.state === 'failed') {
+    postMessage({ type: 'status', status: 'failed' })
     postMessage({
       type: 'error',
       message: outcome.error?.message ?? 'Lapic solve failed',
     })
     return
+  }
+
+  if (outcome.state === 'paused') {
+    postMessage({ type: 'status', status: 'paused' })
+  } else if (outcome.state === 'cancelled') {
+    postMessage({ type: 'status', status: 'cancelled' })
+  } else {
+    postMessage({ type: 'status', status: 'completed' })
   }
 
   // Cancelled, paused, or no results

@@ -43,6 +43,11 @@ async function persistGiLapicCanonicalProblemArtifact(
   controller.publishArtifact(commit.artifactRef)
 }
 
+/**
+ * @deprecated Use `createGiLapicSolveOrchestration()` from `./orchestrate`
+ * instead. This function is retained only for existing test coverage and
+ * will be removed once tests are migrated to the orchestration API.
+ */
 export async function executeGiLapicBoundedCurrentOnlySolve(
   options: GiLapicBoundedCurrentOnlySolveOptions
 ): Promise<GiLapicBoundedCurrentOnlySolveResult> {

@@ -627,17 +627,34 @@ export default function TabBuild() {
         worker.onmessage = (e: MessageEvent<LapicWorkerOutMsg>) => {
           const msg = e.data
           if (msg.type === 'progress') {
-            status.tested = msg.tested
-            status.failed = msg.failed
-            status.skipped = msg.skipped
-            status.total = msg.total
+            const ev = msg.event
+            if (ev.phase === 'join') {
+              status.tested = ev.completedUnits - (ev.skippedUnits ?? 0)
+              status.skipped = ev.skippedUnits ?? 0
+              if (ev.totalUnits !== undefined) status.total = ev.totalUnits
+            }
           } else if (msg.type === 'result') {
             resolve(msg)
           } else if (msg.type === 'error') {
             reject(new Error(msg.message))
           } else if (msg.type === 'diagnostic') {
-            if (msg.severity === 'error' || msg.severity === 'warning') {
-              console.warn(`[lapic] ${msg.severity}: ${msg.message}`)
+            const ev = msg.event
+            if ('failureClass' in ev) {
+              const severity = ev.diagnostics.some(
+                (d) => d.severity === 'error'
+              )
+                ? 'error'
+                : ev.diagnostics.some((d) => d.severity === 'warning')
+                  ? 'warning'
+                  : 'info'
+              if (severity === 'error' || severity === 'warning') {
+                console.warn(`[lapic] ${severity}: ${ev.message}`)
+              }
+            }
+          } else if (msg.type === 'status') {
+            // Status lifecycle tracked for future pause/resume UI
+            if (process.env['NODE_ENV'] === 'development') {
+              console.log(`[lapic] status: ${msg.status}`)
             }
           }
         }
