@@ -55,6 +55,14 @@ export interface GiLapicSolveOrchestrationConfig {
   readonly maxCombinationCount?: number
   readonly computeUpperBound?: GiLapicBoundedCurrentOnlySolveOptions['computeUpperBound']
   readonly candidateVariableExtractor?: GiLapicBoundedCurrentOnlySolveOptions['candidateVariableExtractor']
+  /**
+   * Global constants for the FIR interval environment.
+   * These are additive base values (e.g., from `arts.base` after
+   * `pruneAll` + `reaffine`) that `precompute()` includes but
+   * the per-candidate variable extractor does not.
+   * Keys should match FIR variable IDs (`dyn:{statKey}`).
+   */
+  readonly globalConstants?: ReadonlyMap<string, number>
   /** Optional explicit session ID. */
   readonly sessionId?: string
   /**
@@ -177,6 +185,9 @@ export function createGiLapicSolveOrchestration(
               firGraph,
               canonicalExport: canonicalExport.value,
               extractVariables: config.candidateVariableExtractor,
+              ...(config.globalConstants !== undefined
+                ? { globalConstants: config.globalConstants }
+                : {}),
             })
           : undefined)
 

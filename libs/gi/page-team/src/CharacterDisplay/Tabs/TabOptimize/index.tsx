@@ -44,7 +44,12 @@ import {
 import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
 import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
-import { GOSolver, mergeBuilds, mergePlot } from '@genshin-optimizer/gi/solver'
+import {
+  GOSolver,
+  mergeBuilds,
+  mergePlot,
+  pruneAll,
+} from '@genshin-optimizer/gi/solver'
 import { getCharStat } from '@genshin-optimizer/gi/stats'
 import {
   ArtifactLevelSlider,
@@ -496,7 +501,7 @@ export default function TabBuild() {
   ])
 
   const generateBuildsLapic = useCallback(async () => {
-    const { maxBuildsToShow } = buildSetting
+    const { artSetExclusion, maxBuildsToShow } = buildSetting
     if (!characterKey || !buildSetting.optimizationTarget) return
     if (notificationRef.current) Notification?.requestPermission()
 
@@ -517,11 +522,51 @@ export default function TabBuild() {
     const constraintMinimums = valueFilter.map((x) => x.minimum)
     const minimum = [...constraintMinimums, -Infinity]
 
-    const nodes = optimize(
+    let nodes = optimize(
       unoptimizedNodes,
       workerData,
       ({ path: [p] }) => p !== 'dyn'
     )
+
+    // Pre-prune artifact candidates using the same pipeline as GOSolver.
+    // This dramatically reduces the search space and tightens FIR bounds.
+    let arts = split
+    ;({ nodes, arts } = pruneAll(
+      nodes,
+      minimum,
+      arts,
+      maxBuildsToShow,
+      artSetExclusion,
+      {
+        reaffine: true,
+        pruneArtRange: true,
+        pruneNodeRange: true,
+        pruneOrder: true,
+      }
+    ))
+    nodes = optimize(nodes, {}, (_) => false)
+
+    // Collect pruned artifact IDs so the domain builder only sees survivors
+    const prunedIds = new Set<string>()
+    for (const slotArts of Object.values(arts.values)) {
+      for (const a of slotArts) if (a.id) prunedIds.add(a.id)
+    }
+    const prunedFilteredArts = filteredArts.filter(
+      (a) => a.id && prunedIds.has(a.id)
+    )
+
+    if (process.env['NODE_ENV'] === 'development') {
+      const slotCounts = Object.entries(arts.values).map(
+        ([k, v]) => `${k}:${v.length}`
+      )
+      const total = Object.values(arts.values).reduce(
+        (a, v) => a * v.length,
+        1
+      )
+      console.log(
+        `[lapic] After pruneAll: ${slotCounts.join(', ')} → ${total} combinations`
+      )
+    }
 
     setChartData(undefined)
 
@@ -594,10 +639,10 @@ export default function TabBuild() {
         worker.postMessage({
           type: 'init',
           optimizedNodes: nodes,
-          base: split.base,
-          artsBySlot: Object.values(split.values),
-          constraintMinimums: minimum,
-          artifacts: filteredArts,
+          base: arts.base,
+          artsBySlot: Object.values(arts.values),
+          constraintMinimums,
+          artifacts: prunedFilteredArts,
           optimizationTarget: nodes[nodes.length - 1],
           constraints: valueFilter.map((x) => ({
             value: x.value,
@@ -617,6 +662,9 @@ export default function TabBuild() {
       status.tested = result.tested
       status.failed = result.failed
       status.total = result.total
+
+      if (process.env['NODE_ENV'] === 'development')
+        console.log('Build Result', result.builds)
 
       const weaponId = database.teams.getLoadoutWeapon(loadoutDatum).id
 

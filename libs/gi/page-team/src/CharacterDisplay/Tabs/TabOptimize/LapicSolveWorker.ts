@@ -264,6 +264,15 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 3. Build orchestration config via the adapter's config factory
   const normalizationInput = createGiArtifactNormalizationInput(topN)
 
+  // Build global constants from base stats for FIR interval evaluation.
+  // precompute() computes total = base[key] + sum(artifact[key]) per variable,
+  // but the candidate variable extractor only provides per-artifact values.
+  // Without these base values, FIR upper bounds underestimate by ~4.5x.
+  const globalConstants = new Map<string, number>()
+  for (const [key, value] of Object.entries(base)) {
+    if (value !== 0) globalConstants.set(`dyn:${key}`, value)
+  }
+
   const config = createGiLapicOrchestrationConfigFromUi({
     problemId,
     artifacts,
@@ -276,6 +285,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     normalizationInput,
     evaluateCombination,
     candidateVariableExtractor,
+    globalConstants,
     topN,
   })
 

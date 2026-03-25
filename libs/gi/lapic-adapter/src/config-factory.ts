@@ -117,6 +117,11 @@ export interface GiLapicConfigFactoryInput {
   readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
   /** Variable extractor for FIR-based bound computation. */
   readonly candidateVariableExtractor?: GiLapicCandidateVariableExtractor
+  /**
+   * Global constants for FIR interval evaluation (e.g., `arts.base`
+   * after `pruneAll` + `reaffine`). Keys use `dyn:{statKey}` format.
+   */
+  readonly globalConstants?: ReadonlyMap<string, number>
 
   // ---- Infrastructure (optional) ----
   /** Artifact store. Defaults to in-memory store. */
@@ -309,6 +314,9 @@ export function createGiLapicOrchestrationConfigFromUi(
     }),
     ...(input.candidateVariableExtractor !== undefined && {
       candidateVariableExtractor: input.candidateVariableExtractor,
+    }),
+    ...(input.globalConstants !== undefined && {
+      globalConstants: input.globalConstants,
     }),
     ...(input.sessionId !== undefined && { sessionId: input.sessionId }),
   } satisfies GiLapicSolveOrchestrationConfig
