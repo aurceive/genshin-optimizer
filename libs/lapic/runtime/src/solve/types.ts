@@ -119,6 +119,17 @@ export interface LapicBoundedExactSolveOptions {
    * value from completed partitions with subsequent partitions.
    */
   readonly initialIncumbentThreshold?: string
+  /**
+   * When true, the executor skips creation, validation, and persistence
+   * of intermediate certificates (BoundPruneCert, DominanceCert,
+   * BranchReachabilityCert) during the solve.  The final
+   * FinalOptimalityCert is still emitted with empty reference arrays.
+   *
+   * This dramatically reduces memory pressure and GC overhead for large
+   * problems where the caller does not need a full certificate chain
+   * (e.g. UI-driven solves that only consume the top-N candidates).
+   */
+  readonly skipIntermediateCertificates?: boolean
 }
 
 /**

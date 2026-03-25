@@ -73,6 +73,12 @@ export interface GiLapicSolveOrchestrationConfig {
    * Defaults to 1 (single-threaded executor).
    */
   readonly workerCount?: number
+  /**
+   * When true, intermediate certificates (BoundPruneCert, DominanceCert,
+   * BranchReachabilityCert) are not emitted during the solve.
+   * Use for UI-driven solves that only consume the top-N candidates.
+   */
+  readonly skipIntermediateCertificates?: boolean
 }
 
 /**
@@ -224,6 +230,12 @@ export function createGiLapicSolveOrchestration(
             ? { maxCombinationCount: config.maxCombinationCount }
             : {}),
           ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+          ...(config.skipIntermediateCertificates !== undefined
+            ? {
+                skipIntermediateCertificates:
+                  config.skipIntermediateCertificates,
+              }
+            : {}),
         })
       }
 
@@ -253,6 +265,11 @@ export function createGiLapicSolveOrchestration(
           ? { maxCombinationCount: config.maxCombinationCount }
           : {}),
         ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+        ...(config.skipIntermediateCertificates !== undefined
+          ? {
+              skipIntermediateCertificates: config.skipIntermediateCertificates,
+            }
+          : {}),
       })
     },
   })

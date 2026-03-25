@@ -301,6 +301,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   orchestration = createGiLapicSolveOrchestration({
     ...config,
     workerCount,
+    skipIntermediateCertificates: true,
   })
 
   // 5. Subscribe to progress — forward canonical LapicProgressEvent objects

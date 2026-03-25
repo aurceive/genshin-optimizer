@@ -101,6 +101,13 @@ export interface LapicCoordinatedBoundedExactSolveConfig {
   readonly maxCombinationCount?: number
 
   /**
+   * When true, intermediate certificates (BoundPruneCert, DominanceCert,
+   * BranchReachabilityCert) are skipped during the solve.
+   * @see LapicBoundedExactSolveOptions.skipIntermediateCertificates
+   */
+  readonly skipIntermediateCertificates?: boolean
+
+  /**
    * Number of partitions to split the outermost domain into.
    * When <= 1, the solve delegates directly to the single-threaded
    * executor with zero overhead.
@@ -241,6 +248,9 @@ function buildExecutorOptions(
     ...(prebuiltJoinContext !== undefined && { prebuiltJoinContext }),
     ...(initialIncumbentThreshold !== undefined && {
       initialIncumbentThreshold,
+    }),
+    ...(config.skipIntermediateCertificates !== undefined && {
+      skipIntermediateCertificates: config.skipIntermediateCertificates,
     }),
   }
 }

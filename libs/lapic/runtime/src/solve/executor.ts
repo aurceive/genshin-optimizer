@@ -413,7 +413,11 @@ export async function executeLapicBoundedExactSolve(
     ]
 
     // --- A-IR branch reachability inference (pre-solve static analysis) ---
-    if (options.firGraph && !isResuming) {
+    if (
+      options.firGraph &&
+      !isResuming &&
+      !options.skipIntermediateCertificates
+    ) {
       const airGraph = analyzeLapicFirGraph(options.firGraph)
       const forcedBranches = inferForcedBranches(airGraph)
       for (let i = 0; i < forcedBranches.length; i++) {
@@ -502,31 +506,33 @@ export async function executeLapicBoundedExactSolve(
         skippedUnits: pruningStats.prunedCombinationCount,
       })
 
-      pruneCertStepCounter += 1
-      const dangerZoneRecord = detection
-        ? buildDangerZoneRecord(detection, false)
-        : undefined
-      const pruneCert = createBoundPruneCertificate(options, {
-        boundValue,
-        boundEvidenceDigest,
-        thresholdValue,
-        domainIndex,
-        stepIndex: pruneCertStepCounter,
-        frontierBlockIds,
-        ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
-      })
-      pendingPersistence.push(async () => {
-        await persistArtifact(
-          options,
-          'certificate',
-          pruneCert.certId,
-          pruneCert.evidenceDigest,
-          pruneCert,
-          frontierBlockIds
-        )
-      })
-      options.controller.emitCertificate(pruneCert)
-      pruneCertificateIds.push(pruneCert.certId)
+      if (!options.skipIntermediateCertificates) {
+        pruneCertStepCounter += 1
+        const dangerZoneRecord = detection
+          ? buildDangerZoneRecord(detection, false)
+          : undefined
+        const pruneCert = createBoundPruneCertificate(options, {
+          boundValue,
+          boundEvidenceDigest,
+          thresholdValue,
+          domainIndex,
+          stepIndex: pruneCertStepCounter,
+          frontierBlockIds,
+          ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
+        })
+        pendingPersistence.push(async () => {
+          await persistArtifact(
+            options,
+            'certificate',
+            pruneCert.certId,
+            pruneCert.evidenceDigest,
+            pruneCert,
+            frontierBlockIds
+          )
+        })
+        options.controller.emitCertificate(pruneCert)
+        pruneCertificateIds.push(pruneCert.certId)
+      }
     }
 
     // -----------------------------------------------------------------------
@@ -628,7 +634,11 @@ export async function executeLapicBoundedExactSolve(
         })
 
         // Emit DominanceCert when a candidate is evicted from the top-N tracker.
-        if (insertResult.evicted && !insertResult.insertedWasEvicted) {
+        if (
+          insertResult.evicted &&
+          !insertResult.insertedWasEvicted &&
+          !options.skipIntermediateCertificates
+        ) {
           dominanceCertStepCounter += 1
           const dominanceCert = createDominanceCertificate(options, {
             dominatingStateId: stateId,
