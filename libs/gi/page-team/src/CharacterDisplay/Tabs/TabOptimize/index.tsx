@@ -647,11 +647,6 @@ export default function TabBuild() {
                 console.warn(`[lapic] ${ev.failureClass}: ${ev.message}`)
               }
             }
-          } else if (msg.type === 'status') {
-            // Status lifecycle tracked for future pause/resume UI
-            if (process.env['NODE_ENV'] === 'development') {
-              console.log(`[lapic] status: ${msg.status}`)
-            }
           }
         }
 

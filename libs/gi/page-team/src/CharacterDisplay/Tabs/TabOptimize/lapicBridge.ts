@@ -107,18 +107,8 @@ export interface LapicWorkerDiagnosticMsg {
   readonly event: LapicTraceEvent | LapicFailureRecord
 }
 
-/**
- * Status change notification from the Worker to the main thread.
- * Enables the UI to track the session lifecycle state machine.
- */
-export interface LapicWorkerStatusMsg {
-  readonly type: 'status'
-  readonly status: 'running' | 'completed' | 'paused' | 'failed' | 'cancelled'
-}
-
 export type LapicWorkerOutMsg =
   | LapicWorkerProgressMsg
   | LapicWorkerResultMsg
   | LapicWorkerErrorMsg
   | LapicWorkerDiagnosticMsg
-  | LapicWorkerStatusMsg

@@ -206,7 +206,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
   let failedCount = 0
   let evaluatedCount = 0
-  let skippedCount = 0
+  let _skippedCount = 0
   let totalCombinations = 0
 
   const evaluateCombination = (
@@ -309,12 +309,10 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   let lastProgressPostTime = 0
   const PROGRESS_THROTTLE_MS = 500
 
-  postMessage({ type: 'status', status: 'running' })
-
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
       evaluatedCount = event.completedUnits - (event.skippedUnits ?? 0)
-      skippedCount = event.skippedUnits ?? 0
+      _skippedCount = event.skippedUnits ?? 0
       if (event.totalUnits !== undefined) {
         totalCombinations = event.totalUnits
       }
@@ -341,18 +339,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     postMessage({ type: 'progress', event: lastProgressEvent })
   }
 
-  // Determine status from outcome
-  const status =
-    outcome.state === 'failed'
-      ? 'failed'
-      : outcome.state === 'paused'
-        ? 'paused'
-        : outcome.state === 'cancelled'
-          ? 'cancelled'
-          : 'completed'
-
   if (outcome.state === 'failed') {
-    postMessage({ type: 'status', status: 'failed' })
     postMessage({
       type: 'error',
       message: outcome.error?.message ?? 'Lapic solve failed',
@@ -371,7 +358,6 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     }
   }
 
-  postMessage({ type: 'status', status })
   postMessage({
     type: 'result',
     builds,
