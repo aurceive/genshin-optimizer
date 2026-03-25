@@ -5,6 +5,7 @@ import type {
 } from '@genshin-optimizer/lapic/core'
 import {
   lapicInterval,
+  lapicIntervalAdd,
   lapicIntervalPoint,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFirDomainVariableMap } from './types'
@@ -23,6 +24,13 @@ export type LapicFirDomainEnvelopes = ReadonlyMap<
 /**
  * Pre-compute the per-domain variable envelopes.
  * For each domain, finds [min, max] of each variable across all candidates.
+ *
+ * Candidates that don't contribute a particular variable are treated as
+ * contributing 0 for that variable. Without this zero-floor, the envelope's
+ * lower bound is artificially inflated, causing the interval-arithmetic
+ * bound evaluator to produce upper bounds that are too tight — which makes
+ * B&B pruning over-aggressive and can cause the solver to miss the true
+ * optimum.
  */
 export function precomputeDomainEnvelopes(
   domainVariableMaps: readonly LapicFirDomainVariableMap[]
@@ -33,23 +41,27 @@ export function precomputeDomainEnvelopes(
   >()
 
   for (const dvm of domainVariableMaps) {
-    const envelopes = new Map<LapicFirVariableId, LapicInterval>()
+    // Pass 1: collect all variable IDs across all candidates in this domain
+    const allVarIds = new Set<LapicFirVariableId>()
     for (const [, candidateVars] of dvm.candidateVariables) {
-      for (const [varId, value] of candidateVars) {
-        const existing = envelopes.get(varId)
-        if (existing) {
-          envelopes.set(
-            varId,
-            lapicInterval(
-              Math.min(existing.lo, value),
-              Math.max(existing.hi, value)
-            )
-          )
-        } else {
-          envelopes.set(varId, lapicIntervalPoint(value))
-        }
+      for (const [varId] of candidateVars) {
+        allVarIds.add(varId)
       }
     }
+
+    // Pass 2: compute envelopes, treating missing variables as 0
+    const envelopes = new Map<LapicFirVariableId, LapicInterval>()
+    for (const varId of allVarIds) {
+      let lo = Infinity
+      let hi = -Infinity
+      for (const [, candidateVars] of dvm.candidateVariables) {
+        const value = candidateVars.get(varId) ?? 0
+        if (value < lo) lo = value
+        if (value > hi) hi = value
+      }
+      envelopes.set(varId, lapicInterval(lo, hi))
+    }
+
     result.set(dvm.domainId, envelopes)
   }
 
@@ -90,6 +102,21 @@ export function createLapicFirPartialIntervalEnv(
  * Fill an existing interval environment for F-IR evaluation.
  * Clears the map and fills it in-place — avoids per-call Map allocation
  * in hot paths (B&B bound evaluation).
+ *
+ * The F-IR graph has a single `read('dyn:atk_')` node per variable,
+ * representing the aggregate value across all artifact slots.
+ * `precompute()` sums per-slot contributions into this aggregate.
+ * Therefore the interval environment must contain the SUM of all
+ * per-domain contributions:
+ *
+ *   env[varId] = Σ_d contribution_d(varId)
+ *
+ * where each domain contributes either a point interval (assigned
+ * candidate) or an envelope interval (unassigned domain).
+ *
+ * Using SET (overwrite) instead of ADD here produces inadmissible
+ * bounds — the upper bound can fall below the true optimum, causing
+ * the B&B solver to prune branches containing the optimal solution.
  */
 export function fillLapicFirPartialIntervalEnv(
   env: Map<LapicFirVariableId, LapicInterval>,
@@ -101,34 +128,46 @@ export function fillLapicFirPartialIntervalEnv(
 ): void {
   env.clear()
 
-  // 1. Global constants as point intervals
+  // 1. Global constants as point intervals (base stats, folded constants)
   if (globalConstants) {
     for (const [varId, value] of globalConstants) {
       env.set(varId, lapicIntervalPoint(value))
     }
   }
 
-  // 2. Assigned candidates → point intervals
-  const assignedDomainIds = new Set<string>()
-
+  // 2. Build assigned-domain lookup
+  const assignedMap = new Map<string, LapicCandidateDescriptor>()
   for (const candidate of assignedCandidates) {
-    assignedDomainIds.add(candidate.domainId)
-    const dvm = domainMapById.get(candidate.domainId)
-    if (!dvm) continue
-    const vars = dvm.candidateVariables.get(candidate.candidateId)
-    if (!vars) continue
-    for (const [varId, value] of vars) {
-      env.set(varId, lapicIntervalPoint(value))
-    }
+    assignedMap.set(candidate.domainId, candidate)
   }
 
-  // 3. Unassigned domains → envelope intervals
+  // 3. Sum contributions from ALL domains via interval addition.
+  //    Assigned → point interval from the chosen candidate's variables.
+  //    Unassigned → envelope interval (min/max across all candidates).
+  //    Variables the assigned candidate does not carry contribute 0
+  //    implicitly (interval addition identity) and need not be added.
   for (const dvm of domainVariableMaps) {
-    if (assignedDomainIds.has(dvm.domainId)) continue
-    const envelopes = domainEnvelopes.get(dvm.domainId)
-    if (!envelopes) continue
-    for (const [varId, iv] of envelopes) {
-      env.set(varId, iv)
+    const assigned = assignedMap.get(dvm.domainId)
+
+    if (assigned) {
+      const vars = dvm.candidateVariables.get(assigned.candidateId)
+      if (!vars) continue
+      for (const [varId, value] of vars) {
+        const prev = env.get(varId)
+        env.set(
+          varId,
+          prev
+            ? lapicIntervalAdd(prev, lapicIntervalPoint(value))
+            : lapicIntervalPoint(value)
+        )
+      }
+    } else {
+      const envelopes = domainEnvelopes.get(dvm.domainId)
+      if (!envelopes) continue
+      for (const [varId, iv] of envelopes) {
+        const prev = env.get(varId)
+        env.set(varId, prev ? lapicIntervalAdd(prev, iv) : iv)
+      }
     }
   }
 }
