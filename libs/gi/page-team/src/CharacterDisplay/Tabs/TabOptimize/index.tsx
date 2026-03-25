@@ -43,6 +43,8 @@ import {
 } from '@genshin-optimizer/gi/db-ui'
 import {
   LapicEngineProvider,
+  useLapicDiagnostics,
+  useLapicSolveProgress,
   useLocalStorageEnginePreference,
 } from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
@@ -84,6 +86,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import {
+  Alert,
   Box,
   Button,
   ButtonGroup,
@@ -130,6 +133,11 @@ import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
 import type { LapicWorkerOutMsg } from './lapicBridge'
+import type {
+  LapicFailureRecord,
+  LapicProgressEvent,
+  LapicTraceEvent,
+} from '@genshin-optimizer/lapic/runtime'
 import { prepareOptimizationData } from './prepareOptimizationData'
 
 function initBuildStatus(): BuildStatus {
@@ -168,6 +176,22 @@ export default function TabBuild() {
 
   // Engine preference (legacy vs lapic)
   const [enginePref, handleEngineChange] = useLocalStorageEnginePreference()
+
+  // Lapic progress formatting — last event is buffered and flushed via setInterval
+  const [lapicProgress, setLapicProgress] = useState<
+    LapicProgressEvent | undefined
+  >()
+  const [lapicStartedAt, setLapicStartedAt] = useState<number | undefined>()
+  const lapicFormattedProgress = useLapicSolveProgress(
+    lapicProgress,
+    lapicStartedAt
+  )
+
+  // Lapic diagnostics — accumulated during a solve run
+  const [lapicDiagnosticEvents, setLapicDiagnosticEvents] = useState<
+    readonly (LapicTraceEvent | LapicFailureRecord)[]
+  >([])
+  const lapicDiagnostics = useLapicDiagnostics(lapicDiagnosticEvents)
 
   // Clear state when changing characters
   if (usePrev(characterKey) !== characterKey) setBuildStatus(initBuildStatus())
@@ -566,6 +590,13 @@ export default function TabBuild() {
 
     setChartData(undefined)
 
+    // Reset lapic progress/diagnostics for this run
+    const solveStartedAt = Date.now()
+    setLapicStartedAt(solveStartedAt)
+    setLapicProgress(undefined)
+    setLapicDiagnosticEvents([])
+    let latestProgressEvent: LapicProgressEvent | undefined
+
     const worker = new Worker(
       new URL('./LapicSolveWorker.ts', import.meta.url),
       { type: 'module' }
@@ -581,10 +612,10 @@ export default function TabBuild() {
       skippedPerSecond: 0,
       startTime: performance.now(),
     }
-    const statusUpdateTimer = setInterval(
-      () => setBuildStatus({ type: 'active', ...status }),
-      100
-    )
+    const statusUpdateTimer = setInterval(() => {
+      setBuildStatus({ type: 'active', ...status })
+      if (latestProgressEvent) setLapicProgress(latestProgressEvent)
+    }, 100)
 
     // Builds-per-second tracking
     let lastTime = performance.now()
@@ -615,6 +646,7 @@ export default function TabBuild() {
           const msg = e.data
           if (msg.type === 'progress') {
             const ev = msg.event
+            latestProgressEvent = ev
             if (ev.phase === 'join') {
               status.tested = ev.completedUnits - (ev.skippedUnits ?? 0)
               status.skipped = ev.skippedUnits ?? 0
@@ -626,6 +658,7 @@ export default function TabBuild() {
             reject(new Error(msg.message))
           } else if (msg.type === 'diagnostic') {
             const ev = msg.event
+            setLapicDiagnosticEvents((prev) => [...prev, ev])
             if ('failureClass' in ev) {
               const hasErrorOrWarning = ev.diagnostics.some(
                 (d) => d.severity === 'error' || d.severity === 'warning'
@@ -1043,11 +1076,28 @@ export default function TabBuild() {
         {!!characterKey && (
           <BuildAlert
             {...{
-              status: buildStatus,
+              status:
+                enginePref === 'lapic' && buildStatus.type === 'active'
+                  ? {
+                      ...buildStatus,
+                      etaText: lapicFormattedProgress.etaText,
+                    }
+                  : buildStatus,
               characterName,
               maxBuildsToShow,
             }}
           />
+        )}
+        {lapicDiagnostics.hasErrors && (
+          <Alert severity="warning" variant="outlined">
+            <Typography>
+              Lapic engine reported {lapicDiagnostics.errorCount} error
+              {lapicDiagnostics.errorCount !== 1 ? 's' : ''}
+              {lapicDiagnostics.warningCount > 0 &&
+                ` and ${lapicDiagnostics.warningCount} warning${lapicDiagnostics.warningCount !== 1 ? 's' : ''}`}{' '}
+              during optimization. Check the console for details.
+            </Typography>
+          </Alert>
         )}
         {optimizationTarget && (
           <Box>

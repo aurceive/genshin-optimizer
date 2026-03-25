@@ -13,6 +13,8 @@ export type BuildStatus = {
   skippedPerSecond: number // number of configs skipped in the last second (none are tested)
   startTime?: number
   finishTime?: number
+  /** Estimated time remaining, e.g. "~2:15". Provided by `useLapicSolveProgress`. */
+  etaText?: string
 }
 
 const Monospace = styled('strong')({
@@ -34,6 +36,7 @@ export default function BuildAlert({
     skippedPerSecond,
     startTime,
     finishTime,
+    etaText,
   },
   characterName,
 }: {
@@ -104,6 +107,12 @@ export default function BuildAlert({
       <Typography>
         Time elapsed: {durationString} | {testedPerSecondString} builds tested
         (+{skippedPerSecondString} skipped) per second
+        {etaText && etaText !== '—' && (
+          <>
+            {' '}
+            | ETA: <Monospace>{etaText}</Monospace>
+          </>
+        )}
       </Typography>
     )
   } else if (tested + skipped) {
