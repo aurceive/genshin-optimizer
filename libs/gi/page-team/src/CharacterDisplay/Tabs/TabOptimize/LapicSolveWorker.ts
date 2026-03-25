@@ -206,7 +206,6 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
   let failedCount = 0
   let evaluatedCount = 0
-  let _skippedCount = 0
   let totalCombinations = 0
 
   const evaluateCombination = (
@@ -312,7 +311,6 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
       evaluatedCount = event.completedUnits - (event.skippedUnits ?? 0)
-      _skippedCount = event.skippedUnits ?? 0
       if (event.totalUnits !== undefined) {
         totalCombinations = event.totalUnits
       }

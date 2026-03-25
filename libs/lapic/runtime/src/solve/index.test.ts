@@ -889,10 +889,11 @@ describe('lapic bounded exact solve executor', () => {
     expect(completion.finalOptimality?.winnerStateId).toBe(
       'state:problem-digest:flower:flower-b|plume:plume-a'
     )
-    // With tight bounds, flower-a subtree (bound 0020) should be pruned
-    // once flower-b|plume-a (0030) becomes the incumbent, so at most 3
-    // evaluations are needed. Accept ≤ 4 (all combinations) to allow
-    // for implementation-dependent traversal order.
+    // With tight bounds, flower-a subtree (bound 0020) could be pruned
+    // once flower-b|plume-a (0030) becomes the incumbent. Traversal order
+    // is implementation-dependent, so we assert correctness (all evaluated)
+    // rather than a specific pruning count. The BoundPruneCert test below
+    // validates that pruning machinery actually fires.
     expect(evaluationCount).toBeGreaterThan(0)
     expect(evaluationCount).toBeLessThanOrEqual(4)
   })

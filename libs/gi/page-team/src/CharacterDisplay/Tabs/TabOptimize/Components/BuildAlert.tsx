@@ -107,7 +107,7 @@ export default function BuildAlert({
       <Typography>
         Time elapsed: {durationString} | {testedPerSecondString} builds tested
         (+{skippedPerSecondString} skipped) per second
-        {etaText && etaText !== '—' && (
+        {etaText && (
           <>
             {' '}
             | ETA: <Monospace>{etaText}</Monospace>

@@ -132,12 +132,12 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
-import type { LapicWorkerOutMsg } from './lapicBridge'
 import type {
   LapicFailureRecord,
   LapicProgressEvent,
   LapicTraceEvent,
 } from '@genshin-optimizer/lapic/runtime'
+import type { LapicWorkerOutMsg } from './lapicBridge'
 import { prepareOptimizationData } from './prepareOptimizationData'
 
 function initBuildStatus(): BuildStatus {
@@ -187,7 +187,11 @@ export default function TabBuild() {
     lapicStartedAt
   )
 
-  // Lapic diagnostics — accumulated during a solve run
+  // Lapic diagnostics — accumulated during a solve run via ref,
+  // flushed to state snapshot for hook consumption
+  const lapicDiagnosticEventsRef = useRef<
+    (LapicTraceEvent | LapicFailureRecord)[]
+  >([])
   const [lapicDiagnosticEvents, setLapicDiagnosticEvents] = useState<
     readonly (LapicTraceEvent | LapicFailureRecord)[]
   >([])
@@ -393,6 +397,9 @@ export default function TabBuild() {
       skippedPerSecond: 0,
       startTime: performance.now(),
     }
+    // Clear any leftover lapic diagnostics from a previous run
+    lapicDiagnosticEventsRef.current = []
+    setLapicDiagnosticEvents([])
     const statusUpdateTimer = setInterval(
       () => setBuildStatus({ type: 'active', ...status }),
       100
@@ -594,6 +601,7 @@ export default function TabBuild() {
     const solveStartedAt = Date.now()
     setLapicStartedAt(solveStartedAt)
     setLapicProgress(undefined)
+    lapicDiagnosticEventsRef.current = []
     setLapicDiagnosticEvents([])
     let latestProgressEvent: LapicProgressEvent | undefined
 
@@ -615,6 +623,9 @@ export default function TabBuild() {
     const statusUpdateTimer = setInterval(() => {
       setBuildStatus({ type: 'active', ...status })
       if (latestProgressEvent) setLapicProgress(latestProgressEvent)
+      // Flush accumulated diagnostic events from ref to state (batch, no O(n²) copies)
+      const pending = lapicDiagnosticEventsRef.current
+      if (pending.length > 0) setLapicDiagnosticEvents([...pending])
     }, 100)
 
     // Builds-per-second tracking
@@ -658,7 +669,7 @@ export default function TabBuild() {
             reject(new Error(msg.message))
           } else if (msg.type === 'diagnostic') {
             const ev = msg.event
-            setLapicDiagnosticEvents((prev) => [...prev, ev])
+            lapicDiagnosticEventsRef.current.push(ev)
             if ('failureClass' in ev) {
               const hasErrorOrWarning = ev.diagnostics.some(
                 (d) => d.severity === 'error' || d.severity === 'warning'
@@ -746,6 +757,9 @@ export default function TabBuild() {
       clearInterval(bpsTimer)
       lapicWorkerRef.current?.terminate()
       lapicWorkerRef.current = null
+      // Final flush of accumulated diagnostics
+      const pending = lapicDiagnosticEventsRef.current
+      if (pending.length > 0) setLapicDiagnosticEvents([...pending])
       setBuildStatus({
         type: 'inactive',
         ...status,
@@ -1080,7 +1094,10 @@ export default function TabBuild() {
                 enginePref === 'lapic' && buildStatus.type === 'active'
                   ? {
                       ...buildStatus,
-                      etaText: lapicFormattedProgress.etaText,
+                      etaText:
+                        lapicFormattedProgress.etaText === '—'
+                          ? undefined
+                          : lapicFormattedProgress.etaText,
                     }
                   : buildStatus,
               characterName,
