@@ -453,6 +453,7 @@ export async function executeCoordinatedBoundedExactSolve(
     0
   )
   let completedCombinationsBefore = 0
+  let skippedCombinationsBefore = 0
 
   // Create scheduler and enqueue all partitions
   const scheduler = createLapicWorkScheduler()
@@ -517,14 +518,18 @@ export async function executeCoordinatedBoundedExactSolve(
       // updates instead of only partition-completion jumps.
       const offset = completedCombinationsBefore
       let lastPartitionCompletedUnits = 0
+      let lastPartitionSkippedUnits = 0
       const unsubPartitionProgress = partitionController.subscribeProgress(
         (event) => {
           if (event.phase === 'join') {
             lastPartitionCompletedUnits = event.completedUnits
+            lastPartitionSkippedUnits = event.skippedUnits ?? 0
             config.controller.publishProgress({
               phase: 'join',
               completedUnits: offset + event.completedUnits,
               totalUnits: totalCombinationsAll,
+              skippedUnits:
+                skippedCombinationsBefore + lastPartitionSkippedUnits,
             })
           }
         }
@@ -580,11 +585,13 @@ export async function executeCoordinatedBoundedExactSolve(
         // than the theoretical totalCombinationCount, which would
         // inflate the running total when B&B prunes large subtrees.
         completedCombinationsBefore += lastPartitionCompletedUnits
+        skippedCombinationsBefore += lastPartitionSkippedUnits
 
         config.controller.publishProgress({
           phase: 'join',
           completedUnits: completedCombinationsBefore,
           totalUnits: totalCombinationsAll,
+          skippedUnits: skippedCombinationsBefore,
         })
 
         config.onPartitionComplete?.(

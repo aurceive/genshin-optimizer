@@ -295,10 +295,12 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     workerCount,
   })
 
-  // 5. Subscribe to progress
+  // 5. Subscribe to progress (throttled to avoid flooding the main thread)
   let totalCombinations = 0
   let evaluatedCount = 0
   let skippedCount = 0
+  let lastProgressPostTime = 0
+  const PROGRESS_THROTTLE_MS = 500
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
@@ -308,13 +310,17 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
         totalCombinations = event.totalUnits
       }
     }
-    postMessage({
-      type: 'progress',
-      tested: evaluatedCount,
-      failed: failedCount,
-      skipped: skippedCount,
-      total: totalCombinations,
-    })
+    const now = performance.now()
+    if (now - lastProgressPostTime >= PROGRESS_THROTTLE_MS) {
+      lastProgressPostTime = now
+      postMessage({
+        type: 'progress',
+        tested: evaluatedCount,
+        failed: failedCount,
+        skipped: skippedCount,
+        total: totalCombinations,
+      })
+    }
   })
 
   // 5b. Subscribe to diagnostics and forward to main thread
