@@ -135,9 +135,14 @@ export function fillLapicFirPartialIntervalEnv(
     }
   }
 
-  // 2. Build assigned-domain lookup
+  // 2. Build assigned-domain lookup (one candidate per domain expected)
   const assignedMap = new Map<string, LapicCandidateDescriptor>()
   for (const candidate of assignedCandidates) {
+    if (assignedMap.has(candidate.domainId)) {
+      throw new Error(
+        `fillLapicFirPartialIntervalEnv: duplicate assignment for domain '${candidate.domainId}'`
+      )
+    }
     assignedMap.set(candidate.domainId, candidate)
   }
 

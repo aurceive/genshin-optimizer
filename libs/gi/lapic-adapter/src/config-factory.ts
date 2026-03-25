@@ -181,16 +181,17 @@ function computeProblemDigest(
  * This comparator parses `objectiveValue` as a float and compares
  * numerically, which is always correct for GI optimisation targets.
  */
-const giNumericEvaluationComparator: LapicBoundedExactEvaluationComparator = (
-  left,
-  right
-) => {
-  const lv = parseFloat(left.objectiveValue)
-  const rv = parseFloat(right.objectiveValue)
-  if (lv < rv) return -1
-  if (lv > rv) return 1
-  return 0
-}
+export const giNumericEvaluationComparator: LapicBoundedExactEvaluationComparator =
+  (left, right) => {
+    const lv = parseFloat(left.objectiveValue)
+    const rv = parseFloat(right.objectiveValue)
+    // NaN sorts to the bottom (worse than any valid value)
+    if (Number.isNaN(lv)) return Number.isNaN(rv) ? 0 : -1
+    if (Number.isNaN(rv)) return 1
+    if (lv < rv) return -1
+    if (lv > rv) return 1
+    return 0
+  }
 
 // ---------------------------------------------------------------------------
 // Factory

@@ -544,7 +544,19 @@ export default function TabBuild() {
         pruneOrder: true,
       }
     ))
+    // Structural re-fold: pruneAll may have changed node shapes (reaffine),
+    // so re-optimize with no dynamic evaluation to fold constant sub-trees.
     nodes = optimize(nodes, {}, (_) => false)
+
+    // Guard: if pruneAll emptied any slot, no valid builds exist
+    const hasSlotsWithNoArts = Object.values(arts.values).some(
+      (v) => v.length === 0
+    )
+    if (hasSlotsWithNoArts) {
+      if (process.env['NODE_ENV'] === 'development')
+        console.log('[lapic] pruneAll eliminated all candidates in a slot')
+      return
+    }
 
     // Collect pruned artifact IDs so the domain builder only sees survivors
     const prunedIds = new Set<string>()
@@ -559,10 +571,7 @@ export default function TabBuild() {
       const slotCounts = Object.entries(arts.values).map(
         ([k, v]) => `${k}:${v.length}`
       )
-      const total = Object.values(arts.values).reduce(
-        (a, v) => a * v.length,
-        1
-      )
+      const total = Object.values(arts.values).reduce((a, v) => a * v.length, 1)
       console.log(
         `[lapic] After pruneAll: ${slotCounts.join(', ')} → ${total} combinations`
       )
@@ -664,7 +673,7 @@ export default function TabBuild() {
       status.total = result.total
 
       if (process.env['NODE_ENV'] === 'development')
-        console.log('Build Result', result.builds)
+        console.log('[lapic] Build Result', result.builds)
 
       const weaponId = database.teams.getLoadoutWeapon(loadoutDatum).id
 

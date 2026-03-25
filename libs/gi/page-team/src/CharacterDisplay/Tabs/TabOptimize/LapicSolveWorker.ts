@@ -355,6 +355,15 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   const outcome = await orchestration.start()
 
   // 7. Map results to the expected format
+  // Flush final progress unconditionally (throttle may have suppressed it)
+  postMessage({
+    type: 'progress',
+    tested: evaluatedCount,
+    failed: failedCount,
+    skipped: skippedCount,
+    total: totalCombinations,
+  })
+
   if (outcome.state === 'completed' && outcome.solveOutcome) {
     const solveResult = outcome.solveOutcome
     if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
