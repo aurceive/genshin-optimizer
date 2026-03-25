@@ -22,6 +22,7 @@ import type {
 import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactCombinationEvaluation,
+  LapicProgressEvent,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicProblemNormalizationInput,
@@ -36,12 +37,6 @@ import type {
 } from './lapicBridge'
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
-
-// Track evaluated and failed counts outside subscriptions for result reporting
-let evaluatedCount = 0
-let failedCount = 0
-let skippedCount = 0
-let totalCombinations = 0
 
 // ---------------------------------------------------------------------------
 // GI artifact slot normalization
@@ -209,10 +204,10 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   }
 
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
-  failedCount = 0
-  evaluatedCount = 0
-  skippedCount = 0
-  totalCombinations = 0
+  let failedCount = 0
+  let evaluatedCount = 0
+  let skippedCount = 0
+  let totalCombinations = 0
 
   const evaluateCombination = (
     combination: LapicBoundedExactCandidateCombination,
@@ -310,6 +305,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   })
 
   // 5. Subscribe to progress — forward canonical LapicProgressEvent objects
+  let lastProgressEvent: LapicProgressEvent | undefined
   let lastProgressPostTime = 0
   const PROGRESS_THROTTLE_MS = 500
 
@@ -323,6 +319,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
         totalCombinations = event.totalUnits
       }
     }
+    lastProgressEvent = event
     const now = performance.now()
     if (now - lastProgressPostTime >= PROGRESS_THROTTLE_MS) {
       lastProgressPostTime = now
@@ -340,36 +337,19 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
 
   // 7. Map results to the expected format
   // Flush final progress unconditionally (throttle may have suppressed it)
-  postMessage({
-    type: 'progress',
-    event: {
-      sessionId: orchestration.sessionId,
-      phase: 'join',
-      completedUnits: evaluatedCount + skippedCount,
-      totalUnits: totalCombinations || undefined,
-      skippedUnits: skippedCount || undefined,
-    },
-  })
-
-  if (outcome.state === 'completed' && outcome.solveOutcome) {
-    const solveResult = outcome.solveOutcome
-    if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
-      const builds = solveResult.topNCandidates.map((entry) => ({
-        value: parseFloat(entry.evaluation.objectiveValue),
-        artifactIds: entry.candidates.map((c) => c.candidateId),
-      }))
-
-      postMessage({ type: 'status', status: 'completed' })
-      postMessage({
-        type: 'result',
-        builds,
-        tested: evaluatedCount,
-        failed: failedCount,
-        total: totalCombinations,
-      })
-      return
-    }
+  if (lastProgressEvent) {
+    postMessage({ type: 'progress', event: lastProgressEvent })
   }
+
+  // Determine status from outcome
+  const status =
+    outcome.state === 'failed'
+      ? 'failed'
+      : outcome.state === 'paused'
+        ? 'paused'
+        : outcome.state === 'cancelled'
+          ? 'cancelled'
+          : 'completed'
 
   if (outcome.state === 'failed') {
     postMessage({ type: 'status', status: 'failed' })
@@ -380,18 +360,21 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     return
   }
 
-  if (outcome.state === 'paused') {
-    postMessage({ type: 'status', status: 'paused' })
-  } else if (outcome.state === 'cancelled') {
-    postMessage({ type: 'status', status: 'cancelled' })
-  } else {
-    postMessage({ type: 'status', status: 'completed' })
+  let builds: { value: number; artifactIds: string[] }[] = []
+  if (outcome.state === 'completed' && outcome.solveOutcome) {
+    const solveResult = outcome.solveOutcome
+    if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
+      builds = solveResult.topNCandidates.map((entry) => ({
+        value: parseFloat(entry.evaluation.objectiveValue),
+        artifactIds: entry.candidates.map((c) => c.candidateId),
+      }))
+    }
   }
 
-  // Cancelled, paused, or no results
+  postMessage({ type: 'status', status })
   postMessage({
     type: 'result',
-    builds: [],
+    builds,
     tested: evaluatedCount,
     failed: failedCount,
     total: totalCombinations,

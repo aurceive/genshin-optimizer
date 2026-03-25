@@ -640,15 +640,11 @@ export default function TabBuild() {
           } else if (msg.type === 'diagnostic') {
             const ev = msg.event
             if ('failureClass' in ev) {
-              const severity = ev.diagnostics.some(
-                (d) => d.severity === 'error'
+              const hasErrorOrWarning = ev.diagnostics.some(
+                (d) => d.severity === 'error' || d.severity === 'warning'
               )
-                ? 'error'
-                : ev.diagnostics.some((d) => d.severity === 'warning')
-                  ? 'warning'
-                  : 'info'
-              if (severity === 'error' || severity === 'warning') {
-                console.warn(`[lapic] ${severity}: ${ev.message}`)
+              if (hasErrorOrWarning) {
+                console.warn(`[lapic] ${ev.failureClass}: ${ev.message}`)
               }
             }
           } else if (msg.type === 'status') {
