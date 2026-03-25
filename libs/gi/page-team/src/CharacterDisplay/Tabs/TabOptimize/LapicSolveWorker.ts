@@ -323,9 +323,16 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     }
   })
 
-  // 5b. Subscribe to diagnostics — forward canonical events directly
+  // 5b. Subscribe to diagnostics — forward only failure records.
+  // Trace events (Progress, EmitCertificate, PublishArtifacts, etc.) are
+  // high-frequency bookkeeping that must NOT cross the postMessage boundary:
+  // 21 000+ EmitCertificate traces per solve flood the main-thread message
+  // queue and freeze / crash the page.  Only LapicFailureRecord (which
+  // carries `failureClass`) is actionable on the UI side.
   orchestration.handle.subscribeDiagnostics((event) => {
-    postMessage({ type: 'diagnostic', event })
+    if ('failureClass' in event) {
+      postMessage({ type: 'diagnostic', event })
+    }
   })
 
   // 6. Start the solve
