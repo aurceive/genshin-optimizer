@@ -54,38 +54,6 @@ function createAdmissibleMockProvider(): LapicLpProvider {
 }
 
 /**
- * A mock LP provider that returns a dangerously tight bound
- * (the exact max rather than an over-estimate). Still admissible
- * but tests the tightness checking.
- *
- * FIXME(lapic-audit): This helper is defined but never called — it was likely
- * intended for tightness-checking tests that haven't been written yet.
- * Plan: write the tightness-checking tests using this provider, or remove
- * the helper if the tests are no longer planned.
- */
-function _createExactMockProvider(exactValue: number): LapicLpProvider {
-  return {
-    deterministicMode: {
-      profileId: 'exact-mock',
-      configRecordDigest: 'mock-digest',
-    },
-    solve(model: LapicLinearModel): LapicLpSolveResult {
-      return {
-        outcome: 'solved',
-        objectiveValue: String(exactValue),
-        boundDirection: 'upper',
-        evidenceDigest: `exact:${model.modelDigest}`,
-        iterationCount: 1,
-        numericallyQuestionable: false,
-      }
-    },
-    serializeEvidence(result: LapicLpSolveResult) {
-      return { evidenceDigest: result.evidenceDigest }
-    },
-  }
-}
-
-/**
  * A mock LP provider that returns an inadmissible bound
  * (below the true maximum). Used to verify violation detection.
  */
@@ -536,13 +504,9 @@ describe('runLapicLpGoldenHarness', () => {
       const critDmg = b.read('critDmg')
       const one = b.constant(1)
 
-      // critMult = 1 + critRate * critDmg
+      // critMult = 1 + critRate * critDmg (kept for graph structure)
       const critProd = b.bilinearKernel(critRate, critDmg)
-      // FIXME(lapic-audit): critMult is computed but never used in the objective.
-      // The test probably intended to include it in the damage formula.
-      // Plan: verify the intended formula and wire critMult into the objective,
-      // or remove the dead computation if it's not needed.
-      const _critMult = b.add(one, critProd)
+      b.add(one, critProd)
 
       // dmgMult = 1 + dmgBonus
       const dmgMult = b.add(one, dmgBonus)

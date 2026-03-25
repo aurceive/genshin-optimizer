@@ -1,9 +1,5 @@
 import type { LapicCertificate } from '@genshin-optimizer/lapic/cert'
 import {
-  createLapicSessionIdentity,
-  createLapicSessionSummary,
-} from '@genshin-optimizer/lapic/runtime'
-import {
   createLapicArtifactWriteRequest,
   createLapicMemoryArtifactStore,
   createLapicStorageEnvelope,
@@ -30,23 +26,6 @@ import {
   validateLapicPotentialSummaryView,
   validateLapicStateBlockInspectionView,
 } from './validation'
-
-// FIXME(lapic-audit): createSessionSummary is defined but never called.
-// Plan: write the tests that need this helper, or remove it.
-function _createSessionSummary() {
-  return createLapicSessionSummary(
-    createLapicSessionIdentity({
-      sessionId: 'session-id',
-      problemDigest: 'problem-digest',
-      engineVersion: 'engine-version',
-      arithmeticPolicyId: 'arith-policy',
-      runtimeProtocolVersion: '0.1.0-draft',
-      createdAtLogicalTimestamp: 'ts-1',
-    }),
-    'completed',
-    'analyze'
-  )
-}
 
 function createStoreAndArtifact() {
   const store = createLapicMemoryArtifactStore()
