@@ -24,8 +24,8 @@ export interface LapicFormattedProgress {
   readonly elapsedText: string
   /** Estimated remaining time in seconds (undefined if not enough data). */
   readonly etaSeconds: number | undefined
-  /** Human-readable ETA: "~2:15" or "—". */
-  readonly etaText: string
+  /** Human-readable ETA: "~2:15", or undefined when not enough data. */
+  readonly etaText: string | undefined
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -45,7 +45,7 @@ const NO_PROGRESS: LapicFormattedProgress = {
   elapsedSeconds: undefined,
   elapsedText: '—',
   etaSeconds: undefined,
-  etaText: '—',
+  etaText: undefined,
 }
 
 /**
@@ -89,7 +89,7 @@ export function useLapicSolveProgress(
         : undefined
 
     const etaText =
-      etaSeconds !== undefined ? `~${formatDuration(etaSeconds)}` : '—'
+      etaSeconds !== undefined ? `~${formatDuration(etaSeconds)}` : undefined
 
     return {
       fraction,

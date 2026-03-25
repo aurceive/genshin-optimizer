@@ -14,7 +14,7 @@ describe('useLapicSolveProgress', () => {
     expect(result.current.ratio).toBeUndefined()
     expect(result.current.percentText).toBe('—')
     expect(result.current.elapsedText).toBe('—')
-    expect(result.current.etaText).toBe('—')
+    expect(result.current.etaText).toBeUndefined()
   })
 
   // -----------------------------------------------------------------------
@@ -165,10 +165,10 @@ describe('useLapicSolveProgress', () => {
       useLapicSolveProgress(progress, Date.now() - 5000)
     )
     expect(result.current.etaSeconds).toBeUndefined()
-    expect(result.current.etaText).toBe('—')
+    expect(result.current.etaText).toBeUndefined()
   })
 
-  it('returns dash for ETA when startedAt is undefined', () => {
+  it('returns undefined for ETA when startedAt is undefined', () => {
     const progress: LapicProgressEvent = {
       sessionId: 's1',
       phase: 'join',
@@ -178,7 +178,7 @@ describe('useLapicSolveProgress', () => {
     const { result } = renderHook(() =>
       useLapicSolveProgress(progress, undefined)
     )
-    expect(result.current.etaText).toBe('—')
+    expect(result.current.etaText).toBeUndefined()
   })
 
   // -----------------------------------------------------------------------

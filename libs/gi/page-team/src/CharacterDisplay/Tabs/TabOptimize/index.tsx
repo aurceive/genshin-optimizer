@@ -397,9 +397,6 @@ export default function TabBuild() {
       skippedPerSecond: 0,
       startTime: performance.now(),
     }
-    // Clear any leftover lapic diagnostics from a previous run
-    lapicDiagnosticEventsRef.current = []
-    setLapicDiagnosticEvents([])
     const statusUpdateTimer = setInterval(
       () => setBuildStatus({ type: 'active', ...status }),
       100
@@ -604,6 +601,7 @@ export default function TabBuild() {
     lapicDiagnosticEventsRef.current = []
     setLapicDiagnosticEvents([])
     let latestProgressEvent: LapicProgressEvent | undefined
+    let lastFlushedDiagCount = 0
 
     const worker = new Worker(
       new URL('./LapicSolveWorker.ts', import.meta.url),
@@ -623,9 +621,12 @@ export default function TabBuild() {
     const statusUpdateTimer = setInterval(() => {
       setBuildStatus({ type: 'active', ...status })
       if (latestProgressEvent) setLapicProgress(latestProgressEvent)
-      // Flush accumulated diagnostic events from ref to state (batch, no O(n²) copies)
+      // Flush only when new diagnostic events have been accumulated
       const pending = lapicDiagnosticEventsRef.current
-      if (pending.length > 0) setLapicDiagnosticEvents([...pending])
+      if (pending.length > lastFlushedDiagCount) {
+        setLapicDiagnosticEvents([...pending])
+        lastFlushedDiagCount = pending.length
+      }
     }, 100)
 
     // Builds-per-second tracking
@@ -1094,10 +1095,7 @@ export default function TabBuild() {
                 enginePref === 'lapic' && buildStatus.type === 'active'
                   ? {
                       ...buildStatus,
-                      etaText:
-                        lapicFormattedProgress.etaText === '—'
-                          ? undefined
-                          : lapicFormattedProgress.etaText,
+                      etaText: lapicFormattedProgress.etaText,
                     }
                   : buildStatus,
               characterName,
