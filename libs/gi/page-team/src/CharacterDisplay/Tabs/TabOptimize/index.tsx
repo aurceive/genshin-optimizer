@@ -41,8 +41,10 @@ import {
   useTeammateArtifactIds,
   useWeapon,
 } from '@genshin-optimizer/gi/db-ui'
-import type { LapicEngineKind } from '@genshin-optimizer/gi/lapic-ui'
-import { LapicEngineProvider } from '@genshin-optimizer/gi/lapic-ui'
+import {
+  LapicEngineProvider,
+  useLocalStorageEnginePreference,
+} from '@genshin-optimizer/gi/lapic-ui'
 import type { OptProblemInput } from '@genshin-optimizer/gi/solver'
 import {
   GOSolver,
@@ -165,22 +167,7 @@ export default function TabBuild() {
   const [maxWorkers, nativeThreads, setMaxWorkers] = useNumWorkers()
 
   // Engine preference (legacy vs lapic)
-  const [enginePref, setEnginePref] = useState<LapicEngineKind>(() => {
-    try {
-      const stored = localStorage.getItem('gi-optimizer-engine')
-      return stored === 'lapic' ? 'lapic' : 'legacy'
-    } catch {
-      return 'legacy'
-    }
-  })
-  const handleEngineChange = useCallback((engine: LapicEngineKind) => {
-    try {
-      localStorage.setItem('gi-optimizer-engine', engine)
-    } catch {
-      // Ignore localStorage errors (e.g. private browsing)
-    }
-    setEnginePref(engine)
-  }, [])
+  const [enginePref, handleEngineChange] = useLocalStorageEnginePreference()
 
   // Clear state when changing characters
   if (usePrev(characterKey) !== characterKey) setBuildStatus(initBuildStatus())

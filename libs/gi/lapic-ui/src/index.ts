@@ -4,6 +4,7 @@ export {
   LapicEngineProvider,
   useLapicEnginePreference,
   useLapicDiagnostics,
+  useLocalStorageEnginePreference,
 } from './hooks'
 export type {
   LapicSolveState,

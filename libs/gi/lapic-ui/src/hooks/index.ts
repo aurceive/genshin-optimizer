@@ -24,3 +24,5 @@ export type {
   LapicDiagnosticEntry,
   LapicDiagnosticsState,
 } from './useLapicDiagnostics'
+
+export { useLocalStorageEnginePreference } from './useLocalStorageEnginePreference'
