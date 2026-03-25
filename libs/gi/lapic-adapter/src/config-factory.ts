@@ -160,6 +160,34 @@ function computeProblemDigest(
 }
 
 // ---------------------------------------------------------------------------
+// Numeric evaluation comparator
+// ---------------------------------------------------------------------------
+
+/**
+ * Compares two evaluations numerically by `objectiveValue`.
+ *
+ * The default lapic comparator uses lexicographic `localeCompare` on string
+ * ordering keys.  For GI's float-valued objectives this is incorrect:
+ * `"173007".localeCompare("73686")` yields negative ("1" < "7") even though
+ * 173 007 > 73 686 numerically.  This causes B&B to prune branches whose
+ * upper bounds are actually above the incumbent, silently discarding the
+ * optimal build.
+ *
+ * This comparator parses `objectiveValue` as a float and compares
+ * numerically, which is always correct for GI optimisation targets.
+ */
+const giNumericEvaluationComparator: LapicBoundedExactEvaluationComparator = (
+  left,
+  right
+) => {
+  const lv = parseFloat(left.objectiveValue)
+  const rv = parseFloat(right.objectiveValue)
+  if (lv < rv) return -1
+  if (lv > rv) return 1
+  return 0
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
@@ -268,9 +296,8 @@ export function createGiLapicOrchestrationConfigFromUi(
     canonicalIdentity,
     artifactStore: input.artifactStore ?? createLapicMemoryArtifactStore(),
     evaluateCombination: input.evaluateCombination,
-    ...(input.compareEvaluations !== undefined && {
-      compareEvaluations: input.compareEvaluations,
-    }),
+    compareEvaluations:
+      input.compareEvaluations ?? giNumericEvaluationComparator,
     ...(input.isCombinationFeasible !== undefined && {
       isCombinationFeasible: input.isCombinationFeasible,
     }),
