@@ -2,7 +2,10 @@ import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
 import type { LapicTeamProvenance } from '@genshin-optimizer/lapic/core'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
-import { createGiLapicOrchestrationConfigFromUi } from './config-factory'
+import {
+  createGiLapicOrchestrationConfigFromUi,
+  giNumericEvaluationComparator,
+} from './config-factory'
 import type { GiLapicConfigFactoryInput } from './config-factory'
 import type { GiLapicBoundedCurrentOnlyCombinationEvaluator } from './types'
 
@@ -415,5 +418,54 @@ describe('createGiLapicOrchestrationConfigFromUi', () => {
     expect(config.request.requestedPotentialSolveModes).toEqual([
       'current-only',
     ])
+  })
+
+  // ---- Numeric evaluation comparator ----
+
+  it('defaults compareEvaluations to giNumericEvaluationComparator', () => {
+    const config = createGiLapicOrchestrationConfigFromUi(createMinimalInput())
+    expect(config.compareEvaluations).toBe(giNumericEvaluationComparator)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// giNumericEvaluationComparator
+// ---------------------------------------------------------------------------
+
+describe('giNumericEvaluationComparator', () => {
+  function eval_(value: string) {
+    return {
+      objectiveValue: value,
+      evidenceDigest: 'test',
+    }
+  }
+
+  it('compares numerically, not lexicographically', () => {
+    // Lexicographic: "173007" < "73686" because "1" < "7"
+    // Numeric:       173007 > 73686
+    expect(giNumericEvaluationComparator(eval_('173007'), eval_('73686'))).toBe(
+      1
+    )
+  })
+
+  it('returns -1 when left < right', () => {
+    expect(giNumericEvaluationComparator(eval_('100'), eval_('200'))).toBe(-1)
+  })
+
+  it('returns 0 when equal', () => {
+    expect(giNumericEvaluationComparator(eval_('42.5'), eval_('42.5'))).toBe(0)
+  })
+
+  it('handles negative values', () => {
+    expect(giNumericEvaluationComparator(eval_('-10'), eval_('5'))).toBe(-1)
+  })
+
+  it('sorts NaN below valid values', () => {
+    expect(giNumericEvaluationComparator(eval_('abc'), eval_('100'))).toBe(-1)
+    expect(giNumericEvaluationComparator(eval_('100'), eval_('abc'))).toBe(1)
+  })
+
+  it('treats two NaN values as equal', () => {
+    expect(giNumericEvaluationComparator(eval_('abc'), eval_('xyz'))).toBe(0)
   })
 })

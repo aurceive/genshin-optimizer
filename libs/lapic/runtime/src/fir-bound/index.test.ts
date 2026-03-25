@@ -3,12 +3,14 @@ import {
   LapicFirGraphBuilder,
   type LapicFirVariableId,
   lapicInterval,
+  lapicIntervalAdd,
   lapicIntervalPoint,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicCandidateDescriptor } from '@genshin-optimizer/lapic/core'
 import type { LapicBoundedExactPartialCombination } from '../solve/types'
 import {
   createLapicFirPartialIntervalEnv,
+  fillLapicFirPartialIntervalEnv,
   precomputeDomainEnvelopes,
 } from './env-factory'
 import { createLapicFirBoundProvider } from './provider'
@@ -538,5 +540,119 @@ describe('createLapicFirBoundProvider', () => {
       expect(bound).toBeDefined()
       expect(Number(bound!.upperBoundValue)).toBe(30)
     })
+  })
+})
+
+// ===========================================================================
+// precomputeDomainEnvelopes — zero-floor for missing variables
+// ===========================================================================
+
+describe('precomputeDomainEnvelopes — zero-floor', () => {
+  it('treats missing variable as 0 in envelope computation', () => {
+    // Candidate c1 has x=5, candidate c2 has x=10, candidate c3 has no x.
+    // Envelope should be [0, 10] (zero-floor for c3).
+    const maps = [
+      domainMap('A', [
+        ['c1', { x: 5 }],
+        ['c2', { x: 10 }],
+        ['c3', { y: 1 }],
+      ]),
+    ]
+    const envelopes = precomputeDomainEnvelopes(maps)
+    const aEnv = envelopes.get('A')!
+    expect(aEnv.get('x')).toEqual(lapicInterval(0, 10))
+  })
+
+  it('produces [0, v] when only one candidate has the variable', () => {
+    const maps = [
+      domainMap('A', [
+        ['c1', { x: 7 }],
+        ['c2', { y: 3 }],
+      ]),
+    ]
+    const envelopes = precomputeDomainEnvelopes(maps)
+    expect(envelopes.get('A')!.get('x')).toEqual(lapicInterval(0, 7))
+    expect(envelopes.get('A')!.get('y')).toEqual(lapicInterval(0, 3))
+  })
+})
+
+// ===========================================================================
+// fillLapicFirPartialIntervalEnv — ADD semantics
+// ===========================================================================
+
+describe('fillLapicFirPartialIntervalEnv — ADD semantics', () => {
+  const mapsAB = [
+    domainMap('A', [
+      ['a1', { x: 1, y: 10 }],
+      ['a2', { x: 3, y: 20 }],
+    ]),
+    domainMap('B', [
+      ['b1', { x: 5 }],
+      ['b2', { x: 8 }],
+    ]),
+  ]
+  const domainMapById = new Map(mapsAB.map((m) => [m.domainId, m]))
+  const envelopes = precomputeDomainEnvelopes(mapsAB)
+
+  it('sums contributions from multiple domains via interval ADD', () => {
+    const env = new Map<LapicFirVariableId, LapicInterval>()
+    // Both unassigned: env[x] = envelopeA(x) + envelopeB(x)
+    fillLapicFirPartialIntervalEnv(env, [], mapsAB, domainMapById, envelopes)
+    // A: x ∈ [1,3], B: x ∈ [5,8] → sum x ∈ [6,11]
+    expect(env.get('x')).toEqual(
+      lapicIntervalAdd(lapicInterval(1, 3), lapicInterval(5, 8))
+    )
+    // A: y ∈ [10,20], B: no y → sum y ∈ [10,20]
+    expect(env.get('y')).toEqual(lapicInterval(10, 20))
+  })
+
+  it('adds assigned candidate point to unassigned envelopes', () => {
+    const env = new Map<LapicFirVariableId, LapicInterval>()
+    // A assigned (a1: x=1, y=10), B unassigned (x ∈ [5,8])
+    fillLapicFirPartialIntervalEnv(
+      env,
+      [candidateDescriptor('a1', 'A')],
+      mapsAB,
+      domainMapById,
+      envelopes
+    )
+    // x = point(1) + [5,8] = [6,9]
+    expect(env.get('x')).toEqual(
+      lapicIntervalAdd(lapicIntervalPoint(1), lapicInterval(5, 8))
+    )
+    // y = point(10) (only A contributes y)
+    expect(env.get('y')).toEqual(lapicIntervalPoint(10))
+  })
+
+  it('adds global constants to domain contributions', () => {
+    const env = new Map<LapicFirVariableId, LapicInterval>()
+    const globals = new Map<LapicFirVariableId, number>([['x', 100]])
+    fillLapicFirPartialIntervalEnv(
+      env,
+      [],
+      mapsAB,
+      domainMapById,
+      envelopes,
+      globals
+    )
+    // x = global(100) + envelopeA(x:[1,3]) + envelopeB(x:[5,8]) = [106,111]
+    const expected = lapicIntervalAdd(
+      lapicIntervalAdd(lapicIntervalPoint(100), lapicInterval(1, 3)),
+      lapicInterval(5, 8)
+    )
+    expect(env.get('x')).toEqual(expected)
+  })
+
+  it('throws on duplicate domain assignment', () => {
+    const env = new Map<LapicFirVariableId, LapicInterval>()
+    expect(() =>
+      fillLapicFirPartialIntervalEnv(
+        env,
+        [candidateDescriptor('a1', 'A'), candidateDescriptor('a2', 'A')],
+        mapsAB,
+        domainMapById,
+        envelopes
+      )
+    ).toThrow(/duplicate assignment/)
   })
 })
