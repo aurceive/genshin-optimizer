@@ -67,10 +67,15 @@ export interface LapicWorkerPauseMsg {
   readonly type: 'pause'
 }
 
+export interface LapicWorkerResumeMsg {
+  readonly type: 'resume'
+}
+
 export type LapicWorkerInMsg =
   | LapicWorkerInitMsg
   | LapicWorkerCancelMsg
   | LapicWorkerPauseMsg
+  | LapicWorkerResumeMsg
 
 // ---------------------------------------------------------------------------
 // Worker → Main messages
@@ -94,6 +99,18 @@ export interface LapicWorkerResultMsg {
   readonly total: number
 }
 
+/** Emitted when the solve is paused at a safe point. */
+export interface LapicWorkerPausedMsg {
+  readonly type: 'paused'
+  /** Partial top-N builds found so far. Same format as result builds. */
+  readonly partialBuilds: ReadonlyArray<{
+    readonly value: number
+    readonly artifactIds: string[]
+  }>
+  readonly tested: number
+  readonly total: number
+}
+
 export interface LapicWorkerErrorMsg {
   readonly type: 'error'
   readonly message: string
@@ -102,4 +119,5 @@ export interface LapicWorkerErrorMsg {
 export type LapicWorkerOutMsg =
   | LapicWorkerProgressMsg
   | LapicWorkerResultMsg
+  | LapicWorkerPausedMsg
   | LapicWorkerErrorMsg

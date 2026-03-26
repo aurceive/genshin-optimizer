@@ -19,6 +19,7 @@ import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
   LapicInMemorySessionController,
+  LapicSolveCheckpointState,
   LapicSolveOrchestration,
 } from '@genshin-optimizer/lapic/runtime'
 import type { LapicLpProvider } from '@genshin-optimizer/lapic/core'
@@ -86,6 +87,14 @@ export interface GiLapicSolveOrchestrationConfig {
    * interval-arithmetic first, LP bounds as fallback for tighter pruning.
    */
   readonly lpProvider?: LapicLpProvider
+  /**
+   * Checkpoint state from a previously paused solve.
+   * When present, the single-threaded executor resumes from
+   * the saved cursor position instead of starting fresh.
+   * Coordinated (multi-partition) solve does not support resume;
+   * if this is set, the solve is forced to single-threaded mode.
+   */
+  readonly resumeCheckpointState?: LapicSolveCheckpointState
 }
 
 /**
@@ -208,7 +217,10 @@ export function createGiLapicSolveOrchestration(
           : undefined)
 
       // 5. Execute solve — coordinated or single-threaded
-      const effectiveWorkerCount = config.workerCount ?? 1
+      //    Resume forces single-threaded (coordinated solve lacks resume support)
+      const effectiveWorkerCount = config.resumeCheckpointState
+        ? 1
+        : (config.workerCount ?? 1)
       if (effectiveWorkerCount > 1) {
         return executeCoordinatedBoundedExactSolve({
           problem: canonicalExport.value.problem,
@@ -279,6 +291,9 @@ export function createGiLapicSolveOrchestration(
           ? {
               skipIntermediateCertificates: config.skipIntermediateCertificates,
             }
+          : {}),
+        ...(config.resumeCheckpointState !== undefined
+          ? { resumeCheckpointState: config.resumeCheckpointState }
           : {}),
       })
     },

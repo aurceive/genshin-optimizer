@@ -31,6 +31,7 @@ import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactCombinationEvaluation,
   LapicProgressEvent,
+  LapicSolveCheckpointState,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicProblemNormalizationInput,
@@ -134,16 +135,30 @@ function createGiArtifactNormalizationInput(
 
 let orchestration: GiLapicSolveOrchestration | null = null
 
+// Resume synchronization: when the Worker is paused, a 'resume' message
+// resolves this promise to unblock the solve cycle.
+let resolveResumeWait: ((action: 'resume' | 'cancel') => void) | null = null
+
 onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
   const msg = e.data
 
   if (msg.type === 'cancel') {
+    // If paused and waiting for resume, unblock the wait so the
+    // solve cycle can exit cleanly.
+    resolveResumeWait?.('cancel')
+    resolveResumeWait = null
     orchestration?.handle.requestCancel().catch(() => {})
     return
   }
 
   if (msg.type === 'pause') {
     orchestration?.handle.requestPause().catch(() => {})
+    return
+  }
+
+  if (msg.type === 'resume') {
+    resolveResumeWait?.('resume')
+    resolveResumeWait = null
     return
   }
 
@@ -164,7 +179,10 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
   }
 }
 
-async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
+async function runSolve(
+  msg: LapicWorkerInitMsg,
+  resumeCheckpoint?: LapicSolveCheckpointState
+): Promise<void> {
   const {
     optimizedNodes,
     base,
@@ -324,6 +342,9 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     workerCount,
     skipIntermediateCertificates: true,
     ...(lpProvider !== undefined ? { lpProvider } : {}),
+    ...(resumeCheckpoint !== undefined
+      ? { resumeCheckpointState: resumeCheckpoint }
+      : {}),
   })
 
   // 6. Subscribe to progress — forward canonical LapicProgressEvent objects
@@ -353,12 +374,47 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // 7. Start the solve
   const outcome = await orchestration.start()
 
-  // 8. Map results to the expected format
+  // 8. Handle outcome
   // Flush final progress unconditionally (throttle may have suppressed it)
   if (lastProgressEvent) {
     postMessage({ type: 'progress', event: lastProgressEvent })
   }
 
+  // 8a. Paused — extract partial results, wait for resume or cancel
+  if (
+    outcome.state === 'paused' &&
+    outcome.solveOutcome &&
+    'paused' in outcome.solveOutcome &&
+    outcome.solveOutcome.paused
+  ) {
+    const checkpoint = outcome.solveOutcome.checkpointState
+    const partialBuilds = checkpoint.trackerSnapshot.entries.map((entry) => ({
+      value: Number.parseFloat(entry.evaluation.objectiveValue),
+      artifactIds: [...entry.candidateIds],
+    }))
+
+    postMessage({
+      type: 'paused',
+      partialBuilds,
+      tested: evaluatedCount,
+      total: totalCombinations,
+    })
+
+    // Block until 'resume' or 'cancel' message arrives
+    const action = await new Promise<'resume' | 'cancel'>((resolve) => {
+      resolveResumeWait = resolve
+    })
+    resolveResumeWait = null
+
+    // If cancelled while paused, exit without resuming
+    if (action === 'cancel') return
+
+    // Resume: create a new orchestration from the checkpoint
+    orchestration = null
+    return runSolve(msg, checkpoint)
+  }
+
+  // 8b. Failed
   if (outcome.state === 'failed') {
     postMessage({
       type: 'error',
@@ -367,12 +423,13 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     return
   }
 
+  // 8c. Completed (or cancelled — no result posted)
   let builds: { value: number; artifactIds: string[] }[] = []
   if (outcome.state === 'completed' && outcome.solveOutcome) {
     const solveResult = outcome.solveOutcome
     if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
       builds = solveResult.topNCandidates.map((entry) => ({
-        value: parseFloat(entry.evaluation.objectiveValue),
+        value: Number.parseFloat(entry.evaluation.objectiveValue),
         artifactIds: entry.candidates.map((c) => c.candidateId),
       }))
     }

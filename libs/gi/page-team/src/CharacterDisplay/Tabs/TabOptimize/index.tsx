@@ -77,6 +77,8 @@ import {
   CheckBoxOutlineBlank,
   Close,
   DeleteForever,
+  Pause,
+  PlayArrow,
   Science,
   TrendingUp,
 } from '@mui/icons-material'
@@ -320,6 +322,9 @@ export default function TabBuild() {
 
   // Lapic solver — worker ref for cancellation
   const lapicWorkerRef = useRef<Worker | null>(null)
+
+  // Lapic pause/resume state
+  const [lapicPaused, setLapicPaused] = useState(false)
 
   // Combined generating flag for both engines
   const generatingBuilds = buildStatus.type !== 'inactive'
@@ -639,6 +644,11 @@ export default function TabBuild() {
               status.skipped = ev.skippedUnits ?? 0
               if (ev.totalUnits !== undefined) status.total = ev.totalUnits
             }
+          } else if (msg.type === 'paused') {
+            status.tested = msg.tested
+            status.total = msg.total
+            setBuildStatus({ type: 'active', ...status })
+            setLapicPaused(true)
           } else if (msg.type === 'result') {
             resolve(msg)
           } else if (msg.type === 'error') {
@@ -722,6 +732,7 @@ export default function TabBuild() {
       clearInterval(bpsTimer)
       lapicWorkerRef.current?.terminate()
       lapicWorkerRef.current = null
+      setLapicPaused(false)
       setBuildStatus({
         type: 'inactive',
         ...status,
@@ -1020,6 +1031,32 @@ export default function TabBuild() {
             title={!optimizationTarget ? t('selectTargetFirst') : ''}
           >
             <span>
+              {/* Lapic pause/resume buttons when generating with lapic engine */}
+              {generatingBuilds && enginePref === 'lapic' && !lapicPaused && (
+                <Button
+                  color="warning"
+                  onClick={() =>
+                    lapicWorkerRef.current?.postMessage({ type: 'pause' })
+                  }
+                  startIcon={<Pause />}
+                  sx={{ borderRadius: '0px 0px 0px 0px' }}
+                >
+                  {t('generateButton.pause')}
+                </Button>
+              )}
+              {generatingBuilds && enginePref === 'lapic' && lapicPaused && (
+                <Button
+                  color="success"
+                  onClick={() => {
+                    setLapicPaused(false)
+                    lapicWorkerRef.current?.postMessage({ type: 'resume' })
+                  }}
+                  startIcon={<PlayArrow />}
+                  sx={{ borderRadius: '0px 0px 0px 0px' }}
+                >
+                  {t('generateButton.resume')}
+                </Button>
+              )}
               <Button
                 disabled={
                   !characterKey ||

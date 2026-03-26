@@ -141,7 +141,9 @@
   "selectTargetFirst": "Select an Optimization Target first",
   "generateButton": {
     "cancel": "Cancel",
-    "generateBuilds": "Generate Builds"
+    "generateBuilds": "Generate Builds",
+    "pause": "Pause",
+    "resume": "Resume"
   },
   "buildShowingNum": "Showing <2>{{count}}</2> build generated for <6/>.",
   "generatedOn": "Build generated on: ",
