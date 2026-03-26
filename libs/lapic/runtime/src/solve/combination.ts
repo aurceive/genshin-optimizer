@@ -166,11 +166,23 @@ export function validateSolveOptions(
 
   if (
     options.problem.potentialConfiguration &&
-    options.problem.potentialConfiguration.solveMode !== 'current-only'
+    options.problem.potentialConfiguration.solveMode !== 'current-only' &&
+    options.problem.potentialConfiguration.solveMode !==
+      'potential-aware-rerank'
   )
     return failure(
-      'The bounded in-process solve slice currently supports only current-only potential mode.',
+      'The bounded in-process solve slice currently supports only current-only and potential-aware-rerank potential modes.',
       ['problem', 'potentialConfiguration', 'solveMode']
+    )
+
+  if (
+    options.problem.potentialConfiguration?.solveMode ===
+      'potential-aware-rerank' &&
+    !options.potentialRerankEvaluator
+  )
+    return failure(
+      'The potential-aware-rerank mode requires a potentialRerankEvaluator in solve options.',
+      ['potentialRerankEvaluator']
     )
 
   if (!orderedCandidates.length)

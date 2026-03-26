@@ -136,6 +136,15 @@ export interface LapicTopNCandidateEntry {
     readonly evidenceDigest: LapicDigest
     readonly orderingKey?: readonly string[]
   }
+  /**
+   * Potential-adjusted ordering key, populated when the solve uses
+   * `potential-aware-rerank` mode (§4.3).  Absent under `current-only`.
+   */
+  readonly potentialOrderingKey?: readonly string[]
+  /**
+   * Evidence digest for the potential evaluation.
+   */
+  readonly potentialEvidenceDigest?: LapicDigest
 }
 
 export interface LapicPauseRequestResult {

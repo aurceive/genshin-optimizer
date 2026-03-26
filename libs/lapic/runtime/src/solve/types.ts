@@ -4,6 +4,7 @@ import type {
   LapicDeterministicOrderingRelation,
   LapicDigest,
   LapicFirGraph,
+  LapicPotentialRerankEvaluator,
   LapicValidationResult,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
@@ -137,6 +138,14 @@ export interface LapicBoundedExactSolveOptions {
    * removing dominated candidates before the join search.
    */
   readonly domainVariableMaps?: readonly LapicFirDomainVariableMap[]
+  /**
+   * Potential rerank evaluator for `potential-aware-rerank` mode (§4.3).
+   * When the problem's potentialConfiguration.solveMode is
+   * `potential-aware-rerank`, this callback must be provided.
+   * It is called once per top-N entry after the primary solve completes,
+   * producing a potential-adjusted ordering key for the final result.
+   */
+  readonly potentialRerankEvaluator?: LapicPotentialRerankEvaluator
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   createLapicSuccessResult,
   hasExclusiveResourceConflict,
   inferForcedBranches,
+  rerankByPotential,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
 import { LapicSessionFailureError } from '../session/completion'
@@ -277,9 +278,19 @@ async function completeSolve(
   }
 
   const winners = tracker.results()
+
+  // §4.3 potential-aware-rerank: primary solve by current-value,
+  // then rerank the top-N entries using the potential evaluator.
+  const finalWinners =
+    options.potentialRerankEvaluator &&
+    options.problem.potentialConfiguration?.solveMode ===
+      'potential-aware-rerank'
+      ? rerankByPotential(winners, options.potentialRerankEvaluator).reranked
+      : winners
+
   const finalCertificate = createFinalOptimalityCertificate(
     options,
-    winners,
+    finalWinners,
     frontierBlockIds,
     pruneCertificateIds,
     branchReachabilityCertificateIds,
@@ -303,7 +314,7 @@ async function completeSolve(
     frontierBlockIds
   )
   options.controller.emitCertificate(finalCertificate)
-  return options.controller.complete(finalOptimality.value, winners)
+  return options.controller.complete(finalOptimality.value, finalWinners)
 }
 
 // ---------------------------------------------------------------------------
