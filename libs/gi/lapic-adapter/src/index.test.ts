@@ -231,13 +231,13 @@ describe('gi lapic adapter', () => {
     ).toEqual(['current-only'])
   })
 
-  it('rejects unsupported potential solve modes', () => {
+  it('accepts potential-aware-rerank solve mode', () => {
     const result = normalizeGiLapicAdapterRequest({
       ...createGiRequest(),
       requestedPotentialSolveModes: ['potential-aware-rerank'],
     })
 
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
   })
 
   it('creates a canonical problem from normalization input and identity', () => {
@@ -288,8 +288,11 @@ describe('gi lapic adapter', () => {
       'weapon-snapshot-digest',
       'formula-snapshot-digest',
     ])
-    expect(metadata.supportedPotentialSolveModes).toEqual(['current-only'])
-    expect(metadata.declaredUnsupportedFeatures).toContain(
+    expect(metadata.supportedPotentialSolveModes).toEqual([
+      'current-only',
+      'potential-aware-rerank',
+    ])
+    expect(metadata.declaredUnsupportedFeatures).not.toContain(
       'gi-potential-aware-ranking'
     )
     expect(metadata.metadata.formulaCompilationMode).toBe(

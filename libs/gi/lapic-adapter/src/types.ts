@@ -31,6 +31,7 @@ import type {
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
 } from '@genshin-optimizer/lapic/runtime'
+import type { LapicPotentialRerankEvaluator } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import type { GiLapicCandidateVariableExtractor } from './bound-maps'
 
@@ -192,6 +193,13 @@ export interface GiLapicBoundedCurrentOnlySolveOptions {
    * creates a built-in FIR-bound provider using the compiled F-IR graph.
    */
   readonly candidateVariableExtractor?: GiLapicCandidateVariableExtractor
+  /**
+   * Potential rerank evaluator for `potential-aware-rerank` mode (§4.3).
+   * When provided and the problem's potentialConfiguration.solveMode is
+   * `potential-aware-rerank`, this callback is invoked once per top-N entry
+   * after the primary solve, producing a potential-adjusted ordering key.
+   */
+  readonly potentialRerankEvaluator?: LapicPotentialRerankEvaluator
 }
 
 export interface GiLapicBoundedCurrentOnlySolveResult {
@@ -220,6 +228,7 @@ export const giLapicAdapterSkeleton: GiLapicAdapterSkeletonMarker = {
 
 const giSupportedPotentialSolveModes = [
   'current-only',
+  'potential-aware-rerank',
 ] as const satisfies readonly LapicPotentialSolveMode[]
 const giSupportedGraphOutputKinds = ['gi-plot-base'] as const
 const giSupportedFormulaCompilationModes = ['gi-legacy-compatibility'] as const
@@ -228,7 +237,6 @@ const giSupportedLegacyCompatibilityPaths = ['waverider-opt-node'] as const
 const giExplicitlyUnsupportedSemantics = [
   'gi-canonical-pando-export',
   'gi-upgrade-frontier-export',
-  'gi-potential-aware-ranking',
   'gi-tc-subproblem-export',
 ] as const
 

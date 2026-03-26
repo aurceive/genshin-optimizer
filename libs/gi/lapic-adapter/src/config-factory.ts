@@ -25,6 +25,7 @@ import type {
   LapicBoundedExactEvaluationComparator,
   LapicBoundedExactUpperBoundEvaluator,
 } from '@genshin-optimizer/lapic/runtime'
+import type { LapicPotentialRerankEvaluator } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import { createLapicMemoryArtifactStore } from '@genshin-optimizer/lapic/storage'
 import type { GiLapicCandidateVariableExtractor } from './bound-maps'
@@ -122,6 +123,17 @@ export interface GiLapicConfigFactoryInput {
    * after `pruneAll` + `reaffine`). Keys use `dyn:{statKey}` format.
    */
   readonly globalConstants?: ReadonlyMap<string, number>
+  /**
+   * Potential rerank evaluator for `potential-aware-rerank` mode.
+   * When provided, the solve will rerank top-N results using
+   * potential-adjusted ordering keys after the primary solve.
+   */
+  readonly potentialRerankEvaluator?: LapicPotentialRerankEvaluator
+  /**
+   * Potential solve mode to request.
+   * Defaults to `'current-only'` when not provided.
+   */
+  readonly potentialSolveMode?: 'current-only' | 'potential-aware-rerank'
 
   // ---- Infrastructure (optional) ----
   /** Artifact store. Defaults to in-memory store. */
@@ -279,7 +291,7 @@ export function createGiLapicOrchestrationConfigFromUi(
       optConfig: input.optConfig,
       optimizationRequest,
     },
-    requestedPotentialSolveModes: ['current-only'],
+    requestedPotentialSolveModes: [input.potentialSolveMode ?? 'current-only'],
   }
 
   // ---- Build canonical identity ----
@@ -318,6 +330,9 @@ export function createGiLapicOrchestrationConfigFromUi(
     }),
     ...(input.globalConstants !== undefined && {
       globalConstants: input.globalConstants,
+    }),
+    ...(input.potentialRerankEvaluator !== undefined && {
+      potentialRerankEvaluator: input.potentialRerankEvaluator,
     }),
     ...(input.sessionId !== undefined && { sessionId: input.sessionId }),
   } satisfies GiLapicSolveOrchestrationConfig

@@ -57,6 +57,7 @@ export interface GiLapicSolveOrchestrationConfig {
   readonly maxCombinationCount?: number
   readonly computeUpperBound?: GiLapicBoundedCurrentOnlySolveOptions['computeUpperBound']
   readonly candidateVariableExtractor?: GiLapicBoundedCurrentOnlySolveOptions['candidateVariableExtractor']
+  readonly potentialRerankEvaluator?: GiLapicBoundedCurrentOnlySolveOptions['potentialRerankEvaluator']
   /**
    * Global constants for the FIR interval environment.
    * These are additive base values (e.g., from `arts.base` after
@@ -294,6 +295,9 @@ export function createGiLapicSolveOrchestration(
           : {}),
         ...(config.resumeCheckpointState !== undefined
           ? { resumeCheckpointState: config.resumeCheckpointState }
+          : {}),
+        ...(config.potentialRerankEvaluator !== undefined
+          ? { potentialRerankEvaluator: config.potentialRerankEvaluator }
           : {}),
       })
     },
