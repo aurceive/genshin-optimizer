@@ -21,6 +21,7 @@ import type {
   LapicInMemorySessionController,
   LapicSolveOrchestration,
 } from '@genshin-optimizer/lapic/runtime'
+import type { LapicLpProvider } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import {
   createLapicArtifactWriteRequest,
@@ -79,6 +80,12 @@ export interface GiLapicSolveOrchestrationConfig {
    * Use for UI-driven solves that only consume the top-N candidates.
    */
   readonly skipIntermediateCertificates?: boolean
+  /**
+   * Optional LP solver provider (e.g. HiGHS WASM).
+   * When supplied, the auto-wired bound provider composes a cascade:
+   * interval-arithmetic first, LP bounds as fallback for tighter pruning.
+   */
+  readonly lpProvider?: LapicLpProvider
 }
 
 /**
@@ -183,7 +190,7 @@ export function createGiLapicSolveOrchestration(
         )
       }
 
-      // 4. Auto-wire FIR-bound provider
+      // 4. Auto-wire bound provider (interval-only or interval+LP cascade)
       const computeUpperBound =
         config.computeUpperBound ??
         (firGraph && config.candidateVariableExtractor
@@ -193,6 +200,9 @@ export function createGiLapicSolveOrchestration(
               extractVariables: config.candidateVariableExtractor,
               ...(config.globalConstants !== undefined
                 ? { globalConstants: config.globalConstants }
+                : {}),
+              ...(config.lpProvider !== undefined
+                ? { lpProvider: config.lpProvider }
                 : {}),
             })
           : undefined)

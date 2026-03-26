@@ -305,14 +305,28 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     topN,
   })
 
-  // 4. Create orchestration (D-007: UI solves skip intermediate certificates)
+  // 4. Init HiGHS LP provider (graceful fallback to FIR-only bounds)
+  let lpProvider:
+    | import('@genshin-optimizer/lapic/core').LapicLpProvider
+    | undefined
+  try {
+    const { createLapicHighsProvider } = await import(
+      '@genshin-optimizer/lapic/runtime'
+    )
+    lpProvider = await createLapicHighsProvider()
+  } catch (e) {
+    console.warn('[lapic] HiGHS WASM init failed, using FIR bounds only', e)
+  }
+
+  // 5. Create orchestration (UI solves skip intermediate certificates)
   orchestration = createGiLapicSolveOrchestration({
     ...config,
     workerCount,
     skipIntermediateCertificates: true,
+    ...(lpProvider !== undefined ? { lpProvider } : {}),
   })
 
-  // 5. Subscribe to progress — forward canonical LapicProgressEvent objects
+  // 6. Subscribe to progress — forward canonical LapicProgressEvent objects
   let lastProgressEvent: LapicProgressEvent | undefined
   let lastProgressPostTime = 0
   const PROGRESS_THROTTLE_MS = 500
@@ -336,10 +350,10 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
   // diagnostic broadcast is a no-op with zero listeners. Solve failures
   // surface through outcome.state and outcome.error.
 
-  // 6. Start the solve
+  // 7. Start the solve
   const outcome = await orchestration.start()
 
-  // 7. Map results to the expected format
+  // 8. Map results to the expected format
   // Flush final progress unconditionally (throttle may have suppressed it)
   if (lastProgressEvent) {
     postMessage({ type: 'progress', event: lastProgressEvent })
