@@ -297,7 +297,7 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     topN,
   })
 
-  // 4. Create orchestration
+  // 4. Create orchestration (D-007: UI solves skip intermediate certificates)
   orchestration = createGiLapicSolveOrchestration({
     ...config,
     workerCount,
@@ -324,17 +324,9 @@ async function runSolve(msg: LapicWorkerInitMsg): Promise<void> {
     }
   })
 
-  // 5b. Subscribe to diagnostics — forward only failure records.
-  // Trace events (Progress, EmitCertificate, PublishArtifacts, etc.) are
-  // high-frequency bookkeeping that must NOT cross the postMessage boundary:
-  // 21 000+ EmitCertificate traces per solve flood the main-thread message
-  // queue and freeze / crash the page.  Only LapicFailureRecord (which
-  // carries `failureClass`) is actionable on the UI side.
-  orchestration.handle.subscribeDiagnostics((event) => {
-    if ('failureClass' in event) {
-      postMessage({ type: 'diagnostic', event })
-    }
-  })
+  // UI solves do not subscribe to diagnostics (D-007). The runtime's
+  // diagnostic broadcast is a no-op with zero listeners. Solve failures
+  // surface through outcome.state and outcome.error.
 
   // 6. Start the solve
   const outcome = await orchestration.start()

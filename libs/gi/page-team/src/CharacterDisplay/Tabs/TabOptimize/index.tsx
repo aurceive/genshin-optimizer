@@ -43,7 +43,6 @@ import {
 } from '@genshin-optimizer/gi/db-ui'
 import {
   LapicEngineProvider,
-  useLapicDiagnostics,
   useLapicSolveProgress,
   useLocalStorageEnginePreference,
 } from '@genshin-optimizer/gi/lapic-ui'
@@ -86,7 +85,6 @@ import CloseIcon from '@mui/icons-material/Close'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import {
-  Alert,
   Box,
   Button,
   ButtonGroup,
@@ -132,11 +130,7 @@ import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
-import type {
-  LapicFailureRecord,
-  LapicProgressEvent,
-  LapicTraceEvent,
-} from '@genshin-optimizer/lapic/runtime'
+import type { LapicProgressEvent } from '@genshin-optimizer/lapic/runtime'
 import type { LapicWorkerOutMsg } from './lapicBridge'
 import { prepareOptimizationData } from './prepareOptimizationData'
 
@@ -186,16 +180,6 @@ export default function TabBuild() {
     lapicProgress,
     lapicStartedAt
   )
-
-  // Lapic diagnostics — accumulated during a solve run via ref,
-  // flushed to state snapshot for hook consumption
-  const lapicDiagnosticEventsRef = useRef<
-    (LapicTraceEvent | LapicFailureRecord)[]
-  >([])
-  const [lapicDiagnosticEvents, setLapicDiagnosticEvents] = useState<
-    readonly (LapicTraceEvent | LapicFailureRecord)[]
-  >([])
-  const lapicDiagnostics = useLapicDiagnostics(lapicDiagnosticEvents)
 
   // Clear state when changing characters
   if (usePrev(characterKey) !== characterKey) setBuildStatus(initBuildStatus())
@@ -594,14 +578,11 @@ export default function TabBuild() {
 
     setChartData(undefined)
 
-    // Reset lapic progress/diagnostics for this run
+    // Reset lapic progress for this run
     const solveStartedAt = Date.now()
     setLapicStartedAt(solveStartedAt)
     setLapicProgress(undefined)
-    lapicDiagnosticEventsRef.current = []
-    setLapicDiagnosticEvents([])
     let latestProgressEvent: LapicProgressEvent | undefined
-    let lastFlushedDiagCount = 0
 
     const worker = new Worker(
       new URL('./LapicSolveWorker.ts', import.meta.url),
@@ -621,12 +602,6 @@ export default function TabBuild() {
     const statusUpdateTimer = setInterval(() => {
       setBuildStatus({ type: 'active', ...status })
       if (latestProgressEvent) setLapicProgress(latestProgressEvent)
-      // Flush only when new diagnostic events have been accumulated
-      const pending = lapicDiagnosticEventsRef.current
-      if (pending.length > lastFlushedDiagCount) {
-        setLapicDiagnosticEvents([...pending])
-        lastFlushedDiagCount = pending.length
-      }
     }, 100)
 
     // Builds-per-second tracking
@@ -668,17 +643,6 @@ export default function TabBuild() {
             resolve(msg)
           } else if (msg.type === 'error') {
             reject(new Error(msg.message))
-          } else if (msg.type === 'diagnostic') {
-            const ev = msg.event
-            lapicDiagnosticEventsRef.current.push(ev)
-            if ('failureClass' in ev) {
-              const hasErrorOrWarning = ev.diagnostics.some(
-                (d) => d.severity === 'error' || d.severity === 'warning'
-              )
-              if (hasErrorOrWarning) {
-                console.warn(`[lapic] ${ev.failureClass}: ${ev.message}`)
-              }
-            }
           }
         }
 
@@ -758,9 +722,6 @@ export default function TabBuild() {
       clearInterval(bpsTimer)
       lapicWorkerRef.current?.terminate()
       lapicWorkerRef.current = null
-      // Final flush of accumulated diagnostics
-      const pending = lapicDiagnosticEventsRef.current
-      if (pending.length > 0) setLapicDiagnosticEvents([...pending])
       setBuildStatus({
         type: 'inactive',
         ...status,
@@ -1102,17 +1063,6 @@ export default function TabBuild() {
               maxBuildsToShow,
             }}
           />
-        )}
-        {lapicDiagnostics.hasErrors && (
-          <Alert severity="warning" variant="outlined">
-            <Typography>
-              Lapic engine reported {lapicDiagnostics.errorCount} error
-              {lapicDiagnostics.errorCount !== 1 ? 's' : ''}
-              {lapicDiagnostics.warningCount > 0 &&
-                ` and ${lapicDiagnostics.warningCount} warning${lapicDiagnostics.warningCount !== 1 ? 's' : ''}`}{' '}
-              during optimization. Check the console for details.
-            </Typography>
-          </Alert>
         )}
         {optimizationTarget && (
           <Box>

@@ -8,19 +8,17 @@
  * - Runs `executeCoordinatedBoundedExactSolve()` with B&B pruning
  * - Returns top-N candidates with artifact IDs
  *
- * Progress and diagnostic events use canonical runtime types
- * (`LapicProgressEvent`, `LapicFailureRecord`, `LapicTraceEvent`)
+ * Progress events use canonical runtime types (`LapicProgressEvent`)
  * to stay aligned with the lapic session lifecycle protocol.
+ *
+ * Diagnostics are not streamed across the Worker boundary (D-007).
+ * Solve failures surface through the error message type.
  */
 
 import type { ICachedArtifact, OptConfig } from '@genshin-optimizer/gi/db'
 import type { ArtifactBuildData, DynStat } from '@genshin-optimizer/gi/solver'
 import type { OptNode } from '@genshin-optimizer/gi/wr'
-import type {
-  LapicFailureRecord,
-  LapicProgressEvent,
-  LapicTraceEvent,
-} from '@genshin-optimizer/lapic/runtime'
+import type { LapicProgressEvent } from '@genshin-optimizer/lapic/runtime'
 
 // ---------------------------------------------------------------------------
 // Main → Worker messages
@@ -101,14 +99,7 @@ export interface LapicWorkerErrorMsg {
   readonly message: string
 }
 
-/** Forwards a canonical diagnostic from the runtime session. */
-export interface LapicWorkerDiagnosticMsg {
-  readonly type: 'diagnostic'
-  readonly event: LapicTraceEvent | LapicFailureRecord
-}
-
 export type LapicWorkerOutMsg =
   | LapicWorkerProgressMsg
   | LapicWorkerResultMsg
   | LapicWorkerErrorMsg
-  | LapicWorkerDiagnosticMsg
