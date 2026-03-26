@@ -1,0 +1,21 @@
+{
+  "fixtureId": "gi-opt-5slot-moderate-constrained",
+  "description": "5 artifact slots × 20 candidates each, crit-multiplicative objective with ER ≥ 180% and HP ≥ 25000 constraints.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [20, 20, 20, 20, 20]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 2,
+  "constraintNotes": "ER ≥ 180%, HP ≥ 25000 — common support character constraints",
+  "totalCombinations": 3200000,
+  "expectedMetrics": {
+    "expectedFeasibleRatio": "0.1–0.3",
+    "boundPruneRateNote": "High — constraints eliminate many branches that can't satisfy both thresholds"
+  },
+  "notes": "Support characters (Bennett, Furina, etc.) often require ER and HP thresholds alongside damage optimization. Measures constraint-aware pruning."
+}

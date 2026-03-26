@@ -1,0 +1,24 @@
+{
+  "suiteId": "internal-adversarial-v0.2",
+  "suiteClass": "internal",
+  "corpusVersion": "0.2.0",
+  "description": "Internal adversarial and stress-test suite — covers degenerate inputs, threshold-dense constraints, piecewise objectives, and whale-scale search spaces.",
+  "cases": [
+    "gi-opt-5slot-xlarge-crit",
+    "adversarial-opt-5slot-degenerate-uniform",
+    "adversarial-opt-5slot-threshold-dense",
+    "adversarial-opt-5slot-set-bonus-piecewise"
+  ],
+  "gates": {
+    "correctness": {
+      "requirement": "Solver must terminate with a valid outcome (completed or certified-optimal) on all cases"
+    },
+    "performance": {
+      "timeToCertifiedOptimality": {
+        "appliesTo": ["gi-opt-5slot-xlarge-crit"],
+        "requirement": "< 300s median in browserCI environment class with LP cascade enabled"
+      }
+    }
+  },
+  "notes": "Internal failures may block release even if the public suite passes. See benchmark-governance-and-browser-noise.md §Public vs. Internal Policy."
+}

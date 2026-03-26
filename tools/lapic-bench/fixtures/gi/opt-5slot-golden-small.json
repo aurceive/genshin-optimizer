@@ -1,0 +1,20 @@
+{
+  "fixtureId": "gi-opt-5slot-golden-small",
+  "description": "5 artifact slots × 5 candidates each — golden-oracle scale. Small enough for exhaustive enumeration to verify bounded-exact correctness.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [5, 5, 5, 5, 5]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 0,
+  "totalCombinations": 3125,
+  "expectedMetrics": {
+    "exactLeafResolutionCount": 3125,
+    "boundPruneRateNote": "Low — most branches explored at this scale"
+  },
+  "notes": "Primary use: golden enumeration correctness gate. Exhaustive search must match bounded-exact top-N. Mandatory for correctness qualification."
+}

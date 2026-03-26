@@ -1,5 +1,78 @@
 {
-  "corpusVersion": "0.1.0-draft",
-  "description": "Initial lapic benchmark corpus — scaffold only",
-  "cases": []
+  "corpusVersion": "0.2.0",
+  "description": "Lapic benchmark corpus — team-join baselines and bounded-exact optimization scenarios",
+  "cases": [
+    {
+      "fixtureRef": "fixtures/gi/team-4slot-join-baseline.json",
+      "fixtureId": "gi-team-4slot-join-baseline",
+      "suiteClass": "public",
+      "category": "team-join"
+    },
+    {
+      "fixtureRef": "fixtures/gi/team-4slot-conflict-heavy.json",
+      "fixtureId": "gi-team-4slot-conflict-heavy",
+      "suiteClass": "public",
+      "category": "team-join"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-golden-small.json",
+      "fixtureId": "gi-opt-5slot-golden-small",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-golden-constrained.json",
+      "fixtureId": "gi-opt-5slot-golden-constrained",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-moderate-linear.json",
+      "fixtureId": "gi-opt-5slot-moderate-linear",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-moderate-crit.json",
+      "fixtureId": "gi-opt-5slot-moderate-crit",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-moderate-constrained.json",
+      "fixtureId": "gi-opt-5slot-moderate-constrained",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-large-crit.json",
+      "fixtureId": "gi-opt-5slot-large-crit",
+      "suiteClass": "public",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/gi/opt-5slot-xlarge-crit.json",
+      "fixtureId": "gi-opt-5slot-xlarge-crit",
+      "suiteClass": "internal",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/adversarial/opt-5slot-degenerate-uniform.json",
+      "fixtureId": "adversarial-opt-5slot-degenerate-uniform",
+      "suiteClass": "internal",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/adversarial/opt-5slot-threshold-dense.json",
+      "fixtureId": "adversarial-opt-5slot-threshold-dense",
+      "suiteClass": "internal",
+      "category": "bounded-exact"
+    },
+    {
+      "fixtureRef": "fixtures/adversarial/opt-5slot-set-bonus-piecewise.json",
+      "fixtureId": "adversarial-opt-5slot-set-bonus-piecewise",
+      "suiteClass": "internal",
+      "category": "bounded-exact"
+    }
+  ]
 }

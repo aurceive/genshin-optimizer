@@ -1,0 +1,21 @@
+{
+  "fixtureId": "gi-opt-5slot-golden-constrained",
+  "description": "5 artifact slots × 6 candidates each with ER ≥ 200% constraint — golden-oracle scale with constraints.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [6, 6, 6, 6, 6]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 1,
+  "constraintNotes": "ER ≥ 200% — filters roughly 40-60% of combinations as infeasible",
+  "totalCombinations": 7776,
+  "expectedMetrics": {
+    "expectedFeasibleRatio": "0.4–0.6",
+    "boundPruneRateNote": "Moderate — constraint prunes many branches early"
+  },
+  "notes": "Golden enumeration with constraint feasibility verification. Both feasible and infeasible branches must be correctly classified."
+}

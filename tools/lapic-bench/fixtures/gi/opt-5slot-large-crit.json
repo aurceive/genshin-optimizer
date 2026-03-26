@@ -1,0 +1,20 @@
+{
+  "fixtureId": "gi-opt-5slot-large-crit",
+  "description": "5 artifact slots × 50 candidates each, crit-multiplicative objective — large endgame player artifact pool.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [50, 50, 50, 50, 50]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 0,
+  "totalCombinations": 312500000,
+  "expectedMetrics": {
+    "boundPruneRateNote": "> 0.95 — must prune heavily to finish in reasonable time",
+    "timeToCertifiedOptimalityNote": "Target < 60s in Worker context"
+  },
+  "notes": "Endgame player with a well-stocked artifact inventory. This is the primary performance benchmark — if lapic can solve this in under a minute, it's production-ready for most players."
+}

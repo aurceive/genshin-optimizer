@@ -1,0 +1,20 @@
+{
+  "fixtureId": "adversarial-opt-5slot-degenerate-uniform",
+  "description": "5 slots × 20 candidates, all artifacts have identical stats — worst case for B&B pruning.",
+  "category": "bounded-exact",
+  "gameAdapter": "synthetic",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [20, 20, 20, 20, 20]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 0,
+  "totalCombinations": 3200000,
+  "expectedMetrics": {
+    "boundPruneRateNote": "~0 — all candidates are equivalent, no branch can be pruned",
+    "frontierCompressionRatio": 1.0
+  },
+  "notes": "Adversarial degenerate case: uniform candidates defeat all pruning heuristics. Every combination has the same objective value. Measures solver behavior at B&B worst-case."
+}

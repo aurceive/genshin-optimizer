@@ -1,0 +1,28 @@
+{
+  "suiteId": "public-bounded-exact-v0.2",
+  "suiteClass": "public",
+  "corpusVersion": "0.2.0",
+  "description": "Public correctness and performance suite for bounded-exact optimization — GI artifact scenarios from golden-oracle to large-scale.",
+  "cases": [
+    "gi-opt-5slot-golden-small",
+    "gi-opt-5slot-golden-constrained",
+    "gi-opt-5slot-moderate-linear",
+    "gi-opt-5slot-moderate-crit",
+    "gi-opt-5slot-moderate-constrained",
+    "gi-opt-5slot-large-crit"
+  ],
+  "gates": {
+    "correctness": {
+      "goldenEnumeration": {
+        "appliesTo": ["gi-opt-5slot-golden-small", "gi-opt-5slot-golden-constrained"],
+        "requirement": "Top-N from bounded-exact must exactly match exhaustive enumeration"
+      }
+    },
+    "performance": {
+      "timeToCertifiedOptimality": {
+        "appliesTo": ["gi-opt-5slot-large-crit"],
+        "requirement": "< 60s median in browserCI environment class"
+      }
+    }
+  }
+}

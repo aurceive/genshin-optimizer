@@ -1,0 +1,20 @@
+{
+  "fixtureId": "gi-opt-5slot-moderate-linear",
+  "description": "5 artifact slots × 20 candidates each, pure ATK% linear objective — LP relaxation should be tight.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [20, 20, 20, 20, 20]
+  },
+  "objectiveClass": "linear",
+  "constraintCount": 0,
+  "totalCombinations": 3200000,
+  "expectedMetrics": {
+    "lpTighteningNote": "LP relaxation is exact for linear objectives — very high prune rate expected",
+    "boundPruneRateNote": "> 0.95 — linear objective allows aggressive pruning"
+  },
+  "notes": "Measures LP bound quality on purely linear objectives. Interval bounds are also tight here but LP should match or exceed. Baseline for LP vs FIR comparison."
+}

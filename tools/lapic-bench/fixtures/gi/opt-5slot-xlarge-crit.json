@@ -1,0 +1,20 @@
+{
+  "fixtureId": "gi-opt-5slot-xlarge-crit",
+  "description": "5 artifact slots × 100 candidates each, crit-multiplicative objective — whale-scale artifact pool.",
+  "category": "bounded-exact",
+  "gameAdapter": "gi",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [100, 100, 100, 100, 100]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 0,
+  "totalCombinations": 10000000000,
+  "expectedMetrics": {
+    "boundPruneRateNote": "> 0.99 — exhaustive search impossible; B&B pruning critical",
+    "timeToCertifiedOptimalityNote": "Target < 300s in Worker context with LP cascade"
+  },
+  "notes": "Stress-test scale: 10B combinations. Only achievable with strong LP bounds and aggressive pruning. Represents maximum realistic GI inventory size."
+}

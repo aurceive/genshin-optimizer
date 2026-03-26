@@ -1,0 +1,21 @@
+{
+  "fixtureId": "adversarial-opt-5slot-threshold-dense",
+  "description": "5 slots × 15 candidates, objective and 4 constraints all near active thresholds — many near-feasible branches.",
+  "category": "bounded-exact",
+  "gameAdapter": "synthetic",
+  "problemStructure": {
+    "slotCount": 5,
+    "slotKind": "gi-artifact-slot",
+    "slotIds": ["flower", "plume", "sands", "goblet", "circlet"],
+    "candidatesPerSlot": [15, 15, 15, 15, 15]
+  },
+  "objectiveClass": "crit-multiplicative",
+  "constraintCount": 4,
+  "constraintNotes": "ER ≥ threshold, HP ≥ threshold, DEF ≥ threshold, EM ≥ threshold — all near binding",
+  "totalCombinations": 759375,
+  "expectedMetrics": {
+    "boundPruneRateNote": "Low — thresholds near binding means many branches appear feasible to relaxation",
+    "expectedFeasibleRatio": "0.01–0.05"
+  },
+  "notes": "Adversarial for LP/interval bounds: when constraints are nearly binding, relaxation overestimates feasibility, forcing more exact evaluations. Stresses certificate generation rate."
+}
