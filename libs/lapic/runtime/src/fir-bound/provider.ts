@@ -39,7 +39,6 @@ export function createLapicFirBoundProvider(
   // Pre-compute once at creation — reused for every bound evaluation
   const domainEnvelopes = precomputeDomainEnvelopes(domainVariableMaps)
   const cachedEval = createLapicFirCachedIntervalEvaluator(graph)
-  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
   const env = new Map<LapicFirVariableId, LapicInterval>()
 
   return (partial) => {
@@ -48,7 +47,6 @@ export function createLapicFirBoundProvider(
       env,
       partial.assignedCandidates,
       domainVariableMaps,
-      domainMapById,
       domainEnvelopes,
       globalConstants
     )

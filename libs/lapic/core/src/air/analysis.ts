@@ -114,7 +114,6 @@ class AirAnalysisEngine {
   readonly annotations = new Map<LapicFirNodeId, LapicAirNodeAnnotation>()
   readonly regions: LapicAirRegion[] = []
   private readonly memos = new Map<LapicFirNodeId, MutableAnnotation>()
-  private regionCounter = 0
 
   constructor(private readonly graph: LapicFirGraph) {}
 
@@ -604,6 +603,7 @@ class AirAnalysisEngine {
             : 'unknown',
       parentRegionId: parentId,
       childRegionIds: [],
+      thresholdValue: threshold,
     }
 
     const elseRegion: LapicAirRegion = {
@@ -618,6 +618,7 @@ class AirAnalysisEngine {
             : 'unknown',
       parentRegionId: parentId,
       childRegionIds: [],
+      thresholdValue: threshold,
     }
 
     const parentRegion: LapicAirRegion = {
@@ -626,6 +627,7 @@ class AirAnalysisEngine {
       activeFaces: new Map([[nodeId, forced]]),
       feasibilityStatus: 'feasible',
       childRegionIds: [thenRegionId, elseRegionId],
+      thresholdValue: threshold,
     }
 
     this.regions.push(parentRegion, thenRegion, elseRegion)

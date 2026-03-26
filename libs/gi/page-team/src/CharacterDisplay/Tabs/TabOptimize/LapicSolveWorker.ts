@@ -36,6 +36,7 @@ import type {
 import type {
   LapicProblemNormalizationInput,
   LapicValidationResult,
+  LapicLpProvider,
 } from '@genshin-optimizer/lapic/core'
 import { precompute } from '@genshin-optimizer/gi/wr'
 import type { OptNode, ReadNode } from '@genshin-optimizer/gi/wr'
@@ -330,9 +331,7 @@ async function runSolve(
   })
 
   // 4. Init HiGHS LP provider (graceful fallback to FIR-only bounds)
-  let lpProvider:
-    | import('@genshin-optimizer/lapic/core').LapicLpProvider
-    | undefined
+  let lpProvider: LapicLpProvider | undefined
   try {
     const { createLapicHighsProvider } = await import(
       '@genshin-optimizer/lapic/runtime'

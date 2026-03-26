@@ -591,13 +591,12 @@ describe('fillLapicFirPartialIntervalEnv — ADD semantics', () => {
       ['b2', { x: 8 }],
     ]),
   ]
-  const domainMapById = new Map(mapsAB.map((m) => [m.domainId, m]))
   const envelopes = precomputeDomainEnvelopes(mapsAB)
 
   it('sums contributions from multiple domains via interval ADD', () => {
     const env = new Map<LapicFirVariableId, LapicInterval>()
     // Both unassigned: env[x] = envelopeA(x) + envelopeB(x)
-    fillLapicFirPartialIntervalEnv(env, [], mapsAB, domainMapById, envelopes)
+    fillLapicFirPartialIntervalEnv(env, [], mapsAB, envelopes)
     // A: x ∈ [1,3], B: x ∈ [5,8] → sum x ∈ [6,11]
     expect(env.get('x')).toEqual(
       lapicIntervalAdd(lapicInterval(1, 3), lapicInterval(5, 8))
@@ -613,7 +612,6 @@ describe('fillLapicFirPartialIntervalEnv — ADD semantics', () => {
       env,
       [candidateDescriptor('a1', 'A')],
       mapsAB,
-      domainMapById,
       envelopes
     )
     // x = point(1) + [5,8] = [6,9]
@@ -627,14 +625,7 @@ describe('fillLapicFirPartialIntervalEnv — ADD semantics', () => {
   it('adds global constants to domain contributions', () => {
     const env = new Map<LapicFirVariableId, LapicInterval>()
     const globals = new Map<LapicFirVariableId, number>([['x', 100]])
-    fillLapicFirPartialIntervalEnv(
-      env,
-      [],
-      mapsAB,
-      domainMapById,
-      envelopes,
-      globals
-    )
+    fillLapicFirPartialIntervalEnv(env, [], mapsAB, envelopes, globals)
     // x = global(100) + envelopeA(x:[1,3]) + envelopeB(x:[5,8]) = [106,111]
     const expected = lapicIntervalAdd(
       lapicIntervalAdd(lapicIntervalPoint(100), lapicInterval(1, 3)),
@@ -650,7 +641,6 @@ describe('fillLapicFirPartialIntervalEnv — ADD semantics', () => {
         env,
         [candidateDescriptor('a1', 'A'), candidateDescriptor('a2', 'A')],
         mapsAB,
-        domainMapById,
         envelopes
       )
     ).toThrow(/duplicate assignment/)

@@ -144,6 +144,12 @@ export interface LapicAirRegion {
   readonly parentRegionId?: string
   /** Child region IDs. */
   readonly childRegionIds: readonly string[]
+  /**
+   * Numeric threshold from the originating thresholdSelect node.
+   * Stored so that region predicates are self-contained for
+   * certificate replay without requiring an F-IR lookup (§11.4).
+   */
+  readonly thresholdValue?: number
 }
 
 // ---------------------------------------------------------------------------

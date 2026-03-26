@@ -86,12 +86,10 @@ export function createLapicFirPartialIntervalEnv(
   globalConstants?: ReadonlyMap<LapicFirVariableId, number>
 ): Map<LapicFirVariableId, LapicInterval> {
   const env = new Map<LapicFirVariableId, LapicInterval>()
-  const domainMapById = new Map(domainVariableMaps.map((d) => [d.domainId, d]))
   fillLapicFirPartialIntervalEnv(
     env,
     assignedCandidates,
     domainVariableMaps,
-    domainMapById,
     domainEnvelopes,
     globalConstants
   )
@@ -122,7 +120,6 @@ export function fillLapicFirPartialIntervalEnv(
   env: Map<LapicFirVariableId, LapicInterval>,
   assignedCandidates: readonly LapicCandidateDescriptor[],
   domainVariableMaps: readonly LapicFirDomainVariableMap[],
-  domainMapById: ReadonlyMap<string, LapicFirDomainVariableMap>,
   domainEnvelopes: LapicFirDomainEnvelopes,
   globalConstants?: ReadonlyMap<LapicFirVariableId, number>
 ): void {
