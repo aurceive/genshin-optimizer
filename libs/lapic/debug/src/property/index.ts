@@ -31,3 +31,11 @@ export {
 } from './invariants'
 
 export type { LapicPropertyResult } from './invariants'
+
+export {
+  arbDominanceVectors,
+  propEveryDominatedHasKeptDominator,
+  propSkylineIdempotent,
+  propSkylineKeptSetIsAntichain,
+  propSkylineNeverDropsNonDominated,
+} from './skyline-invariants'

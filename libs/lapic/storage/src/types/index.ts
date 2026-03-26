@@ -70,6 +70,18 @@ export interface LapicFrontierBlock {
   readonly stateIds: readonly string[]
   readonly rows: readonly LapicFrontierStateRow[]
   readonly rowCount: number
+  /** §8.3 skylineSummary — present when skyline compression was applied. */
+  readonly skylineSummary?: LapicSkylineSummary
+}
+
+/**
+ * Aggregate statistics from skyline compression of this frontier block (§8.3).
+ */
+export interface LapicSkylineSummary {
+  readonly totalRows: number
+  readonly keptRows: number
+  readonly dominatedCount: number
+  readonly groupCount: number
 }
 
 export interface LapicFrontierGroupSummary {

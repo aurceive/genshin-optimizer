@@ -11,6 +11,7 @@ import type {
   LapicInMemorySessionController,
   LapicSolveCompletionResult,
 } from '../types'
+import type { LapicFirDomainVariableMap } from '../fir-bound'
 import type { LapicSolveCheckpointState } from './checkpoint-state'
 import type { LapicDangerZoneConfig } from './danger-zone'
 import type { LapicFrontierJoinPlan } from './join-plan'
@@ -130,6 +131,12 @@ export interface LapicBoundedExactSolveOptions {
    * (e.g. UI-driven solves that only consume the top-N candidates).
    */
   readonly skipIntermediateCertificates?: boolean
+  /**
+   * Per-domain F-IR variable maps.  When provided, the frontier builder
+   * applies skyline compression (§9.3) within each exact signature group,
+   * removing dominated candidates before the join search.
+   */
+  readonly domainVariableMaps?: readonly LapicFirDomainVariableMap[]
 }
 
 /**

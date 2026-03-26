@@ -1,11 +1,15 @@
 import {
   type LapicCanonicalProblem,
   type LapicExactSignatureGroupKey,
+  type LapicSkylineSummary,
+  computeSkyline,
   createFrameAxisIdentity,
   createLapicCompatibilitySignature,
   createLapicExactSignatureGroupKeyFromCompatibilitySignature,
   createLapicExactSignatureGroupOrderingKey,
   createLapicStateLayoutDescriptor,
+  deriveDominanceVariableOrder,
+  extractDominanceVector,
 } from '@genshin-optimizer/lapic/core'
 import {
   type LapicFrontierBlock,
@@ -15,6 +19,7 @@ import {
   createLapicFrontierBlock,
   createLapicFrontierIndex,
 } from '@genshin-optimizer/lapic/storage'
+import type { LapicFirDomainVariableMap } from '../fir-bound'
 
 interface LapicFrontierGroupAccumulator {
   readonly groupDigest: string
@@ -29,7 +34,8 @@ interface LapicFrontierGroupAccumulator {
 
 export function createFrontierBlockForDomain(
   problem: LapicCanonicalProblem,
-  domain: LapicCanonicalProblem['itemDomains'][number]
+  domain: LapicCanonicalProblem['itemDomains'][number],
+  domainVariableMap?: LapicFirDomainVariableMap
 ): LapicFrontierBlock {
   const slotIndex = problem.teamLayout.slotIds.indexOf(domain.slotId)
   if (slotIndex < 0)
@@ -109,6 +115,11 @@ export function createFrontierBlockForDomain(
     }
   })
 
+  const { filteredRows, skylineSummary } = applySkylineCompression(
+    rows,
+    domainVariableMap
+  )
+
   return createLapicFrontierBlock({
     blockId: `frontier:${problem.problemDigest}:${domain.slotId}`,
     layout: createLapicStateLayoutDescriptor({
@@ -118,10 +129,82 @@ export function createFrontierBlockForDomain(
       frameAxisIdentity,
       dominanceProjectionIds: [`dominance:${domain.slotId}`],
     }),
-    stateIds: rows.map((row) => row.stateId),
-    rows,
-    rowCount: rows.length,
+    stateIds: filteredRows.map((row) => row.stateId),
+    rows: filteredRows,
+    rowCount: filteredRows.length,
+    ...(skylineSummary ? { skylineSummary } : {}),
   })
+}
+
+/**
+ * Applies skyline compression to frontier rows when a domain variable
+ * map is available.  Falls back to keeping all rows (no filtering)
+ * when the map is missing or empty.
+ */
+function applySkylineCompression(
+  rows: readonly LapicFrontierStateRow[],
+  domainVariableMap: LapicFirDomainVariableMap | undefined
+): {
+  filteredRows: readonly LapicFrontierStateRow[]
+  skylineSummary: LapicSkylineSummary | undefined
+} {
+  if (!domainVariableMap || domainVariableMap.candidateVariables.size === 0) {
+    return { filteredRows: rows, skylineSummary: undefined }
+  }
+
+  const variableOrder = deriveDominanceVariableOrder(
+    domainVariableMap.candidateVariables
+  )
+  if (variableOrder.length === 0) {
+    return { filteredRows: rows, skylineSummary: undefined }
+  }
+
+  // Group rows by serialized exactSignatureGroupKey
+  const groups = new Map<string, LapicFrontierStateRow[]>()
+  for (const row of rows) {
+    const keyResult = createLapicExactSignatureGroupOrderingKey(
+      row.exactSignatureGroupKey
+    )
+    const groupKey = keyResult.ok ? keyResult.value.join('|') : row.candidateId
+    const group = groups.get(groupKey)
+    if (group) {
+      group.push(row)
+    } else {
+      groups.set(groupKey, [row])
+    }
+  }
+
+  const keptRows: LapicFrontierStateRow[] = []
+  let totalDominated = 0
+
+  for (const groupRows of groups.values()) {
+    // Extract dominance vectors for this group's candidates
+    const entries = groupRows.map((row) => {
+      const vars =
+        domainVariableMap.candidateVariables.get(row.candidateId) ??
+        new Map<string, number>()
+      return {
+        ...extractDominanceVector(row.candidateId, vars, variableOrder),
+        row,
+      }
+    })
+
+    const result = computeSkyline(entries)
+    for (const kept of result.kept) {
+      keptRows.push(kept.row)
+    }
+    totalDominated += result.dominatedPairs.length
+  }
+
+  return {
+    filteredRows: keptRows,
+    skylineSummary: {
+      totalRows: rows.length,
+      keptRows: keptRows.length,
+      dominatedCount: totalDominated,
+      groupCount: groups.size,
+    },
+  }
 }
 
 function createFrontierCompatibilityDigest(

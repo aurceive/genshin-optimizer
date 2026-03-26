@@ -86,7 +86,14 @@ async function buildFrontierFromScratch(
 
   options.controller.activate('frontier-build')
   for (const [domainIndex, domain] of orderedDomains.entries()) {
-    const block = createFrontierBlockForDomain(options.problem, domain)
+    const domainVariableMap = options.domainVariableMaps?.find(
+      (dvm) => dvm.domainId === domain.domainId
+    )
+    const block = createFrontierBlockForDomain(
+      options.problem,
+      domain,
+      domainVariableMap
+    )
     frontierBlocks.push(block)
     frontierBlockIds.push(block.blockId)
     await persistArtifact(

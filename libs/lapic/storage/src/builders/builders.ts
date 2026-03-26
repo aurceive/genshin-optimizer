@@ -82,6 +82,16 @@ export function createLapicFrontierBlock(
       rowDigest: row.rowDigest,
     })),
     rowCount: input.rowCount,
+    ...(input.skylineSummary
+      ? {
+          skylineSummary: {
+            totalRows: input.skylineSummary.totalRows,
+            keptRows: input.skylineSummary.keptRows,
+            dominatedCount: input.skylineSummary.dominatedCount,
+            groupCount: input.skylineSummary.groupCount,
+          },
+        }
+      : {}),
   }
 }
 
