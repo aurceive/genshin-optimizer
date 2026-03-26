@@ -97,6 +97,36 @@ export interface LapicWorkerResultMsg {
   readonly tested: number
   readonly failed: number
   readonly total: number
+  /** Optimality evidence extracted from the final certificate, if available. */
+  readonly evidence?: LapicSolveEvidence
+}
+
+// ---------------------------------------------------------------------------
+// Optimality evidence — extracted from the solve completion result
+// ---------------------------------------------------------------------------
+
+/**
+ * Summary of the solve's optimality guarantee, forwarded from the
+ * FinalOptimalityCert and session summary.  This is a serialization-safe
+ * subset of the runtime certificate data — no class instances or
+ * complex nested types.
+ */
+export interface LapicSolveEvidence {
+  /** Optimality gap (string representation; "0" for bounded-exact). */
+  readonly optimalityGap: string
+  /** Whether threshold-sensitive danger zones were detected. */
+  readonly dangerZoneDetected: boolean
+  /** Whether the result requires exact replay verification. */
+  readonly exactReplayRequired: boolean
+  /** Final certificate ID, if one was emitted. */
+  readonly certificateId?: string
+  /** Validation status of the final certificate. */
+  readonly certificateValidationStatus?: string
+  /**
+   * Serialized JSON of the FinalOptimalityCert for export/inspection.
+   * Only present when a final certificate was emitted.
+   */
+  readonly certificateJson?: string
 }
 
 /** Emitted when the solve is paused at a safe point. */

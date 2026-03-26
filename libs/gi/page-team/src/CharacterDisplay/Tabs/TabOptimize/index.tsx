@@ -128,12 +128,13 @@ import ExcludeArt from './Components/ExcludeArt'
 import MainStatSelectionCard from './Components/MainStatSelectionCard'
 import { OptCharacterCard } from './Components/OptCharacterCard'
 import OptimizationTargetSelector from './Components/OptimizationTargetSelector'
+import OptimalityEvidencePanel from './Components/OptimalityEvidencePanel'
 import StatFilterCard from './Components/StatFilterCard'
 import UseEquipped from './Components/UseEquipped'
 import { UseTeammateArt } from './Components/UseTeammateArt'
 import ScalesWith from './ScalesWith'
 import type { LapicProgressEvent } from '@genshin-optimizer/lapic/runtime'
-import type { LapicWorkerOutMsg } from './lapicBridge'
+import type { LapicSolveEvidence, LapicWorkerOutMsg } from './lapicBridge'
 import { prepareOptimizationData } from './prepareOptimizationData'
 
 function initBuildStatus(): BuildStatus {
@@ -325,6 +326,11 @@ export default function TabBuild() {
 
   // Lapic pause/resume state
   const [lapicPaused, setLapicPaused] = useState(false)
+
+  // Lapic optimality evidence — populated after solve completes
+  const [lapicEvidence, setLapicEvidence] = useState<LapicSolveEvidence | null>(
+    null
+  )
 
   // Combined generating flag for both engines
   const generatingBuilds = buildStatus.type !== 'inactive'
@@ -583,10 +589,11 @@ export default function TabBuild() {
 
     setChartData(undefined)
 
-    // Reset lapic progress for this run
+    // Reset lapic progress and evidence for this run
     const solveStartedAt = Date.now()
     setLapicStartedAt(solveStartedAt)
     setLapicProgress(undefined)
+    setLapicEvidence(null)
     let latestProgressEvent: LapicProgressEvent | undefined
 
     const worker = new Worker(
@@ -685,6 +692,9 @@ export default function TabBuild() {
       status.tested = result.tested
       status.failed = result.failed
       status.total = result.total
+
+      // Store optimality evidence for the UI panel
+      if (result.evidence) setLapicEvidence(result.evidence)
 
       if (process.env['NODE_ENV'] === 'development')
         console.log('[lapic] Build Result', result.builds)
@@ -1099,6 +1109,13 @@ export default function TabBuild() {
               characterName,
               maxBuildsToShow,
             }}
+          />
+        )}
+        {lapicEvidence && !generatingBuilds && (
+          <OptimalityEvidencePanel
+            evidence={lapicEvidence}
+            tested={buildStatus.tested}
+            total={buildStatus.total}
           />
         )}
         {optimizationTarget && (

@@ -43,6 +43,7 @@ import type {
   LapicWorkerInMsg,
   LapicWorkerOutMsg,
   LapicWorkerInitMsg,
+  LapicSolveEvidence,
 } from './lapicBridge'
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
@@ -425,6 +426,7 @@ async function runSolve(
 
   // 8c. Completed (or cancelled — no result posted)
   let builds: { value: number; artifactIds: string[] }[] = []
+  let evidence: LapicSolveEvidence | undefined
   if (outcome.state === 'completed' && outcome.solveOutcome) {
     const solveResult = outcome.solveOutcome
     if ('topNCandidates' in solveResult && solveResult.topNCandidates) {
@@ -432,6 +434,29 @@ async function runSolve(
         value: Number.parseFloat(entry.evaluation.objectiveValue),
         artifactIds: entry.candidates.map((c) => c.candidateId),
       }))
+    }
+
+    // Extract optimality evidence from the completion result
+    if ('finalOptimality' in solveResult && solveResult.finalOptimality) {
+      const fo = solveResult.finalOptimality
+      const finalCert =
+        'emittedCertificates' in solveResult
+          ? solveResult.emittedCertificates.find(
+              (c) => c.certKind === 'FinalOptimalityCert'
+            )
+          : undefined
+      evidence = {
+        optimalityGap: fo.decisionMetadata?.thresholdDigest ? '0' : 'unknown',
+        dangerZoneDetected: fo.decisionMetadata?.dangerZoneDetected ?? false,
+        exactReplayRequired: fo.decisionMetadata?.exactReplayRequired ?? false,
+        ...(finalCert !== undefined
+          ? {
+              certificateId: finalCert.certId,
+              certificateValidationStatus: finalCert.validationStatus,
+              certificateJson: JSON.stringify(finalCert, null, 2),
+            }
+          : {}),
+      }
     }
   }
 
@@ -441,5 +466,6 @@ async function runSolve(
     tested: evaluatedCount,
     failed: failedCount,
     total: totalCombinations,
+    ...(evidence !== undefined ? { evidence } : {}),
   })
 }
