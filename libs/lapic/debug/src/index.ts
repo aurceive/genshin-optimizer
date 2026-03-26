@@ -7,6 +7,7 @@ export * from './validation'
 export * from './property'
 export * from './divergence'
 export * from './trace'
+export * from './corpus'
 
 export {
   createLapicCheckpointClosureInventory,
