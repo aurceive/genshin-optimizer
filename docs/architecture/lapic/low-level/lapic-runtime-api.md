@@ -97,14 +97,14 @@ The `solve-handle` surface MUST export:
 
 #### 4.2.1 Solve Request Configuration
 
-The solve request type MUST support at least the following configuration concerns:
+The public solve request type is an invocation descriptor, not the full problem-definition surface.
 
-- `topN` — number of top candidates to retain,
-- solve-surface emission scope — callers must be able to request either an ordinary completion-oriented solve surface or a richer per-decision audit surface.
+The solve request type MUST support at least:
 
-Emission-scope configuration controls emitted artifacts only; it MUST NOT relax pruning legality, feasibility rules, or global top-N correctness requirements.
+- a stable reference to the canonical problem definition to execute,
+- optional checkpoint-import information for resumed solves.
 
-The concrete request-shape used to express emission scope is a runtime-package design detail, not a top-level architectural commitment.
+Problem-level configuration such as `topN`, and any higher-level policy about emitted audit material, belong to the problem model or orchestration layer unless the runtime package explicitly chooses to surface them as public request fields.
 
 #### 4.2.2 Solve Handle Contract
 
