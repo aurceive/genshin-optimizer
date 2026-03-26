@@ -97,12 +97,14 @@ The `solve-handle` surface MUST export:
 
 #### 4.2.1 Solve Request Configuration
 
-The solve request type MUST support at least the following configuration fields:
+The solve request type MUST support at least the following configuration concerns:
 
 - `topN` — number of top candidates to retain,
-- `skipIntermediateCertificates` — when true, the executor does not emit BoundPruneCert, DominanceCert, or BranchReachabilityCert during the solve. FinalOptimalityCertificate is always emitted regardless.
+- solve-surface emission scope — callers must be able to request either an ordinary completion-oriented solve surface or a richer per-decision audit surface.
 
-The default for `skipIntermediateCertificates` is false (full certificate chain).
+Emission-scope configuration controls emitted artifacts only; it MUST NOT relax pruning legality, feasibility rules, or global top-N correctness requirements.
+
+The concrete request-shape used to express emission scope is a runtime-package design detail, not a top-level architectural commitment.
 
 #### 4.2.2 Solve Handle Contract
 

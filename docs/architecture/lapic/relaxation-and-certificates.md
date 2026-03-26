@@ -12,6 +12,7 @@
 
 This document specifies the correctness-critical system responsible for:
 
+- grounding the reported optimum or global `topN` result in verifiable correctness machinery,
 - constructing admissible upper bounds and infeasibility proofs,
 - certifying prune, dominance, and reachability decisions,
 - handling numeric uncertainty without weakening exactness,
@@ -39,7 +40,7 @@ If a numeric computation is not trustworthy enough for a correctness-critical de
 
 Certificates are not debug artifacts. The certificate infrastructure is a first-class component of the correctness system. All certificate kinds must be schema-governed, storable, replayable, and inspectable.
 
-The completeness proof (FinalOptimalityCertificate) is a mandatory output of every completed solve. Intermediate per-decision certificates provide the audit trail for individual pruning, dominance, and reachability decisions; their emission scope is a runtime configuration concern specified at the API level.
+A completed solve outcome MUST remain grounded in governed proof material appropriate to that outcome class. Intermediate per-decision certificates provide the audit trail for individual pruning, dominance, and reachability decisions; whether the ordinary solve surface emits that full trail is a runtime configuration concern specified at the API level.
 
 ## 3. System Responsibilities
 

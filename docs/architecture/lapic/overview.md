@@ -12,6 +12,8 @@
 
 This document defines the target architecture of lapic, a new optimization engine that must outperform the current engines on search spaces larger than 10^10 candidate builds while preserving exactness.
 
+The primary product contract is to return an efficient solve result whose reported optimum or `topN` set is globally correct under the declared model. Proof artifacts, replay hooks, and telemetry exist to justify and validate that result, but they are supporting architecture rather than the ordinary end-user product surface.
+
 Exactness means all of the following are mandatory:
 
 - No false pruning of the global optimum.
@@ -63,7 +65,7 @@ The objective function is a symbolic formula graph with:
 - Browser runtime is required.
 - Node runtime is required.
 - WASM acceleration is required where it improves asymptotic or practical performance without weakening guarantees.
-- The engine must expose structured traces, metrics, and proof artifacts for post-hoc validation.
+- The engine must expose structured traces, metrics, and proof artifacts for post-hoc validation and tooling, even though ordinary solve consumers primarily care about the globally correct optimization result.
 
 ### 3.4 Extensibility
 
@@ -177,7 +179,7 @@ Runs a hybrid exact algorithm:
 
 #### Relaxation and Certification Layer
 
-Provides certified upper bounds, dominance certificates, and replayable pruning witnesses.
+Provides the correctness machinery behind the solve result: certified upper bounds, infeasibility and dominance evidence, and replayable pruning witnesses.
 
 #### Runtime and Scheduling Layer
 
@@ -370,7 +372,7 @@ When a block cannot be pruned and cannot be compressed further, perform exact jo
 
 #### Phase 5: Certification and Finalization
 
-Validate final top-N, emit proof summary, and store replayable trace.
+Validate the final solve outcome, expose the completion proof material required by the configured surface, and store replayable trace artifacts for validation workflows.
 
 ### 10.3 Best-First Queue Semantics
 
@@ -487,13 +489,15 @@ Each certificate stores:
 
 ### 12.3 Final Optimality Certificate
 
-The final solve result must emit an optimality certificate summary stating:
+When a solve completes with a feasible top-N result, the completion surface must expose an optimality certificate summary stating:
 
 - final incumbent set,
 - proof that the global queue is exhausted or every remaining block is upper-bounded below threshold,
 - proof that top-N order is complete,
 - counts of each prune category,
 - validation outcome.
+
+If a solve completes without any feasible result, the completion proof may instead be an infeasibility proof rather than a final optimality summary.
 
 ## 13. Runtime and Scheduling Architecture
 

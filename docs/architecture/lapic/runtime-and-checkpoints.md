@@ -18,6 +18,7 @@ The runtime is responsible for:
 
 - instantiating and driving a solve from canonical inputs,
 - coordinating search, storage, and certification subsystems,
+- delivering the globally correct solve outcome and `topN` result requested by the caller,
 - preserving deterministic correctness semantics across browser and Node environments,
 - supporting pause, resume, cancellation, checkpoint export and import,
 - surfacing progress and diagnostics without affecting correctness.
@@ -41,7 +42,7 @@ Different worker counts or execution interleavings may affect performance but mu
 
 - admissibility of pruning,
 - final result set,
-- final optimality certificate outcome,
+- completion-proof outcome,
 - replay validity.
 
 ### 2.3 Pause and Resume Are First-Class
@@ -80,7 +81,7 @@ Owns block persistence, reload, manifest closure, and checkpoint transactions.
 
 Owns threshold snapshots, certificate emission, replay escalation, and validation hooks.
 
-Certificate emission scope is configurable per-solve. The minimum guaranteed output is the FinalOptimalityCertificate on solve completion. Callers that require the full per-decision certificate chain — for audit, replay, or post-hoc verification — enable intermediate certificate emission at solve configuration time. The runtime behaviour is identical in both modes; only the set of emitted artifacts differs.
+Certificate emission scope is configurable per-solve. Ordinary callers may request a completion-oriented solve surface that focuses on the globally correct result and its outcome-level proof material, while audit and tooling workflows may request richer per-decision certificate emission. This configuration MUST NOT change legality, feasibility, or top-N membership; it changes only which observational or replay-supporting artifacts are emitted on the solve surface.
 
 ### 3.7 Diagnostics Streamer
 
