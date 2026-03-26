@@ -80,6 +80,8 @@ Owns block persistence, reload, manifest closure, and checkpoint transactions.
 
 Owns threshold snapshots, certificate emission, replay escalation, and validation hooks.
 
+Certificate emission scope is configurable per-solve. The minimum guaranteed output is the FinalOptimalityCertificate on solve completion. Callers that require the full per-decision certificate chain — for audit, replay, or post-hoc verification — enable intermediate certificate emission at solve configuration time. The runtime behaviour is identical in both modes; only the set of emitted artifacts differs.
+
 ### 3.7 Diagnostics Streamer
 
 Publishes progress, counters, and traces in a way that is observational only.

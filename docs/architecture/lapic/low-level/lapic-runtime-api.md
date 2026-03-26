@@ -95,7 +95,16 @@ The `solve-handle` surface MUST export:
 - cancel request result type,
 - session inspection result type.
 
-#### 4.2.1 Solve Handle Contract
+#### 4.2.1 Solve Request Configuration
+
+The solve request type MUST support at least the following configuration fields:
+
+- `topN` — number of top candidates to retain,
+- `skipIntermediateCertificates` — when true, the executor does not emit BoundPruneCert, DominanceCert, or BranchReachabilityCert during the solve. FinalOptimalityCertificate is always emitted regardless.
+
+The default for `skipIntermediateCertificates` is false (full certificate chain).
+
+#### 4.2.2 Solve Handle Contract
 
 The public solve handle MUST support typed entrypoints corresponding to:
 
