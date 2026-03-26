@@ -31,6 +31,17 @@ docs/architecture/
     implementation-roadmap.md
     low-level/
       README.md
+      lapic-core-ir-api.md
+      lapic-cert-api.md
+      lapic-storage-api.md
+      lapic-runtime-api.md
+      lapic-debug-api.md
+      adapters-gi-sr-zzz-api.md
+      exact-decimal-wire-format.md
+      highs-evidence-and-deterministic-config.md
+      benchmark-governance-and-browser-noise.md
+      benchmark-fixture-layout.md
+      source-snapshot-packaging.md
 ```
 
 ## 3. File Responsibilities

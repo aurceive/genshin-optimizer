@@ -737,6 +737,6 @@ This document requires the following detailed documents:
 1. [Relaxation and Certificate Specification](./relaxation-and-certificates.md).
 2. [Frontier Storage and Codec Specification](./frontier-storage-and-codec.md).
 3. [Runtime and Checkpoint Specification](./runtime-and-checkpoints.md).
-4. Adapter Specification for GI, SR, and ZZZ.
+4. [Adapter Specification for GI, SR, and ZZZ](./adapters-gi-sr-zzz.md).
 
 Implementation of production search and certificate modules must not begin before these documents exist.

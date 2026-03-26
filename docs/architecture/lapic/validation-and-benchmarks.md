@@ -541,6 +541,6 @@ The validation and benchmark system is compliant only if all answers below are y
 
 This document leaves one major remaining architecture family to be written:
 
-1. Adapter Specification for GI, SR, and ZZZ.
+1. [Adapter Specification for GI, SR, and ZZZ](./adapters-gi-sr-zzz.md).
 
 That document is required before production implementation planning is considered architecturally complete.
