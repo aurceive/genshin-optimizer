@@ -712,7 +712,7 @@ Resolved by decision: canonical correctness-critical persistence is exact-decima
 
 ## 22. Verification Strategy
 
-### 21.1 Correctness Test Families
+### 22.1 Correctness Test Families
 
 - Golden comparison against exhaustive enumeration on small spaces.
 - Adversarial formulas for branch, ratio, and nonlinear kernels.
@@ -722,14 +722,14 @@ Resolved by decision: canonical correctness-critical persistence is exact-decima
 - Frontier dominance soundness tests.
 - Top-N stability tests.
 
-### 21.2 Property Tests
+### 22.2 Property Tests
 
 - No pruned block can contain a build above the certified threshold.
 - Every returned build is feasible.
 - Every omitted build is dominated by returned top-N or lies below certified threshold.
 - Replay of certificate log reaches the same decision frontier.
 
-### 21.3 Performance Benchmarks
+### 22.3 Performance Benchmarks
 
 Benchmark suites must separate:
 

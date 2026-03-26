@@ -663,7 +663,7 @@ The validator MUST reject:
 
 ### 14.1 Pando Mapping
 
-Existing pando node graphs can map into F-IR, but the mapping MUST be explicit and loseless.
+Existing pando node graphs can map into F-IR, but the mapping MUST be explicit and lossless.
 
 Required adapter responsibilities:
 
