@@ -182,7 +182,8 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
 
 async function runSolve(
   msg: LapicWorkerInitMsg,
-  resumeCheckpoint?: LapicSolveCheckpointState
+  resumeCheckpoint?: LapicSolveCheckpointState,
+  priorCounters?: { evaluated: number; failed: number; total: number }
 ): Promise<void> {
   const {
     optimizedNodes,
@@ -231,9 +232,13 @@ async function runSolve(
   }
 
   // 2. Create the lapic evaluator (maps candidate combinations → scores)
-  let failedCount = 0
-  let evaluatedCount = 0
-  let totalCombinations = 0
+  // When resuming from a checkpoint, carry forward the counters accumulated
+  // before the pause so that progress and final result messages report
+  // cumulative values across the full solve lifecycle.
+  const counterBase = priorCounters ?? { evaluated: 0, failed: 0, total: 0 }
+  let failedCount = counterBase.failed
+  let evaluatedCount = counterBase.evaluated
+  let totalCombinations = counterBase.total
 
   const evaluateCombination = (
     combination: LapicBoundedExactCandidateCombination,
@@ -355,9 +360,10 @@ async function runSolve(
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {
-      evaluatedCount = event.completedUnits - (event.skippedUnits ?? 0)
+      evaluatedCount =
+        counterBase.evaluated + event.completedUnits - (event.skippedUnits ?? 0)
       if (event.totalUnits !== undefined) {
-        totalCombinations = event.totalUnits
+        totalCombinations = Math.max(totalCombinations, event.totalUnits)
       }
     }
     lastProgressEvent = event
@@ -412,7 +418,11 @@ async function runSolve(
 
     // Resume: create a new orchestration from the checkpoint
     orchestration = null
-    return runSolve(msg, checkpoint)
+    return runSolve(msg, checkpoint, {
+      evaluated: evaluatedCount,
+      failed: failedCount,
+      total: totalCombinations,
+    })
   }
 
   // 8b. Failed

@@ -1,0 +1,18 @@
+{
+  "suiteId": "public-team-join-v0.2",
+  "suiteClass": "public",
+  "corpusVersion": "0.2.0",
+  "description": "Public correctness suite for team-join baselines — GI 4-slot team composition scenarios.",
+  "cases": ["gi-team-4slot-join-baseline", "gi-team-4slot-conflict-heavy"],
+  "gates": {
+    "correctness": {
+      "joinFeasibility": {
+        "appliesTo": [
+          "gi-team-4slot-join-baseline",
+          "gi-team-4slot-conflict-heavy"
+        ],
+        "requirement": "Team-join must produce a feasible build for every occupied slot"
+      }
+    }
+  }
+}
