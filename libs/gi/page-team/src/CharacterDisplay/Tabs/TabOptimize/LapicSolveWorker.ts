@@ -1,12 +1,20 @@
 /**
  * Web Worker for the lapic optimization engine.
  *
- * Runs the full lapic orchestration pipeline off the main thread:
+ * The GI optimization tab runs the full lapic orchestration inside this
+ * Worker rather than on the main thread.  The `useLapicSolve` hook in
+ * `lapic-ui` provides a convenient React wrapper around the same
+ * orchestration API, but it executes on the calling thread — which
+ * blocks rendering for production-scale search spaces (>10^8 candidates).
+ *
+ * This Worker isolates the computation so the UI stays responsive:
  * 1. Reconstructs the GI stat evaluator via `precompute()`
  * 2. Builds a proper normalization input for GI artifact optimization
  * 3. Runs `createGiLapicSolveOrchestration()` with coordinated solve
  *    (domain partitioning, B&B pruning, incumbent sharing)
  * 4. Forwards progress events and top-N results to the main thread
+ *
+ * Communication follows the typed bridge protocol in `lapicBridge.ts`.
  */
 
 import type { ArtifactBuildData } from '@genshin-optimizer/gi/solver'

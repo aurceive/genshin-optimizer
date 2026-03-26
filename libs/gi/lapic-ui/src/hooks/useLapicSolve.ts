@@ -7,6 +7,14 @@
  * - Provides start/pause/cancel/reset controls
  * - Cleans up subscriptions on unmount
  *
+ * **Threading note:** This hook runs the orchestration on the calling
+ * thread (typically the browser main thread).  For small or test-sized
+ * problems this is convenient, but for production UI solves over large
+ * search spaces the computation will block React rendering.  The GI
+ * optimization tab therefore uses a dedicated Web Worker
+ * (`LapicSolveWorker.ts`) that instantiates the orchestration off-thread
+ * and communicates via the bridge message protocol.
+ *
  * Usage:
  * ```tsx
  * function SolvePanel({ config }: { config: GiLapicSolveOrchestrationConfig }) {
