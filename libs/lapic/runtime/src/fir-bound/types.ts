@@ -20,6 +20,26 @@ export interface LapicFirDomainVariableMap {
     string,
     ReadonlyMap<LapicFirVariableId, number>
   >
+  /**
+   * Per-candidate upper-bound variable values (condition 3, §9.3).
+   * candidateId → (variableId → upper-bound numeric value).
+   * When provided, skyline compression verifies that the dominator's
+   * upper bounds are >= the dominated candidate's upper bounds.
+   *
+   * For additive F-IR models this is implied by point-value dominance
+   * and may be omitted. Required for non-additive interaction models.
+   */
+  readonly candidateUpperBoundVariables?: ReadonlyMap<
+    string,
+    ReadonlyMap<LapicFirVariableId, number>
+  >
+  /**
+   * Per-candidate branch-region digest (condition 4, §9.3).
+   * candidateId → branch-region digest string.
+   * Candidates with different digests are incomparable — skyline
+   * compression never asserts dominance across branch regions.
+   */
+  readonly candidateBranchRegionDigests?: ReadonlyMap<string, string>
 }
 
 /**

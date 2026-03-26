@@ -3,6 +3,11 @@
  *
  * Given a set of dominance vectors, removes every vector that is
  * strictly dominated by at least one other vector in the set.
+ * Dominance is checked using all four conditions (§9.3):
+ *   1. Compatibility (implicit — same group)
+ *   2. Monotone statistics (dimensions)
+ *   3. Upper-bound guard (upperBoundDimensions, when present)
+ *   4. Branch-region guard (branchRegionDigest, when present)
  *
  * Complexity: O(n²) pairwise comparison, acceptable for per-slot
  * frontier sizes.
@@ -10,7 +15,7 @@
  * Deterministic: stable input order → stable output order.
  */
 
-import { isDominated } from './compare'
+import { isFullyDominated } from './compare'
 import type {
   LapicDominanceVector,
   LapicDominatedPair,
@@ -40,13 +45,13 @@ export function computeSkyline<T extends LapicDominanceVector>(
       const ei = entries[i]!
       const ej = entries[j]!
 
-      if (isDominated(ei.dimensions, ej.dimensions)) {
+      if (isFullyDominated(ei, ej)) {
         dominated.add(j)
         dominatedPairs.push({
           dominatorCandidateId: ei.candidateId,
           dominatedCandidateId: ej.candidateId,
         })
-      } else if (isDominated(ej.dimensions, ei.dimensions)) {
+      } else if (isFullyDominated(ej, ei)) {
         dominated.add(i)
         dominatedPairs.push({
           dominatorCandidateId: ej.candidateId,

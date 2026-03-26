@@ -1,8 +1,14 @@
-export { isDominated } from './compare'
+export {
+  isBranchRegionGuardSatisfied,
+  isDominated,
+  isFullyDominated,
+  isUpperBoundGuardSatisfied,
+} from './compare'
 export {
   deriveDominanceVariableOrder,
   extractDominanceVector,
 } from './projection'
+export type { LapicDominanceVectorContext } from './projection'
 export { computeSkyline } from './skyline'
 export type {
   LapicDominanceVector,

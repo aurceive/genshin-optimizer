@@ -1,5 +1,6 @@
 import {
   type LapicCanonicalProblem,
+  type LapicDominanceVectorContext,
   type LapicExactSignatureGroupKey,
   type LapicSkylineSummary,
   computeSkyline,
@@ -183,8 +184,38 @@ function applySkylineCompression(
       const vars =
         domainVariableMap.candidateVariables.get(row.candidateId) ??
         new Map<string, number>()
+
+      // Build condition 3+4 context when data is available
+      const context: LapicDominanceVectorContext = {
+        ...(domainVariableMap.candidateUpperBoundVariables
+          ? {
+              upperBoundVariables:
+                domainVariableMap.candidateUpperBoundVariables.get(
+                  row.candidateId
+                ),
+            }
+          : {}),
+        ...(domainVariableMap.candidateBranchRegionDigests
+          ? {
+              branchRegionDigest:
+                domainVariableMap.candidateBranchRegionDigests.get(
+                  row.candidateId
+                ),
+            }
+          : {}),
+      }
+
+      const hasContext =
+        context.upperBoundVariables !== undefined ||
+        context.branchRegionDigest !== undefined
+
       return {
-        ...extractDominanceVector(row.candidateId, vars, variableOrder),
+        ...extractDominanceVector(
+          row.candidateId,
+          vars,
+          variableOrder,
+          hasContext ? context : undefined
+        ),
         row,
       }
     })

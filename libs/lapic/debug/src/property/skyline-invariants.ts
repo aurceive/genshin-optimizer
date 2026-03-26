@@ -8,7 +8,7 @@
 import {
   type LapicDominanceVector,
   computeSkyline,
-  isDominated,
+  isFullyDominated,
   validateSkylineResult,
 } from '@genshin-optimizer/lapic/core'
 import type fc from 'fast-check'
@@ -29,7 +29,7 @@ export function propSkylineNeverDropsNonDominated(
     const dominatedBySomeone = entries.some(
       (other) =>
         other.candidateId !== entry.candidateId &&
-        isDominated(other.dimensions, entry.dimensions)
+        isFullyDominated(other, entry)
     )
     if (!dominatedBySomeone && !keptIds.has(entry.candidateId)) {
       return false
@@ -81,7 +81,7 @@ export function propEveryDominatedHasKeptDominator(
       )
       if (!dominatedEntry) return false
       const hasKeptDominator = result.kept.some((k) =>
-        isDominated(k.dimensions, dominatedEntry.dimensions)
+        isFullyDominated(k, dominatedEntry)
       )
       if (!hasKeptDominator) return false
     }
