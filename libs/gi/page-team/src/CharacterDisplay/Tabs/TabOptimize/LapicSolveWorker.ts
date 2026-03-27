@@ -407,7 +407,7 @@ async function runSolve(
   // 6. Subscribe to progress — forward canonical LapicProgressEvent objects
   let lastProgressEvent: LapicProgressEvent | undefined
   let lastProgressPostTime = 0
-  const PROGRESS_THROTTLE_MS = 500
+  const PROGRESS_THROTTLE_MS = 200
 
   orchestration.handle.subscribeProgress((event) => {
     if (event.phase === 'join') {

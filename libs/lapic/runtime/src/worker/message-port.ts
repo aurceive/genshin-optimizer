@@ -128,6 +128,13 @@ export type LapicBoundedExactPortWorkerEnvelope =
       readonly response: LapicPartitionDispatchResponse
     }
   | { readonly kind: 'error'; readonly id: number; readonly message: string }
+  | {
+      readonly kind: 'partition-progress'
+      readonly id: number
+      readonly completedUnits: number
+      readonly totalUnits?: number
+      readonly skippedUnits?: number
+    }
 
 // ---------------------------------------------------------------------------
 // Main-thread side: MessagePort worker handle
@@ -406,6 +413,23 @@ export function createBoundedExactWorkerEntryHandler(
           )
           controller.awaitCompletion().catch(() => {})
 
+          // Forward partition progress to coordinator via port
+          let lastForwardTime = 0
+          const unsub = controller.subscribeProgress((event) => {
+            if (event.phase !== 'join') return
+            const now = performance.now()
+            if (now - lastForwardTime < 100) return
+            lastForwardTime = now
+            const progressReply: LapicBoundedExactPortWorkerEnvelope = {
+              kind: 'partition-progress',
+              id: envelope.id,
+              completedUnits: event.completedUnits,
+              totalUnits: event.totalUnits,
+              skippedUnits: event.skippedUnits,
+            }
+            port.postMessage(progressReply)
+          })
+
           const response = await dispatcher.dispatch({
             partitionIndex: envelope.request.partitionIndex,
             controller,
@@ -416,6 +440,8 @@ export function createBoundedExactWorkerEntryHandler(
             initialIncumbentThreshold:
               envelope.request.initialIncumbentThreshold,
           })
+
+          unsub.unsubscribe()
 
           const reply: LapicBoundedExactPortWorkerEnvelope = {
             kind: 'partition-result',
@@ -500,10 +526,25 @@ export function createMessagePortPartitionDispatcher(
     {
       resolve: (value: LapicPartitionDispatchResponse) => void
       reject: (reason: unknown) => void
+      controller?: LapicInMemorySessionController
     }
   >()
 
   function handleMessage(envelope: LapicBoundedExactPortWorkerEnvelope) {
+    // Progress updates don't resolve the pending request
+    if (envelope.kind === 'partition-progress') {
+      const entry = pending.get(envelope.id)
+      if (entry?.controller) {
+        entry.controller.publishProgress({
+          phase: 'join',
+          completedUnits: envelope.completedUnits,
+          totalUnits: envelope.totalUnits,
+          skippedUnits: envelope.skippedUnits,
+        })
+      }
+      return
+    }
+
     const entry = pending.get(envelope.id)
     if (!entry) return
 
@@ -537,7 +578,7 @@ export function createMessagePortPartitionDispatcher(
 
       const id = nextId++
       return new Promise<LapicPartitionDispatchResponse>((resolve, reject) => {
-        pending.set(id, { resolve, reject })
+        pending.set(id, { resolve, reject, controller: request.controller })
         const envelope: LapicBoundedExactPortCoordinatorEnvelope = {
           kind: 'dispatch-partition',
           id,

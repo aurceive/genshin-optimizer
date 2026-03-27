@@ -634,14 +634,17 @@ export default function TabBuild() {
     // Builds-per-second tracking
     let lastTime = performance.now()
     let lastTested = 0
+    let lastSkipped = 0
     const bpsTimer = setInterval(() => {
       const now = performance.now()
       const elapsed = (now - lastTime) / 1000
       if (elapsed > 0) {
         status.testedPerSecond = (status.tested - lastTested) / elapsed
+        status.skippedPerSecond = (status.skipped - lastSkipped) / elapsed
       }
       lastTime = now
       lastTested = status.tested
+      lastSkipped = status.skipped
     }, 1000)
 
     const cancellationError = new Error()

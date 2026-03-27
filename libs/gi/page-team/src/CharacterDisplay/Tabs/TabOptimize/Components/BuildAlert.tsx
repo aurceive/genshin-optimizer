@@ -43,7 +43,7 @@ export default function BuildAlert({
   status: BuildStatus
   characterName: ReactNode
 }) {
-  const hasTotal = isFinite(total)
+  const hasTotal = isFinite(total) && total > 0
 
   const generatingBuilds = type !== 'inactive'
   const unskipped = total - skipped

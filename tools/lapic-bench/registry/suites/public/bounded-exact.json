@@ -14,7 +14,10 @@
   "gates": {
     "correctness": {
       "goldenEnumeration": {
-        "appliesTo": ["gi-opt-5slot-golden-small", "gi-opt-5slot-golden-constrained"],
+        "appliesTo": [
+          "gi-opt-5slot-golden-small",
+          "gi-opt-5slot-golden-constrained"
+        ],
         "requirement": "Top-N from bounded-exact must exactly match exhaustive enumeration"
       }
     },
