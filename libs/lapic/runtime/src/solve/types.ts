@@ -156,6 +156,26 @@ export interface LapicBoundedExactSolveOptions {
    * MessagePort-based dispatchers in the same worker thread.
    */
   readonly cooperativeYield?: boolean
+  /**
+   * Callback polled at safe points to retrieve a cross-partition
+   * incumbent threshold.  When the returned value is better than
+   * the executor's local top-N threshold, the executor adopts it
+   * for subsequent pruning decisions.
+   *
+   * Designed for coordinated (multi-partition) solve: completed
+   * partitions publish their incumbent, and still-running partitions
+   * pick it up at the next safe point.  For in-process dispatchers
+   * a simple closure over a shared mutable variable works; for
+   * MessagePort dispatchers a message-based update would be needed.
+   */
+  readonly getExternalIncumbentThreshold?: () => string | undefined
+  /**
+   * Called whenever the executor's local incumbent threshold improves
+   * (i.e. the top-N tracker becomes full or its worst entry is replaced
+   * by a better candidate).  The coordinated solve uses this to update
+   * the shared incumbent so other partitions can benefit.
+   */
+  readonly onIncumbentImproved?: (threshold: string) => void
 }
 
 /**

@@ -480,13 +480,18 @@ export async function executeCoordinatedBoundedExactSolve(
     }
   }
 
-  // Launch all partitions concurrently.  Each partition runs its own
-  // executor independently — no cross-partition incumbent sharing.
-  // This sacrifices some pruning efficiency but enables true parallelism
-  // when a MessagePort dispatcher is used with actual worker threads.
-  // For in-process dispatch, Promise.all still avoids the per-partition
-  // overhead of sequential controller creation, progress subscriptions,
-  // and scheduler bookkeeping.
+  // -----------------------------------------------------------------------
+  // Shared incumbent threshold for cross-partition pruning.
+  //
+  // When a partition improves its local top-N worst entry, it publishes
+  // the new threshold here.  Sibling in-process partitions read it at
+  // safe-point boundaries (every 65 536 combinations) and adopt it for
+  // tighter B&B pruning.  Remote (MessagePort) partitions cannot read
+  // this variable and prune independently — future work may push
+  // threshold updates via a dedicated port message.
+  // -----------------------------------------------------------------------
+  let sharedBestThreshold: string | undefined
+
   try {
     type PartitionResult =
       | {
@@ -525,6 +530,10 @@ export async function executeCoordinatedBoundedExactSolve(
             controller: partitionController,
             joinPlan: partition.joinPlan,
             frontierBlockIds,
+            getExternalIncumbentThreshold: () => sharedBestThreshold,
+            onIncumbentImproved: (threshold) => {
+              sharedBestThreshold = threshold
+            },
           })
 
           unsubPartitionProgress.unsubscribe()

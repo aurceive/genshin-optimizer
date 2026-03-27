@@ -19,10 +19,18 @@ export interface LapicResumableTopNTracker
 
   /**
    * Current worst (lowest-ranked) objective value in the tracker,
-   * or `undefined` when the tracker is not yet full.
-   * Useful for future threshold-driven pruning.
+   * or `undefined` when the tracker is not yet full AND no external
+   * threshold has been adopted.
    */
   currentThreshold(): string | undefined
+
+  /**
+   * Adopt an external incumbent threshold (e.g. from a sibling
+   * partition in a coordinated solve).  The tracker returns this
+   * value from `currentThreshold()` when it is stricter than the
+   * local top-N worst entry.
+   */
+  adoptExternalThreshold(value: string): void
 }
 
 /**
@@ -34,6 +42,7 @@ export function createResumableTopNTracker(
   explicitComparator?: LapicBoundedExactSolveOptions['compareEvaluations']
 ): LapicResumableTopNTracker {
   const inner = createTopNTracker(topN, explicitComparator)
+  let externalThreshold: string | undefined
 
   return {
     insert(candidate: LapicBoundedExactBestCandidate): void {
@@ -66,8 +75,15 @@ export function createResumableTopNTracker(
     },
     currentThreshold(): string | undefined {
       const entries = inner.results()
-      if (!inner.isFull() || entries.length === 0) return undefined
-      return entries[entries.length - 1]!.evaluation.objectiveValue
+      if (inner.isFull() && entries.length > 0) {
+        return entries[entries.length - 1]!.evaluation.objectiveValue
+      }
+      // When the tracker isn't full yet, an external threshold still
+      // enables early pruning (e.g. from a sibling partition).
+      return externalThreshold
+    },
+    adoptExternalThreshold(value: string): void {
+      externalThreshold = value
     },
   }
 }

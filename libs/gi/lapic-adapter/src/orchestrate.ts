@@ -20,6 +20,7 @@ import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
   LapicDangerZoneConfig,
+  LapicFirDomainVariableMap,
   LapicInMemorySessionController,
   LapicPartitionDispatcher,
   LapicSolveCheckpointState,
@@ -27,6 +28,7 @@ import type {
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicCanonicalProblem,
+  LapicFirGraph,
   LapicLpProvider,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
@@ -35,6 +37,7 @@ import {
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
 import { createGiLapicBuiltinBoundProvider } from './builtin-bound-provider'
+import { buildGiLapicDomainVariableMaps } from './bound-maps'
 import { buildGiLapicCanonicalExportFromRequest } from './canonical'
 import { compileGiOptNodeToFir } from './compilation'
 import type {
@@ -46,6 +49,17 @@ import type {
 // ---------------------------------------------------------------------------
 // Orchestrator bridge config
 // ---------------------------------------------------------------------------
+
+/**
+ * Bound-related context forwarded to the dispatcher factory so
+ * remote workers can create their own bound providers.
+ */
+export interface GiLapicDispatcherBoundContext {
+  readonly firGraph?: LapicFirGraph
+  readonly domainVariableMaps?: readonly LapicFirDomainVariableMap[]
+  readonly globalConstants?: ReadonlyMap<string, number>
+  readonly dangerZoneConfig?: LapicDangerZoneConfig
+}
 
 /**
  * Configuration for creating a GI solve orchestration.
@@ -120,7 +134,8 @@ export interface GiLapicSolveOrchestrationConfig {
    * solve's finally block.
    */
   readonly dispatcherFactory?: (
-    canonicalProblem: LapicCanonicalProblem
+    canonicalProblem: LapicCanonicalProblem,
+    boundContext?: GiLapicDispatcherBoundContext
   ) => Promise<LapicPartitionDispatcher>
   /**
    * Callback invoked after each partition completes in coordinated solve.
@@ -235,6 +250,16 @@ export function createGiLapicSolveOrchestration(
       }
 
       // 4. Auto-wire bound provider (interval-only or interval+LP cascade)
+      //    Also build domain variable maps for remote workers (they need them
+      //    to create their own FIR-interval bound providers).
+      const domainVariableMaps =
+        firGraph && config.candidateVariableExtractor
+          ? buildGiLapicDomainVariableMaps(
+              canonicalExport.value.problem.itemDomains,
+              config.candidateVariableExtractor
+            )
+          : undefined
+
       const computeUpperBound =
         config.computeUpperBound ??
         (firGraph && config.candidateVariableExtractor
@@ -273,8 +298,22 @@ export function createGiLapicSolveOrchestration(
           : undefined
 
         // Create real dispatcher if factory provided (enables true parallelism)
+        // Pass bound context so remote workers can create their own bound providers
+        const boundContext: GiLapicDispatcherBoundContext = {
+          ...(firGraph !== undefined ? { firGraph } : {}),
+          ...(domainVariableMaps !== undefined && domainVariableMaps.length > 0
+            ? { domainVariableMaps }
+            : {}),
+          ...(config.globalConstants !== undefined
+            ? { globalConstants: config.globalConstants }
+            : {}),
+          ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
+        }
         const dispatcher = config.dispatcherFactory
-          ? await config.dispatcherFactory(canonicalExport.value.problem)
+          ? await config.dispatcherFactory(
+              canonicalExport.value.problem,
+              boundContext
+            )
           : undefined
 
         return executeCoordinatedBoundedExactSolve({

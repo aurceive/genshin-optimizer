@@ -26,6 +26,7 @@ import type {
   GiLapicSolveOrchestration,
   GiLapicCanonicalExport,
   GiLapicCandidateVariableExtractor,
+  GiLapicDispatcherBoundContext,
 } from '@genshin-optimizer/gi/lapic-adapter'
 import type {
   LapicBoundedExactCandidateCombination,
@@ -365,23 +366,42 @@ async function runSolve(
       : {}),
     ...(secondaryPorts && secondaryPorts.length > 0
       ? {
-          dispatcherFactory: async (canonicalProblem) => {
+          dispatcherFactory: async (canonicalProblem, boundContext) => {
             const {
               createMessagePortPartitionDispatcher,
               createInProcessPartitionDispatcher,
+              createLapicFirBoundProvider,
             } = await import('@genshin-optimizer/lapic/runtime')
             const { createLapicMemoryArtifactStore } = await import(
               '@genshin-optimizer/lapic/storage'
             )
 
-            // Phase 2: send canonical problem to each secondary, wait for ready
+            // Phase 2: send canonical problem + bound context to each secondary
             const remoteDispatchers = await Promise.all(
               secondaryPorts.map(async (port) => {
-                port.postMessage({ kind: 'init-problem', canonicalProblem })
+                port.postMessage({
+                  kind: 'init-problem',
+                  canonicalProblem,
+                  ...(boundContext ?? {}),
+                })
                 await waitForReady(port)
                 return createMessagePortPartitionDispatcher({ port })
               })
             )
+
+            // Build local bound provider from shared context (same as remote)
+            const localBoundProvider =
+              boundContext?.firGraph &&
+              boundContext.domainVariableMaps &&
+              boundContext.domainVariableMaps.length > 0
+                ? createLapicFirBoundProvider({
+                    graph: boundContext.firGraph,
+                    domainVariableMaps: boundContext.domainVariableMaps,
+                    ...(boundContext.globalConstants !== undefined
+                      ? { globalConstants: boundContext.globalConstants }
+                      : {}),
+                  })
+                : undefined
 
             // Local in-process dispatcher for primary's own compute.
             // cooperativeYield allows port messages from remote workers
@@ -392,6 +412,15 @@ async function runSolve(
               artifactStore: localStore,
               evaluateCombination: localEvaluator,
               cooperativeYield: true,
+              ...(localBoundProvider !== undefined
+                ? { computeUpperBound: localBoundProvider }
+                : {}),
+              ...(boundContext?.firGraph !== undefined
+                ? { firGraph: boundContext.firGraph }
+                : {}),
+              ...(boundContext?.dangerZoneConfig !== undefined
+                ? { dangerZoneConfig: boundContext.dangerZoneConfig }
+                : {}),
             })
 
             // Hybrid round-robin across all dispatchers

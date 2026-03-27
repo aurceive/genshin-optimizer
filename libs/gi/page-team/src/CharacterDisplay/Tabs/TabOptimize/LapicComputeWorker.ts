@@ -77,6 +77,7 @@ async function initComputeWorker(
   const {
     createBoundedExactWorkerEntryHandler,
     createLapicInMemorySessionController,
+    createLapicFirBoundProvider,
     lapicRuntimeProtocolVersion,
   } = await import('@genshin-optimizer/lapic/runtime')
 
@@ -99,6 +100,19 @@ async function initComputeWorker(
     }
 
     const canonicalProblem = event.data.canonicalProblem
+    const { firGraph, domainVariableMaps, globalConstants, dangerZoneConfig } =
+      event.data
+
+    // Build local bound provider from context sent by primary worker
+    const computeUpperBound =
+      firGraph && domainVariableMaps && domainVariableMaps.length > 0
+        ? createLapicFirBoundProvider({
+            graph: firGraph,
+            domainVariableMaps,
+            ...(globalConstants !== undefined ? { globalConstants } : {}),
+          })
+        : undefined
+
     const artifactStore = createLapicMemoryArtifactStore()
     let sequenceCounter = 0
 
@@ -108,6 +122,9 @@ async function initComputeWorker(
         problem: canonicalProblem,
         artifactStore,
         evaluateCombination,
+        ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+        ...(firGraph !== undefined ? { firGraph } : {}),
+        ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
       },
       createController(partitionIndex: number) {
         return createLapicInMemorySessionController({

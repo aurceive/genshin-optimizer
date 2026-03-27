@@ -602,6 +602,15 @@ export async function executeLapicBoundedExactSolve(
             pauseDetected = true
             return
           }
+
+          // Cross-partition incumbent sharing: adopt external threshold
+          // if it improves our local pruning ability
+          if (options.getExternalIncumbentThreshold) {
+            const ext = options.getExternalIncumbentThreshold()
+            if (ext !== undefined) {
+              tracker.adoptExternalThreshold(ext)
+            }
+          }
         }
 
         // Build a readonly view of the current buffer for evaluation
@@ -680,6 +689,15 @@ export async function executeLapicBoundedExactSolve(
           })
           options.controller.emitCertificate(dominanceCert)
           dominanceCertificateIds.push(dominanceCert.certId)
+        }
+
+        // Notify coordinated solve when the local threshold improves,
+        // enabling other partitions to adopt it for tighter pruning.
+        if (options.onIncumbentImproved && insertResult.evicted) {
+          const threshold = tracker.currentThreshold()
+          if (threshold !== undefined) {
+            options.onIncumbentImproved(threshold)
+          }
         }
 
         return

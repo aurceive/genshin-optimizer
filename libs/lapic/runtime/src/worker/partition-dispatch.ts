@@ -56,6 +56,10 @@ export interface LapicPartitionDispatchRequest {
   readonly joinPlan: LapicFrontierJoinPlan
   readonly frontierBlockIds: readonly string[]
   readonly initialIncumbentThreshold?: string | undefined
+  /** Polled at safe points for cross-partition threshold sharing. */
+  readonly getExternalIncumbentThreshold?: () => string | undefined
+  /** Called when the partition's local incumbent improves. */
+  readonly onIncumbentImproved?: (threshold: string) => void
 }
 
 /**
@@ -185,6 +189,12 @@ export function createInProcessPartitionDispatcher(
         },
         ...(request.initialIncumbentThreshold !== undefined && {
           initialIncumbentThreshold: request.initialIncumbentThreshold,
+        }),
+        ...(request.getExternalIncumbentThreshold !== undefined && {
+          getExternalIncumbentThreshold: request.getExternalIncumbentThreshold,
+        }),
+        ...(request.onIncumbentImproved !== undefined && {
+          onIncumbentImproved: request.onIncumbentImproved,
         }),
       })
 
