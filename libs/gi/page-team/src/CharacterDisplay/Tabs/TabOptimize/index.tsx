@@ -596,11 +596,26 @@ export default function TabBuild() {
     setLapicEvidence(null)
     let latestProgressEvent: LapicProgressEvent | undefined
 
+    // Create message channels for secondary compute workers
+    const channels =
+      maxWorkers > 1
+        ? Array.from({ length: maxWorkers - 1 }, () => new MessageChannel())
+        : []
+
+    // Spawn primary worker
     const worker = new Worker(
       new URL('./LapicSolveWorker.ts', import.meta.url),
       { type: 'module' }
     )
     lapicWorkerRef.current = worker
+
+    // Spawn secondary compute workers
+    const secondaries = channels.map(
+      () =>
+        new Worker(new URL('./LapicComputeWorker.ts', import.meta.url), {
+          type: 'module',
+        })
+    )
 
     const status: Omit<BuildStatus, 'type'> = {
       tested: 0,
@@ -637,7 +652,10 @@ export default function TabBuild() {
       >((resolve, reject) => {
         cancelToken.current = () => {
           worker.postMessage({ type: 'cancel' })
-          setTimeout(() => worker.terminate(), 100)
+          setTimeout(() => {
+            worker.terminate()
+            for (const w of secondaries) w.terminate()
+          }, 100)
           reject(cancellationError)
         }
 
@@ -665,28 +683,46 @@ export default function TabBuild() {
 
         worker.onerror = (e) => reject(new Error(e.message || 'Worker error'))
 
-        // Send computation data to worker
-        worker.postMessage({
-          type: 'init',
-          optimizedNodes: nodes,
-          base: arts.base,
-          artsBySlot: Object.values(arts.values),
-          constraintMinimums,
-          artifacts: prunedFilteredArts,
-          optimizationTarget: nodes[nodes.length - 1],
-          constraints: valueFilter.map((x) => ({
-            value: x.value,
-            minimum: x.minimum,
-          })),
-          optConfig: buildSetting,
-          topN: maxBuildsToShow,
-          workerCount: maxWorkers,
-          problemId: `${characterKey}:${teamId}`,
-        })
+        // Send init to secondary workers first (they start precomputing)
+        for (let i = 0; i < secondaries.length; i++) {
+          secondaries[i].postMessage(
+            {
+              type: 'compute-init',
+              optimizedNodes: nodes,
+              base: arts.base,
+              artsBySlot: Object.values(arts.values),
+              constraintMinimums,
+            },
+            [channels[i].port2]
+          )
+        }
+
+        // Send init to primary (includes port1s for secondary communication)
+        worker.postMessage(
+          {
+            type: 'init',
+            optimizedNodes: nodes,
+            base: arts.base,
+            artsBySlot: Object.values(arts.values),
+            constraintMinimums,
+            artifacts: prunedFilteredArts,
+            optimizationTarget: nodes[nodes.length - 1],
+            constraints: valueFilter.map((x) => ({
+              value: x.value,
+              minimum: x.minimum,
+            })),
+            optConfig: buildSetting,
+            topN: maxBuildsToShow,
+            workerCount: maxWorkers,
+            problemId: `${characterKey}:${teamId}`,
+          },
+          channels.map((ch) => ch.port1)
+        )
       })
 
       cancelToken.current = () => {}
       worker.terminate()
+      for (const w of secondaries) w.terminate()
       lapicWorkerRef.current = null
 
       status.tested = result.tested
@@ -741,6 +777,7 @@ export default function TabBuild() {
       clearInterval(statusUpdateTimer)
       clearInterval(bpsTimer)
       lapicWorkerRef.current?.terminate()
+      for (const w of secondaries) w.terminate()
       lapicWorkerRef.current = null
       setLapicPaused(false)
       setBuildStatus({

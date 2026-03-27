@@ -46,7 +46,7 @@ import type {
   LapicWorkerInitMsg,
   LapicSolveEvidence,
 } from './lapicBridge'
-import { createSubWorkerPool } from './createSubWorkerPool'
+import { buildPartitionEvaluator } from './buildPartitionEvaluator'
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
 
@@ -166,12 +166,14 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
   }
 
   if (msg.type === 'init') {
+    // Capture ports from transferables (one per secondary worker)
+    const secondaryPorts = [...e.ports]
     // Cancel any in-flight orchestration before starting a new one
     const prev = orchestration
     orchestration = null
     const start = async () => {
       if (prev) await prev.handle.requestCancel().catch(() => {})
-      return runSolve(msg)
+      return runSolve(msg, undefined, undefined, secondaryPorts)
     }
     start().catch((err) => {
       postMessage({
@@ -185,7 +187,8 @@ onmessage = (e: MessageEvent<LapicWorkerInMsg>) => {
 async function runSolve(
   msg: LapicWorkerInitMsg,
   resumeCheckpoint?: LapicSolveCheckpointState,
-  priorCounters?: { evaluated: number; failed: number; total: number }
+  priorCounters?: { evaluated: number; failed: number; total: number },
+  secondaryPorts?: MessagePort[]
 ): Promise<void> {
   const {
     optimizedNodes,
@@ -217,6 +220,15 @@ async function runSolve(
       if (art.id) artifactById.set(art.id, art)
     }
   }
+
+  // Build stateless evaluator for local in-process partition dispatcher
+  // (used when primary participates in compute alongside secondaries)
+  const localEvaluator = buildPartitionEvaluator(
+    compute,
+    artifactById,
+    constraintMinimums,
+    slotCount
+  )
 
   // Build candidate variable extractor for B&B pruning.
   // Maps each artifact's stat values to F-IR variable IDs ('dyn:{statKey}')
@@ -351,19 +363,43 @@ async function runSolve(
     ...(resumeCheckpoint !== undefined
       ? { resumeCheckpointState: resumeCheckpoint }
       : {}),
-    ...(workerCount > 1
+    ...(secondaryPorts && secondaryPorts.length > 0
       ? {
-          dispatcherFactory: (canonicalProblem) =>
-            createSubWorkerPool(
-              {
-                workerCount,
-                optimizedNodes: optimizedNodes as OptNode[],
-                base,
-                artsBySlot,
-                constraintMinimums,
-              },
-              canonicalProblem
-            ),
+          dispatcherFactory: async (canonicalProblem) => {
+            const {
+              createMessagePortPartitionDispatcher,
+              createInProcessPartitionDispatcher,
+            } = await import('@genshin-optimizer/lapic/runtime')
+            const { createLapicMemoryArtifactStore } = await import(
+              '@genshin-optimizer/lapic/storage'
+            )
+
+            // Phase 2: send canonical problem to each secondary, wait for ready
+            const remoteDispatchers = await Promise.all(
+              secondaryPorts.map(async (port) => {
+                port.postMessage({ kind: 'init-problem', canonicalProblem })
+                await waitForReady(port)
+                return createMessagePortPartitionDispatcher({ port })
+              })
+            )
+
+            // Local in-process dispatcher for primary's own compute
+            const localStore = createLapicMemoryArtifactStore()
+            const localDispatcher = createInProcessPartitionDispatcher({
+              problem: canonicalProblem,
+              artifactStore: localStore,
+              evaluateCombination: localEvaluator,
+            })
+
+            // Hybrid round-robin across all dispatchers
+            const all = [...remoteDispatchers, localDispatcher]
+            let next = 0
+            return {
+              dispatch: (req) => all[next++ % all.length].dispatch(req),
+              shutdown: () =>
+                Promise.all(all.map((d) => d.shutdown())).then(() => {}),
+            }
+          },
         }
       : {}),
   })
@@ -433,11 +469,16 @@ async function runSolve(
 
     // Resume: create a new orchestration from the checkpoint
     orchestration = null
-    return runSolve(msg, checkpoint, {
-      evaluated: evaluatedCount,
-      failed: failedCount,
-      total: totalCombinations,
-    })
+    return runSolve(
+      msg,
+      checkpoint,
+      {
+        evaluated: evaluatedCount,
+        failed: failedCount,
+        total: totalCombinations,
+      },
+      secondaryPorts
+    )
   }
 
   // 8b. Failed
@@ -492,5 +533,29 @@ async function runSolve(
     failed: failedCount,
     total: totalCombinations,
     ...(evidence !== undefined ? { evidence } : {}),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Port handshake: wait for secondary worker to signal readiness
+// ---------------------------------------------------------------------------
+
+const SECONDARY_INIT_TIMEOUT_MS = 30_000
+
+function waitForReady(port: MessagePort): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error('Secondary worker init timeout')),
+      SECONDARY_INIT_TIMEOUT_MS
+    )
+    function handler(event: MessageEvent) {
+      if (event.data?.kind === 'ready') {
+        clearTimeout(timeout)
+        port.removeEventListener('message', handler)
+        resolve()
+      }
+    }
+    port.addEventListener('message', handler)
+    if (typeof port.start === 'function') port.start()
   })
 }
