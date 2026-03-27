@@ -63,7 +63,8 @@ export async function createSubWorkerPool(
   const readyPromises: Promise<void>[] = []
 
   for (let i = 0; i < workerCount; i++) {
-    const worker = new Worker(new URL('./LapicSubWorker.ts', import.meta.url), {
+    const workerUrl = new URL('./LapicSubWorker.ts', import.meta.url)
+    const worker = new Worker(workerUrl, {
       type: 'module',
     })
     workers.push(worker)

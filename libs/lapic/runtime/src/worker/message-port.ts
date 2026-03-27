@@ -450,6 +450,8 @@ export function createBoundedExactWorkerEntryHandler(
     port.addEventListener('message', (event) =>
       handleMessage(event.data as LapicBoundedExactPortCoordinatorEnvelope)
     )
+    // Browser MessagePort requires explicit start() when using addEventListener
+    if (typeof port.start === 'function') port.start()
   }
 
   return () => {
@@ -521,6 +523,8 @@ export function createMessagePortPartitionDispatcher(
     port.addEventListener('message', (event) =>
       handleMessage(event.data as LapicBoundedExactPortWorkerEnvelope)
     )
+    // Browser MessagePort requires explicit start() when using addEventListener
+    if (typeof port.start === 'function') port.start()
   }
 
   return {

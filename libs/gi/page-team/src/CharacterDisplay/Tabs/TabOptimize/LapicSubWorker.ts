@@ -16,6 +16,7 @@
  * only.  FIR bound integration is planned for Phase 2.
  */
 
+import './subWorkerPolyfill'
 import type { ArtifactBuildData } from '@genshin-optimizer/gi/solver'
 import { precompute } from '@genshin-optimizer/gi/wr'
 import type { ReadNode } from '@genshin-optimizer/gi/wr'
