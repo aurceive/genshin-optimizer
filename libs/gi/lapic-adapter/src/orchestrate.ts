@@ -19,10 +19,14 @@ import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
   LapicInMemorySessionController,
+  LapicPartitionDispatcher,
   LapicSolveCheckpointState,
   LapicSolveOrchestration,
 } from '@genshin-optimizer/lapic/runtime'
-import type { LapicLpProvider } from '@genshin-optimizer/lapic/core'
+import type {
+  LapicCanonicalProblem,
+  LapicLpProvider,
+} from '@genshin-optimizer/lapic/core'
 import type { LapicArtifactStore } from '@genshin-optimizer/lapic/storage'
 import {
   createLapicArtifactWriteRequest,
@@ -96,6 +100,19 @@ export interface GiLapicSolveOrchestrationConfig {
    * if this is set, the solve is forced to single-threaded mode.
    */
   readonly resumeCheckpointState?: LapicSolveCheckpointState
+  /**
+   * Optional factory for creating a partition dispatcher from sub-workers.
+   *
+   * Called with the canonical problem after it's built inside the solve
+   * function.  When provided and workerCount > 1, partitions are dispatched
+   * to real Web Worker threads instead of running in-process.
+   *
+   * The returned dispatcher is shut down automatically by the coordinated
+   * solve's finally block.
+   */
+  readonly dispatcherFactory?: (
+    canonicalProblem: LapicCanonicalProblem
+  ) => Promise<LapicPartitionDispatcher>
 }
 
 /**
@@ -223,6 +240,11 @@ export function createGiLapicSolveOrchestration(
         ? 1
         : (config.workerCount ?? 1)
       if (effectiveWorkerCount > 1) {
+        // Create real dispatcher if factory provided (enables true parallelism)
+        const dispatcher = config.dispatcherFactory
+          ? await config.dispatcherFactory(canonicalExport.value.problem)
+          : undefined
+
         return executeCoordinatedBoundedExactSolve({
           problem: canonicalExport.value.problem,
           controller,
@@ -259,6 +281,7 @@ export function createGiLapicSolveOrchestration(
                   config.skipIntermediateCertificates,
               }
             : {}),
+          ...(dispatcher !== undefined ? { dispatcher } : {}),
         })
       }
 

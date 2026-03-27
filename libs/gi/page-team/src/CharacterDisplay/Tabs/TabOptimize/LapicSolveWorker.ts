@@ -46,6 +46,7 @@ import type {
   LapicWorkerInitMsg,
   LapicSolveEvidence,
 } from './lapicBridge'
+import { createSubWorkerPool } from './createSubWorkerPool'
 
 declare function postMessage(msg: LapicWorkerOutMsg): void
 
@@ -349,6 +350,21 @@ async function runSolve(
     ...(lpProvider !== undefined ? { lpProvider } : {}),
     ...(resumeCheckpoint !== undefined
       ? { resumeCheckpointState: resumeCheckpoint }
+      : {}),
+    ...(workerCount > 1
+      ? {
+          dispatcherFactory: (canonicalProblem) =>
+            createSubWorkerPool(
+              {
+                workerCount,
+                optimizedNodes: optimizedNodes as OptNode[],
+                base,
+                artsBySlot,
+                constraintMinimums,
+              },
+              canonicalProblem
+            ),
+        }
       : {}),
   })
 
