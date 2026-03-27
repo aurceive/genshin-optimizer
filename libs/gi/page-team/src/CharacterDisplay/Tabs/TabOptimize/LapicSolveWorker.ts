@@ -370,40 +370,29 @@ async function runSolve(
             const {
               createMessagePortPartitionDispatcher,
               createInProcessPartitionDispatcher,
-              createLapicFirBoundProvider,
             } = await import('@genshin-optimizer/lapic/runtime')
             const { createLapicMemoryArtifactStore } = await import(
               '@genshin-optimizer/lapic/storage'
             )
 
-            // Phase 2: send canonical problem + bound context to each secondary
+            // Phase 2: send canonical problem to each secondary worker.
+            // Only lightweight serializable fields are sent — NOT the
+            // full domainVariableMaps (would cause OOM via N copies of
+            // ~10MB nested Maps through structured clone).
             const remoteDispatchers = await Promise.all(
               secondaryPorts.map(async (port) => {
                 port.postMessage({
                   kind: 'init-problem',
                   canonicalProblem,
-                  ...(boundContext ?? {}),
                 })
                 await waitForReady(port)
                 return createMessagePortPartitionDispatcher({ port })
               })
             )
 
-            // Build local bound provider from shared context (same as remote)
-            const localBoundProvider =
-              boundContext?.firGraph &&
-              boundContext.domainVariableMaps &&
-              boundContext.domainVariableMaps.length > 0
-                ? createLapicFirBoundProvider({
-                    graph: boundContext.firGraph,
-                    domainVariableMaps: boundContext.domainVariableMaps,
-                    ...(boundContext.globalConstants !== undefined
-                      ? { globalConstants: boundContext.globalConstants }
-                      : {}),
-                  })
-                : undefined
-
             // Local in-process dispatcher for primary's own compute.
+            // Reuses the orchestrator's full-precision bound provider
+            // (zero-copy: same thread, closure reference only).
             // cooperativeYield allows port messages from remote workers
             // to be processed between top-level domain iterations.
             const localStore = createLapicMemoryArtifactStore()
@@ -412,8 +401,8 @@ async function runSolve(
               artifactStore: localStore,
               evaluateCombination: localEvaluator,
               cooperativeYield: true,
-              ...(localBoundProvider !== undefined
-                ? { computeUpperBound: localBoundProvider }
+              ...(boundContext?.computeUpperBound !== undefined
+                ? { computeUpperBound: boundContext.computeUpperBound }
                 : {}),
               ...(boundContext?.firGraph !== undefined
                 ? { firGraph: boundContext.firGraph }

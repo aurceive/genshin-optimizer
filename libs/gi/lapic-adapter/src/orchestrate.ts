@@ -19,8 +19,8 @@ import {
 import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
+  LapicBoundedExactUpperBoundEvaluator,
   LapicDangerZoneConfig,
-  LapicFirDomainVariableMap,
   LapicInMemorySessionController,
   LapicPartitionDispatcher,
   LapicSolveCheckpointState,
@@ -37,7 +37,6 @@ import {
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
 import { createGiLapicBuiltinBoundProvider } from './builtin-bound-provider'
-import { buildGiLapicDomainVariableMaps } from './bound-maps'
 import { buildGiLapicCanonicalExportFromRequest } from './canonical'
 import { compileGiOptNodeToFir } from './compilation'
 import type {
@@ -52,12 +51,18 @@ import type {
 
 /**
  * Bound-related context forwarded to the dispatcher factory so
- * remote workers can create their own bound providers.
+ * the local in-process dispatcher can reuse the primary's bound
+ * provider, and remote workers can create their own (lighter) ones.
+ *
+ * `computeUpperBound` is the full-precision provider already built
+ * by the orchestrator — the local dispatcher should use it directly
+ * instead of rebuilding from raw materials.  Remote workers cannot
+ * receive functions via postMessage, so they get only the lightweight
+ * serializable fields (firGraph, dangerZoneConfig).
  */
 export interface GiLapicDispatcherBoundContext {
+  readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
   readonly firGraph?: LapicFirGraph
-  readonly domainVariableMaps?: readonly LapicFirDomainVariableMap[]
-  readonly globalConstants?: ReadonlyMap<string, number>
   readonly dangerZoneConfig?: LapicDangerZoneConfig
 }
 
@@ -250,16 +255,6 @@ export function createGiLapicSolveOrchestration(
       }
 
       // 4. Auto-wire bound provider (interval-only or interval+LP cascade)
-      //    Also build domain variable maps for remote workers (they need them
-      //    to create their own FIR-interval bound providers).
-      const domainVariableMaps =
-        firGraph && config.candidateVariableExtractor
-          ? buildGiLapicDomainVariableMaps(
-              canonicalExport.value.problem.itemDomains,
-              config.candidateVariableExtractor
-            )
-          : undefined
-
       const computeUpperBound =
         config.computeUpperBound ??
         (firGraph && config.candidateVariableExtractor
@@ -298,15 +293,13 @@ export function createGiLapicSolveOrchestration(
           : undefined
 
         // Create real dispatcher if factory provided (enables true parallelism)
-        // Pass bound context so remote workers can create their own bound providers
+        // Pass computeUpperBound for the local dispatcher (zero-copy, same
+        // thread) and lightweight serializable fields for remote workers.
+        // Heavy domainVariableMaps are NOT sent — they caused OOM via
+        // structured clone duplication across N workers.
         const boundContext: GiLapicDispatcherBoundContext = {
+          ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
           ...(firGraph !== undefined ? { firGraph } : {}),
-          ...(domainVariableMaps !== undefined && domainVariableMaps.length > 0
-            ? { domainVariableMaps }
-            : {}),
-          ...(config.globalConstants !== undefined
-            ? { globalConstants: config.globalConstants }
-            : {}),
           ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
         }
         const dispatcher = config.dispatcherFactory

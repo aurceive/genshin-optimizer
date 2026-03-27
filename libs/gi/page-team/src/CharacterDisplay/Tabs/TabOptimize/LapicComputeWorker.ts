@@ -77,7 +77,6 @@ async function initComputeWorker(
   const {
     createBoundedExactWorkerEntryHandler,
     createLapicInMemorySessionController,
-    createLapicFirBoundProvider,
     lapicRuntimeProtocolVersion,
   } = await import('@genshin-optimizer/lapic/runtime')
 
@@ -88,6 +87,11 @@ async function initComputeWorker(
   // Phase 2: listen for canonical problem from primary via port.
   // Supports re-initialization on resume — each init-problem disposes
   // the previous entry handler and creates a fresh one.
+  //
+  // Note: secondary workers do NOT receive domainVariableMaps (sending
+  // them caused OOM via N × ~10 MB structured clone duplication).
+  // B&B pruning on remote workers requires a lighter data path — see
+  // backlog item "envelope-only remote bounds".
   let currentDispose: (() => void) | null = null
 
   port.addEventListener('message', (event: MessageEvent) => {
@@ -100,18 +104,6 @@ async function initComputeWorker(
     }
 
     const canonicalProblem = event.data.canonicalProblem
-    const { firGraph, domainVariableMaps, globalConstants, dangerZoneConfig } =
-      event.data
-
-    // Build local bound provider from context sent by primary worker
-    const computeUpperBound =
-      firGraph && domainVariableMaps && domainVariableMaps.length > 0
-        ? createLapicFirBoundProvider({
-            graph: firGraph,
-            domainVariableMaps,
-            ...(globalConstants !== undefined ? { globalConstants } : {}),
-          })
-        : undefined
 
     const artifactStore = createLapicMemoryArtifactStore()
     let sequenceCounter = 0
@@ -122,9 +114,6 @@ async function initComputeWorker(
         problem: canonicalProblem,
         artifactStore,
         evaluateCombination,
-        ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
-        ...(firGraph !== undefined ? { firGraph } : {}),
-        ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
       },
       createController(partitionIndex: number) {
         return createLapicInMemorySessionController({
