@@ -23,6 +23,7 @@ import {
   mergeAndTruncateCandidates,
   computeIncumbentThreshold,
 } from './coordinated-solve'
+import { createInProcessPartitionDispatcher } from './partition-dispatch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -247,6 +248,24 @@ describe('executeCoordinatedBoundedExactSolve', () => {
   })
 
   describe('multi-partition solve (workerCount > 1)', () => {
+    it('uses single-partition fast path when no dispatcher provided', async () => {
+      const problem = createProblem({ slotIds, domains, topN: 1 })
+      const { store, controller } = createTestInfra()
+
+      // No dispatcher → effectiveWorkerCount=1 (fast path), still correct.
+      const outcome = await executeCoordinatedBoundedExactSolve({
+        problem,
+        controller,
+        artifactStore: store,
+        evaluateCombination: numericEvaluator,
+        workerCount: 12,
+      })
+
+      const completion = outcome as LapicSolveCompletionResult
+      expect(completion.summary.solveState).toBe('completed')
+      expect(completion.finalOptimality).toBeDefined()
+    })
+
     it('produces correct result with workerCount=2', async () => {
       const problem = createProblem({ slotIds, domains, topN: 1 })
       const { store, controller } = createTestInfra()
@@ -346,6 +365,11 @@ describe('executeCoordinatedBoundedExactSolve', () => {
         artifactStore: store,
         evaluateCombination: numericEvaluator,
         workerCount: 2,
+        dispatcher: createInProcessPartitionDispatcher({
+          problem,
+          artifactStore: store,
+          evaluateCombination: numericEvaluator,
+        }),
         onPartitionComplete: (idx, total) => calls.push([idx, total]),
       })
 
@@ -654,6 +678,11 @@ describe('executeCoordinatedBoundedExactSolve', () => {
         artifactStore: store,
         evaluateCombination: numericEvaluator,
         workerCount: 3,
+        dispatcher: createInProcessPartitionDispatcher({
+          problem,
+          artifactStore: store,
+          evaluateCombination: numericEvaluator,
+        }),
         onPartitionComplete: (idx, total) => calls.push([idx, total]),
       })
 
@@ -693,6 +722,11 @@ describe('executeCoordinatedBoundedExactSolve', () => {
           artifactStore: store,
           evaluateCombination: throwOnSecondPartition,
           workerCount: 2,
+          dispatcher: createInProcessPartitionDispatcher({
+            problem,
+            artifactStore: store,
+            evaluateCombination: throwOnSecondPartition,
+          }),
           onPartitionComplete: (idx) => completedPartitions.push(idx),
         })
       ).rejects.toThrow(/Partition 1\/2 failed/)
