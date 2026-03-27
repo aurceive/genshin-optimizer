@@ -12,5 +12,5 @@
  */
 if (typeof globalThis.process === 'undefined') {
   const g = globalThis as unknown as Record<string, unknown>
-  g.process = { env: { NODE_ENV: 'development' } }
+  g["process"] = { env: { NODE_ENV: 'development' } }
 }

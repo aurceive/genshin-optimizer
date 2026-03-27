@@ -14,6 +14,15 @@
  *   listens for messages and runs the evaluate loop.
  */
 
+import type { LapicFrontierJoinPlan } from '../solve/join-plan'
+import type { LapicInMemorySessionController } from '../types'
+import type {
+  LapicPartitionDispatchConfig,
+  LapicPartitionDispatchRequest,
+  LapicPartitionDispatchResponse,
+  LapicPartitionDispatcher,
+} from './partition-dispatch'
+import { createInProcessPartitionDispatcher } from './partition-dispatch'
 import type { LapicWorkerHandle } from './pool'
 import type {
   LapicInProcessWorkExecutor,
@@ -21,15 +30,6 @@ import type {
   LapicWorkerPauseAckMessage,
   LapicWorkerResultMessage,
 } from './transport'
-import type {
-  LapicPartitionDispatchConfig,
-  LapicPartitionDispatchRequest,
-  LapicPartitionDispatchResponse,
-  LapicPartitionDispatcher,
-} from './partition-dispatch'
-import type { LapicInMemorySessionController } from '../types'
-import type { LapicFrontierJoinPlan } from '../solve/join-plan'
-import { createInProcessPartitionDispatcher } from './partition-dispatch'
 
 // ---------------------------------------------------------------------------
 // MessagePort abstraction
@@ -54,6 +54,7 @@ export interface LapicMessagePortLike {
     handler: (event: { data: unknown }) => void
   ): void
   off?(event: 'message', handler: (data: unknown) => void): void
+  start?(): void
   close?(): void
 }
 
