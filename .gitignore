@@ -25,6 +25,7 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+/.playwright-mcp/
 /.sass-cache
 /connect.lock
 /coverage
