@@ -679,6 +679,10 @@ export default function TabBuild() {
             setLapicPaused(true)
           } else if (msg.type === 'result') {
             resolve(msg)
+          } else if (msg.type === 'partition-complete') {
+            console.log(
+              `[lapic] Partition ${msg.index + 1}/${msg.total} complete`
+            )
           } else if (msg.type === 'error') {
             reject(new Error(msg.message))
           }

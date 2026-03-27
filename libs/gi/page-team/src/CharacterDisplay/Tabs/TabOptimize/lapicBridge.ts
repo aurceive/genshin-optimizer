@@ -146,8 +146,16 @@ export interface LapicWorkerErrorMsg {
   readonly message: string
 }
 
+/** Emitted when a partition completes in coordinated (multi-thread) solve. */
+export interface LapicWorkerPartitionCompleteMsg {
+  readonly type: 'partition-complete'
+  readonly index: number
+  readonly total: number
+}
+
 export type LapicWorkerOutMsg =
   | LapicWorkerProgressMsg
   | LapicWorkerResultMsg
   | LapicWorkerPausedMsg
   | LapicWorkerErrorMsg
+  | LapicWorkerPartitionCompleteMsg

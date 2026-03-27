@@ -12,12 +12,14 @@
 
 import {
   createSolveOrchestration,
+  defaultLapicDangerZoneConfig,
   executeLapicBoundedExactSolve,
   executeCoordinatedBoundedExactSolve,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
+  LapicDangerZoneConfig,
   LapicInMemorySessionController,
   LapicPartitionDispatcher,
   LapicSolveCheckpointState,
@@ -60,6 +62,13 @@ export interface GiLapicSolveOrchestrationConfig {
   readonly isCombinationFeasible?: GiLapicBoundedCurrentOnlySolveOptions['isCombinationFeasible']
   readonly maxCombinationCount?: number
   readonly computeUpperBound?: GiLapicBoundedCurrentOnlySolveOptions['computeUpperBound']
+  /**
+   * Numeric danger-zone protection for bound-based pruning.
+   * When supplied, the executor declines a prune if the bound is
+   * suspiciously close to the threshold (within the safe margin),
+   * avoiding silent false-negative pruning due to floating-point error.
+   */
+  readonly dangerZoneConfig?: LapicDangerZoneConfig
   readonly candidateVariableExtractor?: GiLapicBoundedCurrentOnlySolveOptions['candidateVariableExtractor']
   readonly potentialRerankEvaluator?: GiLapicBoundedCurrentOnlySolveOptions['potentialRerankEvaluator']
   /**
@@ -113,6 +122,14 @@ export interface GiLapicSolveOrchestrationConfig {
   readonly dispatcherFactory?: (
     canonicalProblem: LapicCanonicalProblem
   ) => Promise<LapicPartitionDispatcher>
+  /**
+   * Callback invoked after each partition completes in coordinated solve.
+   * Useful for UX feedback like "Partition 2/4 complete".
+   */
+  readonly onPartitionComplete?: (
+    partitionIndex: number,
+    totalPartitions: number
+  ) => void
 }
 
 /**
@@ -234,6 +251,13 @@ export function createGiLapicSolveOrchestration(
             })
           : undefined)
 
+      // 4b. Auto-wire danger zone protection when pruning is active
+      const dangerZoneConfig =
+        config.dangerZoneConfig ??
+        (computeUpperBound !== undefined
+          ? defaultLapicDangerZoneConfig
+          : undefined)
+
       // 5. Execute solve — coordinated or single-threaded
       //    Resume forces single-threaded (coordinated solve lacks resume support)
       const effectiveWorkerCount = config.resumeCheckpointState
@@ -270,6 +294,7 @@ export function createGiLapicSolveOrchestration(
             ? { maxCombinationCount: config.maxCombinationCount }
             : {}),
           ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+          ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
           ...(config.skipIntermediateCertificates !== undefined
             ? {
                 skipIntermediateCertificates:
@@ -277,6 +302,9 @@ export function createGiLapicSolveOrchestration(
               }
             : {}),
           ...(dispatcher !== undefined ? { dispatcher } : {}),
+          ...(config.onPartitionComplete !== undefined
+            ? { onPartitionComplete: config.onPartitionComplete }
+            : {}),
         })
       }
 
@@ -306,6 +334,7 @@ export function createGiLapicSolveOrchestration(
           ? { maxCombinationCount: config.maxCombinationCount }
           : {}),
         ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+        ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
         ...(config.skipIntermediateCertificates !== undefined
           ? {
               skipIntermediateCertificates: config.skipIntermediateCertificates,

@@ -405,6 +405,13 @@ async function runSolve(
           },
         }
       : {}),
+    ...(workerCount > 1
+      ? {
+          onPartitionComplete: (index: number, total: number) => {
+            postMessage({ type: 'partition-complete', index, total })
+          },
+        }
+      : {}),
   })
 
   // 6. Subscribe to progress — forward canonical LapicProgressEvent objects
