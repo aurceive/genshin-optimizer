@@ -240,6 +240,14 @@ export function createGiLapicSolveOrchestration(
         ? 1
         : (config.workerCount ?? 1)
       if (effectiveWorkerCount > 1) {
+        const wrappedEvaluateCombination = (
+          combination: LapicBoundedExactCandidateCombination
+        ) => config.evaluateCombination(combination, canonicalExport.value)
+        const wrappedFeasibility = config.isCombinationFeasible
+          ? (combination: LapicBoundedExactCandidateCombination) =>
+              config.isCombinationFeasible!(combination, canonicalExport.value)
+          : undefined
+
         // Create real dispatcher if factory provided (enables true parallelism)
         const dispatcher = config.dispatcherFactory
           ? await config.dispatcherFactory(canonicalExport.value.problem)
@@ -251,25 +259,12 @@ export function createGiLapicSolveOrchestration(
           artifactStore,
           workerCount: effectiveWorkerCount,
           ...(firGraph !== undefined ? { firGraph } : {}),
-          evaluateCombination(combination) {
-            return config.evaluateCombination(
-              combination,
-              canonicalExport.value
-            )
-          },
+          evaluateCombination: wrappedEvaluateCombination,
           ...(config.compareEvaluations !== undefined
             ? { compareEvaluations: config.compareEvaluations }
             : {}),
-          ...(config.isCombinationFeasible !== undefined
-            ? {
-                isCombinationFeasible: (
-                  combination: LapicBoundedExactCandidateCombination
-                ) =>
-                  config.isCombinationFeasible!(
-                    combination,
-                    canonicalExport.value
-                  ),
-              }
+          ...(wrappedFeasibility !== undefined
+            ? { isCombinationFeasible: wrappedFeasibility }
             : {}),
           ...(config.maxCombinationCount !== undefined
             ? { maxCombinationCount: config.maxCombinationCount }
