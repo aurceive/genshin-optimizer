@@ -383,12 +383,15 @@ async function runSolve(
               })
             )
 
-            // Local in-process dispatcher for primary's own compute
+            // Local in-process dispatcher for primary's own compute.
+            // cooperativeYield allows port messages from remote workers
+            // to be processed between top-level domain iterations.
             const localStore = createLapicMemoryArtifactStore()
             const localDispatcher = createInProcessPartitionDispatcher({
               problem: canonicalProblem,
               artifactStore: localStore,
               evaluateCombination: localEvaluator,
+              cooperativeYield: true,
             })
 
             // Hybrid round-robin across all dispatchers

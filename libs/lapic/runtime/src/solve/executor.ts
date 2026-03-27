@@ -746,11 +746,27 @@ export async function executeLapicBoundedExactSolve(
 
     // -----------------------------------------------------------------------
     // Run the synchronous enumeration. The entire recursion tree is
-    // traversed in a single call. Persistence is deferred to a queue
-    // and flushed after completion. Cancel is handled by Worker
-    // termination from the main thread.
+    // traversed in a single call (or chunked with yields in cooperative
+    // mode). Persistence is deferred to a queue and flushed after
+    // completion. Cancel is handled by Worker termination from the main
+    // thread.
     // -----------------------------------------------------------------------
-    visitCombination(0)
+    if (options.cooperativeYield && domainCount > 0) {
+      // Cooperative yielding: split the top-level domain loop so that
+      // the event loop can process incoming port messages (e.g. progress
+      // from remote workers) between subtrees.  Each top-level candidate
+      // subtree runs synchronously; a macrotask yield (setTimeout(0))
+      // follows each subtree.
+      const topLevelEntries = joinPlan.value.entries[0]!.rows
+      for (const topRow of topLevelEntries) {
+        if (pauseDetected || failedSolveError) break
+        candidateBuffer[0] = topRow.candidate
+        visitCombination(1)
+        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      }
+    } else {
+      visitCombination(0)
+    }
 
     // Propagate fatal evaluation errors before flushing
     if (failedSolveError) {

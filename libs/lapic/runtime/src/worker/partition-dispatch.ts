@@ -128,6 +128,12 @@ export interface LapicPartitionDispatchConfig {
   readonly firGraph?: LapicFirGraph
   readonly dangerZoneConfig?: LapicDangerZoneConfig
   readonly maxCombinationCount?: number
+  /**
+   * When true, the in-process executor yields the event loop between
+   * top-level domain iterations, allowing port messages from remote
+   * workers to be processed.  Has no effect on MessagePort dispatchers.
+   */
+  readonly cooperativeYield?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +175,9 @@ export function createInProcessPartitionDispatcher(
         }),
         ...(config.maxCombinationCount !== undefined && {
           maxCombinationCount: config.maxCombinationCount,
+        }),
+        ...(config.cooperativeYield !== undefined && {
+          cooperativeYield: config.cooperativeYield,
         }),
         prebuiltJoinContext: {
           joinPlan: request.joinPlan,

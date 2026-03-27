@@ -146,6 +146,16 @@ export interface LapicBoundedExactSolveOptions {
    * producing a potential-adjusted ordering key for the final result.
    */
   readonly potentialRerankEvaluator?: LapicPotentialRerankEvaluator
+  /**
+   * When true, the executor periodically yields the event loop at
+   * the top-level domain boundary so that incoming port messages
+   * (e.g. progress from remote workers) can be processed.
+   *
+   * This adds minimal overhead (~200 × setTimeout(0) ≈ 5-10 ms)
+   * and is only meaningful when the executor runs alongside
+   * MessagePort-based dispatchers in the same worker thread.
+   */
+  readonly cooperativeYield?: boolean
 }
 
 /**

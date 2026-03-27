@@ -424,8 +424,12 @@ export function createBoundedExactWorkerEntryHandler(
               kind: 'partition-progress',
               id: envelope.id,
               completedUnits: event.completedUnits,
-              totalUnits: event.totalUnits,
-              skippedUnits: event.skippedUnits,
+              ...(event.totalUnits !== undefined && {
+                totalUnits: event.totalUnits,
+              }),
+              ...(event.skippedUnits !== undefined && {
+                skippedUnits: event.skippedUnits,
+              }),
             }
             port.postMessage(progressReply)
           })
@@ -538,8 +542,12 @@ export function createMessagePortPartitionDispatcher(
         entry.controller.publishProgress({
           phase: 'join',
           completedUnits: envelope.completedUnits,
-          totalUnits: envelope.totalUnits,
-          skippedUnits: envelope.skippedUnits,
+          ...(envelope.totalUnits !== undefined && {
+            totalUnits: envelope.totalUnits,
+          }),
+          ...(envelope.skippedUnits !== undefined && {
+            skippedUnits: envelope.skippedUnits,
+          }),
         })
       }
       return
