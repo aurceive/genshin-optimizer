@@ -214,6 +214,9 @@ function extractDispatchConfig(
     ...(config.maxCombinationCount !== undefined && {
       maxCombinationCount: config.maxCombinationCount,
     }),
+    ...(config.skipIntermediateCertificates !== undefined && {
+      skipIntermediateCertificates: config.skipIntermediateCertificates,
+    }),
   }
 }
 

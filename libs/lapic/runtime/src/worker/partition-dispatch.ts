@@ -138,6 +138,11 @@ export interface LapicPartitionDispatchConfig {
    * workers to be processed.  Has no effect on MessagePort dispatchers.
    */
   readonly cooperativeYield?: boolean
+  /**
+   * When true, the executor skips generating intermediate prune/branch
+   * certificates, avoiding expensive persistence during the hot loop.
+   */
+  readonly skipIntermediateCertificates?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +187,9 @@ export function createInProcessPartitionDispatcher(
         }),
         ...(config.cooperativeYield !== undefined && {
           cooperativeYield: config.cooperativeYield,
+        }),
+        ...(config.skipIntermediateCertificates !== undefined && {
+          skipIntermediateCertificates: config.skipIntermediateCertificates,
         }),
         prebuiltJoinContext: {
           joinPlan: request.joinPlan,

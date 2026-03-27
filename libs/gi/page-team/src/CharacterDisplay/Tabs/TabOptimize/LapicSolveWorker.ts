@@ -401,6 +401,7 @@ async function runSolve(
               artifactStore: localStore,
               evaluateCombination: localEvaluator,
               cooperativeYield: true,
+              skipIntermediateCertificates: true,
               ...(boundContext?.computeUpperBound !== undefined
                 ? { computeUpperBound: boundContext.computeUpperBound }
                 : {}),
