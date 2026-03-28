@@ -17,6 +17,7 @@ import type {
 import {
   type LapicBoundedExactUpperBoundEvaluator,
   type LapicCascadeBoundEvaluator,
+  type LapicFirDomainVariableMap,
   createLapicFirBoundProvider,
   createLapicIntervalThenLpCascade,
   createLapicLpBoundProvider,
@@ -45,6 +46,12 @@ export interface GiLapicBuiltinBoundProviderConfig {
    * fallback for tighter pruning.
    */
   readonly lpProvider?: LapicLpProvider
+  /**
+   * Pre-built domain variable maps. When provided, skips internal
+   * `buildGiLapicDomainVariableMaps()` — avoids double computation
+   * when the caller already has the maps (e.g., for serialization).
+   */
+  readonly domainVariableMaps?: readonly LapicFirDomainVariableMap[]
 }
 
 /**
@@ -63,10 +70,12 @@ export interface GiLapicBuiltinBoundProviderConfig {
 export function createGiLapicBuiltinBoundProvider(
   config: GiLapicBuiltinBoundProviderConfig
 ): LapicBoundedExactUpperBoundEvaluator | undefined {
-  const domainVariableMaps = buildGiLapicDomainVariableMaps(
-    config.canonicalExport.problem.itemDomains,
-    config.extractVariables
-  )
+  const domainVariableMaps =
+    config.domainVariableMaps ??
+    buildGiLapicDomainVariableMaps(
+      config.canonicalExport.problem.itemDomains,
+      config.extractVariables
+    )
 
   if (domainVariableMaps.length === 0) return undefined
 

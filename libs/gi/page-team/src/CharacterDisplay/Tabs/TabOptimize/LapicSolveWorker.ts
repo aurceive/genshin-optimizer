@@ -26,7 +26,6 @@ import type {
   GiLapicSolveOrchestration,
   GiLapicCanonicalExport,
   GiLapicCandidateVariableExtractor,
-  GiLapicDispatcherBoundContext,
 } from '@genshin-optimizer/gi/lapic-adapter'
 import type {
   LapicBoundedExactCandidateCombination,
@@ -375,15 +374,25 @@ async function runSolve(
               '@genshin-optimizer/lapic/storage'
             )
 
-            // Phase 2: send canonical problem to each secondary worker.
-            // Only lightweight serializable fields are sent — NOT the
-            // full domainVariableMaps (would cause OOM via N copies of
-            // ~10MB nested Maps through structured clone).
+            // Phase 2: send canonical problem + serialized bound data to
+            // each secondary worker.  The bound data uses a plain-object
+            // format (no nested Maps) for efficient structured clone.
             const remoteDispatchers = await Promise.all(
               secondaryPorts.map(async (port) => {
                 port.postMessage({
                   kind: 'init-problem',
                   canonicalProblem,
+                  ...(boundContext?.serializedBoundData !== undefined
+                    ? {
+                        serializedBoundData: boundContext.serializedBoundData,
+                      }
+                    : {}),
+                  ...(boundContext?.firGraph !== undefined
+                    ? { firGraph: boundContext.firGraph }
+                    : {}),
+                  ...(boundContext?.dangerZoneConfig !== undefined
+                    ? { dangerZoneConfig: boundContext.dangerZoneConfig }
+                    : {}),
                 })
                 await waitForReady(port)
                 return createMessagePortPartitionDispatcher({ port })

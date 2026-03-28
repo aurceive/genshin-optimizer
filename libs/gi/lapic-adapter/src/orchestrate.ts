@@ -15,12 +15,14 @@ import {
   defaultLapicDangerZoneConfig,
   executeLapicBoundedExactSolve,
   executeCoordinatedBoundedExactSolve,
+  serializeBoundData,
 } from '@genshin-optimizer/lapic/runtime'
 import type {
   LapicBoundedExactCandidateCombination,
   LapicBoundedExactSolveOutcome,
   LapicBoundedExactUpperBoundEvaluator,
   LapicDangerZoneConfig,
+  LapicFirSerializableBoundData,
   LapicInMemorySessionController,
   LapicPartitionDispatcher,
   LapicSolveCheckpointState,
@@ -36,6 +38,7 @@ import {
   createLapicArtifactWriteRequest,
   createLapicStorageEnvelope,
 } from '@genshin-optimizer/lapic/storage'
+import { buildGiLapicDomainVariableMaps } from './bound-maps'
 import { createGiLapicBuiltinBoundProvider } from './builtin-bound-provider'
 import { buildGiLapicCanonicalExportFromRequest } from './canonical'
 import { compileGiOptNodeToFir } from './compilation'
@@ -57,13 +60,20 @@ import type {
  * `computeUpperBound` is the full-precision provider already built
  * by the orchestrator — the local dispatcher should use it directly
  * instead of rebuilding from raw materials.  Remote workers cannot
- * receive functions via postMessage, so they get only the lightweight
- * serializable fields (firGraph, dangerZoneConfig).
+ * receive functions via postMessage, so they get the serializable
+ * `serializedBoundData` plus `firGraph` to reconstruct their own
+ * FIR bound provider on the worker thread.
  */
 export interface GiLapicDispatcherBoundContext {
   readonly computeUpperBound?: LapicBoundedExactUpperBoundEvaluator
   readonly firGraph?: LapicFirGraph
   readonly dangerZoneConfig?: LapicDangerZoneConfig
+  /**
+   * Structured-clone-friendly domain variable maps + global constants.
+   * Sent to remote workers during `init-problem` so they can
+   * reconstruct a full-precision FIR bound provider locally.
+   */
+  readonly serializedBoundData?: LapicFirSerializableBoundData
 }
 
 /**
@@ -254,14 +264,24 @@ export function createGiLapicSolveOrchestration(
         )
       }
 
-      // 4. Auto-wire bound provider (interval-only or interval+LP cascade)
+      // 4. Build domain variable maps (needed for bound provider + remote workers)
+      const domainVariableMaps =
+        firGraph && config.candidateVariableExtractor
+          ? buildGiLapicDomainVariableMaps(
+              canonicalExport.value.problem.itemDomains,
+              config.candidateVariableExtractor
+            )
+          : undefined
+
+      // 4a. Auto-wire bound provider (interval-only or interval+LP cascade)
       const computeUpperBound =
         config.computeUpperBound ??
-        (firGraph && config.candidateVariableExtractor
+        (firGraph && domainVariableMaps && domainVariableMaps.length > 0
           ? createGiLapicBuiltinBoundProvider({
               firGraph,
               canonicalExport: canonicalExport.value,
-              extractVariables: config.candidateVariableExtractor,
+              extractVariables: config.candidateVariableExtractor!,
+              domainVariableMaps,
               ...(config.globalConstants !== undefined
                 ? { globalConstants: config.globalConstants }
                 : {}),
@@ -294,13 +314,18 @@ export function createGiLapicSolveOrchestration(
 
         // Create real dispatcher if factory provided (enables true parallelism)
         // Pass computeUpperBound for the local dispatcher (zero-copy, same
-        // thread) and lightweight serializable fields for remote workers.
-        // Heavy domainVariableMaps are NOT sent — they caused OOM via
-        // structured clone duplication across N workers.
+        // thread).  Remote workers receive serializedBoundData — a plain-object
+        // representation of domainVariableMaps + globalConstants that clones
+        // efficiently (no nested Map overhead).
+        const serializedBoundData =
+          domainVariableMaps && domainVariableMaps.length > 0
+            ? serializeBoundData(domainVariableMaps, config.globalConstants)
+            : undefined
         const boundContext: GiLapicDispatcherBoundContext = {
           ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
           ...(firGraph !== undefined ? { firGraph } : {}),
           ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
+          ...(serializedBoundData !== undefined ? { serializedBoundData } : {}),
         }
         const dispatcher = config.dispatcherFactory
           ? await config.dispatcherFactory(

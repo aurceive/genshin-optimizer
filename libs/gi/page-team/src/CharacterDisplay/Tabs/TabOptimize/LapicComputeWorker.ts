@@ -27,6 +27,7 @@
 import type { ArtifactBuildData } from '@genshin-optimizer/gi/solver'
 import { precompute } from '@genshin-optimizer/gi/wr'
 import type { ReadNode } from '@genshin-optimizer/gi/wr'
+import type { LapicBoundedExactUpperBoundEvaluator } from '@genshin-optimizer/lapic/runtime'
 import type { LapicComputeWorkerInitMsg } from './computeWorkerProtocol'
 import { buildPartitionEvaluator } from './buildPartitionEvaluator'
 
@@ -84,17 +85,17 @@ async function initComputeWorker(
     '@genshin-optimizer/lapic/storage'
   )
 
-  // Phase 2: listen for canonical problem from primary via port.
+  // Phase 2: listen for canonical problem + bound data from primary via port.
   // Supports re-initialization on resume — each init-problem disposes
   // the previous entry handler and creates a fresh one.
   //
-  // Note: secondary workers do NOT receive domainVariableMaps (sending
-  // them caused OOM via N × ~10 MB structured clone duplication).
-  // B&B pruning on remote workers requires a lighter data path — see
-  // backlog item "envelope-only remote bounds".
+  // Bound data arrives as a plain-object serialized format (no nested Maps)
+  // to avoid the OOM that occurred with structured clone of Map-based
+  // domainVariableMaps.  Deserialized here to reconstruct a full-precision
+  // FIR bound provider for B&B pruning on this worker thread.
   let currentDispose: (() => void) | null = null
 
-  port.addEventListener('message', (event: MessageEvent) => {
+  port.addEventListener('message', async (event: MessageEvent) => {
     if (event.data?.kind !== 'init-problem') return
 
     // Dispose previous entry handler (resume case)
@@ -103,7 +104,26 @@ async function initComputeWorker(
       currentDispose = null
     }
 
-    const canonicalProblem = event.data.canonicalProblem
+    const {
+      canonicalProblem,
+      serializedBoundData,
+      firGraph,
+      dangerZoneConfig,
+    } = event.data
+
+    // Reconstruct FIR bound provider from serialized data (if available)
+    let computeUpperBound: LapicBoundedExactUpperBoundEvaluator | undefined
+    if (serializedBoundData && firGraph) {
+      const { createLapicFirBoundProvider, deserializeBoundData } =
+        await import('@genshin-optimizer/lapic/runtime')
+      const { domainVariableMaps, globalConstants } =
+        deserializeBoundData(serializedBoundData)
+      computeUpperBound = createLapicFirBoundProvider({
+        graph: firGraph,
+        domainVariableMaps,
+        ...(globalConstants !== undefined ? { globalConstants } : {}),
+      })
+    }
 
     const artifactStore = createLapicMemoryArtifactStore()
     let sequenceCounter = 0
@@ -114,6 +134,10 @@ async function initComputeWorker(
         problem: canonicalProblem,
         artifactStore,
         evaluateCombination,
+        skipIntermediateCertificates: true,
+        ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
+        ...(firGraph !== undefined ? { firGraph } : {}),
+        ...(dangerZoneConfig !== undefined ? { dangerZoneConfig } : {}),
       },
       createController(partitionIndex: number) {
         return createLapicInMemorySessionController({
