@@ -25,6 +25,7 @@
  */
 
 import type { ArtifactBuildData } from '@genshin-optimizer/gi/solver'
+import { giNumericEvaluationComparator } from '@genshin-optimizer/gi/lapic-adapter'
 import { precompute } from '@genshin-optimizer/gi/wr'
 import type { ReadNode } from '@genshin-optimizer/gi/wr'
 import type { LapicBoundedExactUpperBoundEvaluator } from '@genshin-optimizer/lapic/runtime'
@@ -134,6 +135,7 @@ async function initComputeWorker(
         problem: canonicalProblem,
         artifactStore,
         evaluateCombination,
+        compareEvaluations: giNumericEvaluationComparator,
         skipIntermediateCertificates: true,
         ...(computeUpperBound !== undefined ? { computeUpperBound } : {}),
         ...(firGraph !== undefined ? { firGraph } : {}),

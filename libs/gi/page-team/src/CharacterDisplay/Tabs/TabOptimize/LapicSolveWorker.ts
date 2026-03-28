@@ -411,6 +411,9 @@ async function runSolve(
               evaluateCombination: localEvaluator,
               cooperativeYield: true,
               skipIntermediateCertificates: true,
+              ...(config.compareEvaluations !== undefined
+                ? { compareEvaluations: config.compareEvaluations }
+                : {}),
               ...(boundContext?.computeUpperBound !== undefined
                 ? { computeUpperBound: boundContext.computeUpperBound }
                 : {}),
