@@ -51,6 +51,7 @@ import {
   sortDomains,
   validateSolveOptions,
   compareEvaluations,
+  isThresholdStricter,
 } from '../solve/combination'
 import { executeLapicBoundedExactSolve } from '../solve/executor'
 import { persistArtifact } from '../solve/persistence'
@@ -535,7 +536,16 @@ export async function executeCoordinatedBoundedExactSolve(
             frontierBlockIds,
             getExternalIncumbentThreshold: () => sharedBestThreshold,
             onIncumbentImproved: (threshold) => {
-              sharedBestThreshold = threshold
+              if (
+                sharedBestThreshold === undefined ||
+                isThresholdStricter(
+                  threshold,
+                  sharedBestThreshold,
+                  config.compareEvaluations
+                )
+              ) {
+                sharedBestThreshold = threshold
+              }
             },
           })
 

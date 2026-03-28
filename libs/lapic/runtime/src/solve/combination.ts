@@ -9,6 +9,7 @@ import {
 } from '@genshin-optimizer/lapic/core'
 import type {
   LapicBoundedExactCombinationEvaluation,
+  LapicBoundedExactEvaluationComparator,
   LapicBoundedExactSolveOptions,
 } from './types'
 
@@ -140,6 +141,35 @@ export function normalizeFeasibilityResult(
 ): LapicValidationResult<boolean> {
   if (typeof result === 'boolean') return createLapicSuccessResult(result)
   return result
+}
+
+/**
+ * Returns true when `candidate` represents a stricter (better for pruning)
+ * threshold than `current`.  A stricter threshold has a higher rank in the
+ * evaluation ordering, meaning more subtrees can be pruned against it.
+ */
+export function isThresholdStricter(
+  candidate: string,
+  current: string,
+  comparator?: LapicBoundedExactEvaluationComparator
+): boolean {
+  return (
+    compareEvaluations(
+      {
+        objectiveValue: candidate,
+        evidenceDigest: 'threshold',
+        orderingKey: [candidate],
+      },
+      'candidate',
+      {
+        objectiveValue: current,
+        evidenceDigest: 'threshold',
+        orderingKey: [current],
+      },
+      'current',
+      comparator
+    ) > 0
+  )
 }
 
 export function sortDomains(problem: LapicCanonicalProblem) {

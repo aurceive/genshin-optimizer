@@ -549,7 +549,10 @@ export async function executeLapicBoundedExactSolve(
     // 5. No per-build session state inspection
     // -----------------------------------------------------------------------
 
-    const SAFE_POINT_INTERVAL = options.safePointInterval ?? 1 << 16
+    const SAFE_POINT_INTERVAL = Math.max(
+      1,
+      options.safePointInterval ?? 1 << 16
+    )
     const domainCount = joinPlan.value.entries.length
     const candidateBuffer: LapicCandidateDescriptor[] = new Array(domainCount)
     // Pre-compute the signature group key once (used for dominance certs)
@@ -559,6 +562,26 @@ export async function executeLapicBoundedExactSolve(
     // after, so conflicts are detected as soon as the conflicting
     // candidate is assigned — pruning entire subtrees early.
     const seenResourceClaims = new Set<string>()
+    const claimKey = (claim: { resourceKind: string; resourceId: string }) =>
+      `${claim.resourceKind}\0${claim.resourceId}`
+    const hasClaimConflict = (
+      claims: readonly { resourceKind: string; resourceId: string }[]
+    ): boolean => {
+      for (const claim of claims) {
+        if (seenResourceClaims.has(claimKey(claim))) return true
+      }
+      return false
+    }
+    const pushClaims = (
+      claims: readonly { resourceKind: string; resourceId: string }[]
+    ): void => {
+      for (const claim of claims) seenResourceClaims.add(claimKey(claim))
+    }
+    const popClaims = (
+      claims: readonly { resourceKind: string; resourceId: string }[]
+    ): void => {
+      for (const claim of claims) seenResourceClaims.delete(claimKey(claim))
+    }
     // Track failed evaluations to propagate after sync loop
     let failedSolveError: {
       message: string
@@ -731,25 +754,13 @@ export async function executeLapicBoundedExactSolve(
 
         // Incremental conflict check: if this candidate shares a resource
         // with a previously assigned candidate, prune the entire subtree.
-        let conflict = false
-        for (const claim of claims) {
-          const key = `${claim.resourceKind}|${claim.resourceId}`
-          if (seenResourceClaims.has(key)) {
-            conflict = true
-            break
-          }
-        }
-        if (conflict) continue
+        if (hasClaimConflict(claims)) continue
 
         // Add claims, recurse, then remove
-        for (const claim of claims) {
-          seenResourceClaims.add(`${claim.resourceKind}|${claim.resourceId}`)
-        }
+        pushClaims(claims)
         candidateBuffer[domainIndex] = candidate
         visitCombination(domainIndex + 1)
-        for (const claim of claims) {
-          seenResourceClaims.delete(`${claim.resourceKind}|${claim.resourceId}`)
-        }
+        popClaims(claims)
       }
     }
 
@@ -771,14 +782,10 @@ export async function executeLapicBoundedExactSolve(
         if (pauseDetected || failedSolveError) break
         const candidate = topRow.candidate
         const claims = candidate.provenance.exclusiveResourceClaims
-        for (const claim of claims) {
-          seenResourceClaims.add(`${claim.resourceKind}|${claim.resourceId}`)
-        }
+        pushClaims(claims)
         candidateBuffer[0] = candidate
         visitCombination(1)
-        for (const claim of claims) {
-          seenResourceClaims.delete(`${claim.resourceKind}|${claim.resourceId}`)
-        }
+        popClaims(claims)
         await new Promise<void>((resolve) => setTimeout(resolve, 0))
       }
     } else {

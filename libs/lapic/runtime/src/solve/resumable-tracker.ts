@@ -6,7 +6,7 @@ import type {
   LapicBoundedExactTopNTracker,
   LapicTopNInsertResult,
 } from './combination'
-import { createTopNTracker } from './combination'
+import { createTopNTracker, isThresholdStricter } from './combination'
 import type { LapicBoundedExactSolveOptions } from './types'
 
 /**
@@ -83,6 +83,15 @@ export function createResumableTopNTracker(
       return externalThreshold
     },
     adoptExternalThreshold(value: string): void {
+      // Only adopt if the new value is stricter (better for pruning)
+      // than the current external threshold.  This prevents a weaker
+      // threshold from overwriting a stricter one when multiple
+      // partitions push updates concurrently.
+      if (
+        externalThreshold !== undefined &&
+        !isThresholdStricter(value, externalThreshold, explicitComparator)
+      )
+        return
       externalThreshold = value
     },
   }
