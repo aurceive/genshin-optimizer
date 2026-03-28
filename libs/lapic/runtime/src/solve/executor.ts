@@ -5,7 +5,6 @@ import {
   createCombinationStateId,
   createLapicDiagnostic,
   createLapicSuccessResult,
-  hasExclusiveResourceConflict,
   rerankByPotential,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
@@ -555,6 +554,11 @@ export async function executeLapicBoundedExactSolve(
     const candidateBuffer: LapicCandidateDescriptor[] = new Array(domainCount)
     // Pre-compute the signature group key once (used for dominance certs)
     const signatureGroupKey = orderedDomains.map((d) => d.slotId).join('+')
+    // Incremental exclusive resource conflict tracking.  Each candidate's
+    // resource claims are added to the set before recursion and removed
+    // after, so conflicts are detected as soon as the conflicting
+    // candidate is assigned — pruning entire subtrees early.
+    const seenResourceClaims = new Set<string>()
     // Track failed evaluations to propagate after sync loop
     let failedSolveError: {
       message: string
@@ -604,8 +608,6 @@ export async function executeLapicBoundedExactSolve(
           0,
           domainCount
         ) as readonly LapicCandidateDescriptor[]
-
-        if (hasExclusiveResourceConflict(candidates)) return
 
         const combination: LapicBoundedExactCandidateCombination = {
           problem: options.problem,
@@ -724,8 +726,30 @@ export async function executeLapicBoundedExactSolve(
 
       for (const plannedRow of joinPlan.value.entries[domainIndex]!.rows) {
         if (pauseDetected || failedSolveError) return
-        candidateBuffer[domainIndex] = plannedRow.candidate
+        const candidate = plannedRow.candidate
+        const claims = candidate.provenance.exclusiveResourceClaims
+
+        // Incremental conflict check: if this candidate shares a resource
+        // with a previously assigned candidate, prune the entire subtree.
+        let conflict = false
+        for (const claim of claims) {
+          const key = `${claim.resourceKind}|${claim.resourceId}`
+          if (seenResourceClaims.has(key)) {
+            conflict = true
+            break
+          }
+        }
+        if (conflict) continue
+
+        // Add claims, recurse, then remove
+        for (const claim of claims) {
+          seenResourceClaims.add(`${claim.resourceKind}|${claim.resourceId}`)
+        }
+        candidateBuffer[domainIndex] = candidate
         visitCombination(domainIndex + 1)
+        for (const claim of claims) {
+          seenResourceClaims.delete(`${claim.resourceKind}|${claim.resourceId}`)
+        }
       }
     }
 
@@ -745,8 +769,16 @@ export async function executeLapicBoundedExactSolve(
       const topLevelEntries = joinPlan.value.entries[0]!.rows
       for (const topRow of topLevelEntries) {
         if (pauseDetected || failedSolveError) break
-        candidateBuffer[0] = topRow.candidate
+        const candidate = topRow.candidate
+        const claims = candidate.provenance.exclusiveResourceClaims
+        for (const claim of claims) {
+          seenResourceClaims.add(`${claim.resourceKind}|${claim.resourceId}`)
+        }
+        candidateBuffer[0] = candidate
         visitCombination(1)
+        for (const claim of claims) {
+          seenResourceClaims.delete(`${claim.resourceKind}|${claim.resourceId}`)
+        }
         await new Promise<void>((resolve) => setTimeout(resolve, 0))
       }
     } else {
