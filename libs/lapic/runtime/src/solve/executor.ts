@@ -549,7 +549,7 @@ export async function executeLapicBoundedExactSolve(
     // 5. No per-build session state inspection
     // -----------------------------------------------------------------------
 
-    const SAFE_POINT_INTERVAL = 1 << 16 // 65536 builds between safe points
+    const SAFE_POINT_INTERVAL = options.safePointInterval ?? 1 << 16
     const domainCount = joinPlan.value.entries.length
     const candidateBuffer: LapicCandidateDescriptor[] = new Array(domainCount)
     // Pre-compute the signature group key once (used for dominance certs)

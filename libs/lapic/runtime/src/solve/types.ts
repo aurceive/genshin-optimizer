@@ -176,6 +176,16 @@ export interface LapicBoundedExactSolveOptions {
    * the shared incumbent so other partitions can benefit.
    */
   readonly onIncumbentImproved?: (threshold: string) => void
+  /**
+   * Number of combinations between safe-point checks. At each safe
+   * point the executor publishes progress, checks for pause requests,
+   * and adopts cross-partition incumbent thresholds. Smaller values
+   * give smoother progress and faster threshold adoption at the cost
+   * of slightly more overhead per safe point.
+   *
+   * Must be a positive integer. Defaults to 65 536 (`1 << 16`).
+   */
+  readonly safePointInterval?: number
 }
 
 /**
