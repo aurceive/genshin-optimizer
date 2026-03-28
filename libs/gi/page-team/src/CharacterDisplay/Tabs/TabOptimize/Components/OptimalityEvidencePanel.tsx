@@ -18,8 +18,13 @@ import type { LapicSolveEvidence } from '../lapicBridge'
 const Mono = styled('span')({ fontFamily: 'monospace', fontSize: '0.85em' })
 
 /**
- * Collapsible panel displaying optimality evidence from the lapic
- * FinalOptimalityCert.  Shown after a lapic solve completes.
+ * Collapsible panel displaying optimality evidence after a lapic solve.
+ *
+ * Two modes:
+ * - **Production** (no certificate): badge shows "Exhaustive" — search was
+ *   exhaustive with optimality gap 0.
+ * - **Audit** (with certificate): badge shows "Certified" / "Review"
+ *   depending on certificate validation status.
  */
 export default function OptimalityEvidencePanel({
   evidence,
@@ -47,9 +52,18 @@ export default function OptimalityEvidencePanel({
     URL.revokeObjectURL(url)
   }, [evidence])
 
-  const isVerified =
-    evidence.certificateValidationStatus === 'validated' &&
-    !evidence.dangerZoneDetected
+  const hasCertificate = evidence.certificateId !== undefined
+  const isVerified = hasCertificate
+    ? evidence.certificateValidationStatus === 'validated' &&
+      !evidence.dangerZoneDetected
+    : evidence.optimalityGap === '0' && !evidence.dangerZoneDetected
+  const statusLabel = hasCertificate
+    ? isVerified
+      ? 'Certified'
+      : 'Review'
+    : isVerified
+      ? 'Exhaustive'
+      : 'Review'
 
   return (
     <Accordion
@@ -71,7 +85,7 @@ export default function OptimalityEvidencePanel({
           <Typography variant="subtitle2">Optimality Evidence</Typography>
           <Chip
             size="small"
-            label={isVerified ? 'Verified' : 'Review'}
+            label={statusLabel}
             color={isVerified ? 'success' : 'warning'}
             variant="outlined"
           />

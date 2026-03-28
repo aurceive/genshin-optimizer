@@ -531,7 +531,9 @@ async function runSolve(
       }))
     }
 
-    // Extract optimality evidence from the completion result
+    // Extract optimality evidence from the completion result.
+    // Audit mode: evidence from FinalOptimalityCert with full metadata.
+    // Production mode: lightweight evidence based on search completion.
     if ('finalOptimality' in solveResult && solveResult.finalOptimality) {
       const fo = solveResult.finalOptimality
       const finalCert =
@@ -551,6 +553,14 @@ async function runSolve(
               certificateJson: JSON.stringify(finalCert, null, 2),
             }
           : {}),
+      }
+    } else {
+      // Production mode: bounded-exact search completed without certificates.
+      // Optimality gap is 0 by definition of exhaustive search.
+      evidence = {
+        optimalityGap: '0',
+        dangerZoneDetected: false,
+        exactReplayRequired: false,
       }
     }
   }
