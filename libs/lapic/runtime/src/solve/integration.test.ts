@@ -729,4 +729,115 @@ describe('F-IR end-to-end integration', () => {
     const totalCombinations = 12 // 4 × 3
     expect(getCallCount()).toBeLessThan(totalCombinations)
   })
+
+  it('multi-target formula: add of multiplicative sub-targets with shared variables', async () => {
+    // This tests the GI multi-target scenario: add(E_DMG, a1_DMG, LC_DMG)
+    // where sub-targets share variables (atk, dmg_bonus, crit).
+    // Shared variables cause the interval dependency problem but must never
+    // produce inadmissible (too-low) upper bounds.
+    const b = new LapicFirGraphBuilder()
+    const atk = b.read('atk')
+    const dmgBonus = b.read('dmgBonus')
+    const critMult = b.read('critMult')
+    const eMult = b.read('eMult')
+    const a1Mult = b.read('a1Mult')
+
+    // sub1: atk * dmgBonus * eMult  (E skill damage)
+    const sub1 = b.mul(atk, dmgBonus, eMult)
+    // sub2: atk * critMult * a1Mult (ascension passive)
+    const sub2 = b.mul(atk, critMult, a1Mult)
+    // sub3: atk * dmgBonus           (lunar charged)
+    const sub3 = b.mul(atk, dmgBonus)
+    // multi-target = sub1 + sub2 + sub3
+    const root = b.add(sub1, sub2, sub3)
+    const graph = b.build(root)
+
+    // 3 domains × 3 candidates each — shared atk/dmgBonus/critMult across domains
+    const flowerCands = [
+      candidate('f1', 'gi:flower', 'flower'),
+      candidate('f2', 'gi:flower', 'flower'),
+      candidate('f3', 'gi:flower', 'flower'),
+    ]
+    const plumeCands = [
+      candidate('p1', 'gi:plume', 'plume'),
+      candidate('p2', 'gi:plume', 'plume'),
+      candidate('p3', 'gi:plume', 'plume'),
+    ]
+    const sandsCands = [
+      candidate('s1', 'gi:sands', 'sands'),
+      candidate('s2', 'gi:sands', 'sands'),
+      candidate('s3', 'gi:sands', 'sands'),
+    ]
+
+    const maps = [
+      domainMap('gi:flower', [
+        ['f1', { atk: 300, critMult: 0.1 }],
+        ['f2', { atk: 200, critMult: 0.2 }],
+        ['f3', { atk: 250, critMult: 0.15 }],
+      ]),
+      domainMap('gi:plume', [
+        ['p1', { atk: 100, dmgBonus: 0.3 }],
+        ['p2', { atk: 150, dmgBonus: 0.1 }],
+        ['p3', { atk: 120, dmgBonus: 0.2 }],
+      ]),
+      domainMap('gi:sands', [
+        ['s1', { atk: 50, a1Mult: 0.5 }],
+        ['s2', { atk: 80, a1Mult: 0.3 }],
+        ['s3', { atk: 60, a1Mult: 0.4 }],
+      ]),
+    ]
+
+    const globals = new Map<LapicFirVariableId, number>([
+      ['atk', 1000],
+      ['dmgBonus', 1.0],
+      ['critMult', 1.5],
+      ['eMult', 2.0],
+      ['a1Mult', 1.0],
+    ])
+
+    const problem = createProblem({
+      slotIds: ['flower', 'plume', 'sands'],
+      domains: [
+        { domainId: 'gi:flower', slotId: 'flower', candidates: flowerCands },
+        { domainId: 'gi:plume', slotId: 'plume', candidates: plumeCands },
+        { domainId: 'gi:sands', slotId: 'sands', candidates: sandsCands },
+      ],
+      topN: 3,
+    })
+
+    // Run brute-force
+    const { store: store1, controller: ctrl1 } = createTestController()
+    const { evaluator: eval1 } = createFirEvaluator(graph, maps, globals)
+    const bruteForce = await executeLapicBoundedExactSolve({
+      problem,
+      controller: ctrl1,
+      artifactStore: store1,
+      evaluateCombination: eval1,
+    })
+
+    // Run with FIR bounds
+    const { store: store2, controller: ctrl2 } = createTestController()
+    const { evaluator: eval2 } = createFirEvaluator(graph, maps, globals)
+    const boundProvider = createLapicFirBoundProvider({
+      graph,
+      domainVariableMaps: maps,
+      globalConstants: globals,
+      formatUpperBound: (v) => v.toFixed(4).padStart(12, '0'),
+    })
+    const pruned = await executeLapicBoundedExactSolve({
+      problem,
+      controller: ctrl2,
+      artifactStore: store2,
+      evaluateCombination: eval2,
+      computeUpperBound: boundProvider,
+    })
+
+    expect(bruteForce.summary.solveState).toBe('completed')
+    expect(pruned.summary.solveState).toBe('completed')
+
+    // The top-1 winner MUST be identical (admissibility guarantee)
+    expect(pruned.finalOptimality?.winnerStateId).toBe(
+      bruteForce.finalOptimality?.winnerStateId
+    )
+  })
 })
