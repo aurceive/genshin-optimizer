@@ -143,14 +143,11 @@ export function normalizeFeasibilityResult(
 }
 
 export function sortDomains(problem: LapicCanonicalProblem) {
-  const slotOrder = new Map(
-    problem.teamLayout.slotIds.map((slotId, index) => [slotId, index])
-  )
-
+  // Sort by domain size ascending — smaller domains first yields
+  // more effective B&B pruning because each branch at higher levels
+  // covers fewer leaves, so a single prune cuts more combinations.
   return [...problem.itemDomains].sort(
-    (left, right) =>
-      (slotOrder.get(left.slotId) ?? Number.MAX_SAFE_INTEGER) -
-      (slotOrder.get(right.slotId) ?? Number.MAX_SAFE_INTEGER)
+    (left, right) => left.candidates.length - right.candidates.length
   )
 }
 
