@@ -117,6 +117,11 @@ export type LapicBoundedExactPortCoordinatorEnvelope =
       readonly request: LapicBoundedExactPortDispatchRequest
     }
   | { readonly kind: 'terminate' }
+  | {
+      /** Push a cross-partition incumbent threshold to the worker. */
+      readonly kind: 'threshold-update'
+      readonly threshold: string
+    }
 
 /**
  * Messages sent from bounded-exact worker back to coordinator.
@@ -134,6 +139,12 @@ export type LapicBoundedExactPortWorkerEnvelope =
       readonly completedUnits: number
       readonly totalUnits?: number
       readonly skippedUnits?: number
+    }
+  | {
+      /** Worker's local incumbent improved — notify coordinator. */
+      readonly kind: 'incumbent-update'
+      readonly id: number
+      readonly threshold: string
     }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +401,13 @@ export interface LapicBoundedExactWorkerEntryConfig {
  * produces certificates, supports branch-and-bound pruning,
  * and returns the full partition dispatch response.
  *
+ * Threshold sharing: the handler maintains a local
+ * `externalThreshold` variable updated by `threshold-update`
+ * messages from the coordinator.  The executor reads it at
+ * safe-point boundaries for cross-partition B&B pruning.
+ * When the executor's local incumbent improves, an
+ * `incumbent-update` message is sent back to the coordinator.
+ *
  * Returns a cleanup function that stops listening.
  */
 export function createBoundedExactWorkerEntryHandler(
@@ -397,6 +415,9 @@ export function createBoundedExactWorkerEntryHandler(
 ): () => void {
   const { port } = config
   let disposed = false
+
+  // Cross-partition incumbent threshold, updated by coordinator pushes
+  let externalThreshold: string | undefined
 
   const dispatcher = createInProcessPartitionDispatcher(config.dispatchConfig)
 
@@ -406,6 +427,11 @@ export function createBoundedExactWorkerEntryHandler(
     if (disposed) return
 
     switch (envelope.kind) {
+      case 'threshold-update': {
+        externalThreshold = envelope.threshold
+        break
+      }
+
       case 'dispatch-partition': {
         try {
           const controller = config.createController(
@@ -443,6 +469,15 @@ export function createBoundedExactWorkerEntryHandler(
             frontierBlockIds: envelope.request.frontierBlockIds,
             initialIncumbentThreshold:
               envelope.request.initialIncumbentThreshold,
+            getExternalIncumbentThreshold: () => externalThreshold,
+            onIncumbentImproved: (threshold) => {
+              const reply: LapicBoundedExactPortWorkerEnvelope = {
+                kind: 'incumbent-update',
+                id: envelope.id,
+                threshold,
+              }
+              port.postMessage(reply)
+            },
           })
 
           unsub.unsubscribe()
@@ -530,12 +565,17 @@ export function createMessagePortPartitionDispatcher(
     {
       resolve: (value: LapicPartitionDispatchResponse) => void
       reject: (reason: unknown) => void
-      controller?: LapicInMemorySessionController
+      controller: LapicInMemorySessionController | undefined
+      getExternalIncumbentThreshold: (() => string | undefined) | undefined
+      onIncumbentImproved: ((threshold: string) => void) | undefined
+      lastSentThreshold: string | undefined
     }
   >()
 
   function handleMessage(envelope: LapicBoundedExactPortWorkerEnvelope) {
-    // Progress updates don't resolve the pending request
+    // Progress updates don't resolve the pending request but piggyback
+    // threshold delivery: check whether the coordinator-side threshold
+    // has changed since the last push and, if so, send an update.
     if (envelope.kind === 'partition-progress') {
       const entry = pending.get(envelope.id)
       if (entry?.controller) {
@@ -550,6 +590,25 @@ export function createMessagePortPartitionDispatcher(
           }),
         })
       }
+      // Piggyback threshold push on progress traffic
+      if (entry?.getExternalIncumbentThreshold) {
+        const current = entry.getExternalIncumbentThreshold()
+        if (current !== undefined && current !== entry.lastSentThreshold) {
+          entry.lastSentThreshold = current
+          const update: LapicBoundedExactPortCoordinatorEnvelope = {
+            kind: 'threshold-update',
+            threshold: current,
+          }
+          port.postMessage(update)
+        }
+      }
+      return
+    }
+
+    // Worker's local incumbent improved — propagate to coordinator state
+    if (envelope.kind === 'incumbent-update') {
+      const entry = pending.get(envelope.id)
+      entry?.onIncumbentImproved?.(envelope.threshold)
       return
     }
 
@@ -586,7 +645,14 @@ export function createMessagePortPartitionDispatcher(
 
       const id = nextId++
       return new Promise<LapicPartitionDispatchResponse>((resolve, reject) => {
-        pending.set(id, { resolve, reject, controller: request.controller })
+        pending.set(id, {
+          resolve,
+          reject,
+          controller: request.controller,
+          getExternalIncumbentThreshold: request.getExternalIncumbentThreshold,
+          onIncumbentImproved: request.onIncumbentImproved,
+          lastSentThreshold: undefined,
+        })
         const envelope: LapicBoundedExactPortCoordinatorEnvelope = {
           kind: 'dispatch-partition',
           id,
