@@ -439,6 +439,12 @@ export function createBoundedExactWorkerEntryHandler(
           )
           controller.awaitCompletion().catch(() => {})
 
+          // Throttle incumbent-update messages to avoid flooding the port.
+          // The executor calls onIncumbentImproved on every top-N eviction
+          // (~100K+ times for large problems).  We batch them and piggyback
+          // the latest threshold on progress messages (at most 10/s).
+          let pendingIncumbentThreshold: string | undefined
+
           // Forward partition progress to coordinator via port
           let lastForwardTime = 0
           const unsub = controller.subscribeProgress((event) => {
@@ -458,6 +464,17 @@ export function createBoundedExactWorkerEntryHandler(
               }),
             }
             port.postMessage(progressReply)
+
+            // Flush accumulated incumbent improvement alongside progress
+            if (pendingIncumbentThreshold !== undefined) {
+              const incumbentReply: LapicBoundedExactPortWorkerEnvelope = {
+                kind: 'incumbent-update',
+                id: envelope.id,
+                threshold: pendingIncumbentThreshold,
+              }
+              port.postMessage(incumbentReply)
+              pendingIncumbentThreshold = undefined
+            }
           })
 
           const response = await dispatcher.dispatch({
@@ -471,16 +488,22 @@ export function createBoundedExactWorkerEntryHandler(
               envelope.request.initialIncumbentThreshold,
             getExternalIncumbentThreshold: () => externalThreshold,
             onIncumbentImproved: (threshold) => {
-              const reply: LapicBoundedExactPortWorkerEnvelope = {
-                kind: 'incumbent-update',
-                id: envelope.id,
-                threshold,
-              }
-              port.postMessage(reply)
+              pendingIncumbentThreshold = threshold
             },
           })
 
           unsub.unsubscribe()
+
+          // Flush final incumbent threshold before sending partition-result
+          // so the coordinator can adopt it for the merge step.
+          if (pendingIncumbentThreshold !== undefined) {
+            const incumbentReply: LapicBoundedExactPortWorkerEnvelope = {
+              kind: 'incumbent-update',
+              id: envelope.id,
+              threshold: pendingIncumbentThreshold,
+            }
+            port.postMessage(incumbentReply)
+          }
 
           const reply: LapicBoundedExactPortWorkerEnvelope = {
             kind: 'partition-result',
