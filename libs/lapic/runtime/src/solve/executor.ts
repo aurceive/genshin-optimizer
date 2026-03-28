@@ -2,24 +2,25 @@ import { createLapicFinalOptimalitySummary } from '@genshin-optimizer/lapic/cert
 import {
   type LapicCandidateDescriptor,
   type LapicDiagnostic,
-  analyzeLapicFirGraph,
   createCombinationStateId,
   createLapicDiagnostic,
   createLapicSuccessResult,
   hasExclusiveResourceConflict,
-  inferForcedBranches,
   rerankByPotential,
 } from '@genshin-optimizer/lapic/core'
 import type { LapicFrontierBlock } from '@genshin-optimizer/lapic/storage'
 import { LapicSessionFailureError } from '../session/completion'
 import type { LapicSolveCompletionResult } from '../types'
 import {
-  createBoundPruneCertificate,
-  createBranchReachabilityCertificate,
-  createDominanceCertificate,
   createFinalOptimalityCertificate,
   createInfeasibilityCertificate,
 } from './certificate'
+import {
+  createCertifyingDominanceObserver,
+  createCertifyingObserverState,
+  createCertifyingPruneObserver,
+  emitBranchReachabilityCertificates,
+} from './certifying-observers'
 import {
   createLapicSolveCheckpointState,
   createLapicSolveCursorPosition,
@@ -31,7 +32,6 @@ import {
   validateSolveOptions,
 } from './combination'
 import {
-  buildDangerZoneRecord,
   detectBoundPruneDangerZone,
   type LapicDangerZoneDetectionResult,
 } from './danger-zone'
@@ -40,6 +40,12 @@ import {
   createFrontierIndexForSolve,
 } from './frontier'
 import { createFrontierJoinPlan } from './join-plan'
+import { createNullObservers } from './observers'
+import type {
+  LapicDominanceObserver,
+  LapicObserverState,
+  LapicPruneObserver,
+} from './observers'
 import { persistArtifact } from './persistence'
 import {
   computeSubtreeSize,
@@ -249,9 +255,7 @@ async function completeSolve(
   options: LapicBoundedExactSolveOptions,
   tracker: ReturnType<typeof createResumableTopNTracker>,
   frontierBlockIds: readonly string[],
-  pruneCertificateIds: readonly string[] = [],
-  branchReachabilityCertificateIds: readonly string[] = [],
-  dominanceCertificateIds: readonly string[] = []
+  observerState: LapicObserverState
 ): Promise<LapicSolveCompletionResult> {
   options.controller.activate('resolve-residual')
   options.controller.publishProgress({
@@ -261,19 +265,21 @@ async function completeSolve(
   })
 
   if (tracker.isEmpty()) {
-    const infeasibilityCertificate = createInfeasibilityCertificate(
-      options,
-      frontierBlockIds
-    )
-    await persistArtifact(
-      options,
-      'certificate',
-      infeasibilityCertificate.certId,
-      infeasibilityCertificate.evidenceDigest,
-      infeasibilityCertificate,
-      frontierBlockIds
-    )
-    options.controller.emitCertificate(infeasibilityCertificate)
+    if (!options.skipIntermediateCertificates) {
+      const infeasibilityCertificate = createInfeasibilityCertificate(
+        options,
+        frontierBlockIds
+      )
+      await persistArtifact(
+        options,
+        'certificate',
+        infeasibilityCertificate.certId,
+        infeasibilityCertificate.evidenceDigest,
+        infeasibilityCertificate,
+        frontierBlockIds
+      )
+      options.controller.emitCertificate(infeasibilityCertificate)
+    }
     return options.controller.complete()
   }
 
@@ -288,33 +294,39 @@ async function completeSolve(
       ? rerankByPotential(winners, options.potentialRerankEvaluator).reranked
       : winners
 
-  const finalCertificate = createFinalOptimalityCertificate(
-    options,
-    finalWinners,
-    frontierBlockIds,
-    pruneCertificateIds,
-    branchReachabilityCertificateIds,
-    dominanceCertificateIds
-  )
-  const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
-  if (!finalOptimality.ok)
-    return failSolve(
+  if (!options.skipIntermediateCertificates) {
+    const certIds = observerState.getCertificateIds()
+    const finalCertificate = createFinalOptimalityCertificate(
       options,
-      finalOptimality.diagnostics[0]?.message ??
-        'Failed to summarize final optimality certificate.',
-      finalOptimality.diagnostics
+      finalWinners,
+      frontierBlockIds,
+      certIds.pruneCertificateIds,
+      certIds.branchReachabilityCertificateIds,
+      certIds.dominanceCertificateIds
     )
+    const finalOptimality = createLapicFinalOptimalitySummary(finalCertificate)
+    if (!finalOptimality.ok)
+      return failSolve(
+        options,
+        finalOptimality.diagnostics[0]?.message ??
+          'Failed to summarize final optimality certificate.',
+        finalOptimality.diagnostics
+      )
 
-  await persistArtifact(
-    options,
-    'certificate',
-    finalCertificate.certId,
-    finalCertificate.evidenceDigest,
-    finalCertificate,
-    frontierBlockIds
-  )
-  options.controller.emitCertificate(finalCertificate)
-  return options.controller.complete(finalOptimality.value, finalWinners)
+    await persistArtifact(
+      options,
+      'certificate',
+      finalCertificate.certId,
+      finalCertificate.evidenceDigest,
+      finalCertificate,
+      frontierBlockIds
+    )
+    options.controller.emitCertificate(finalCertificate)
+    return options.controller.complete(finalOptimality.value, finalWinners)
+  }
+
+  // Production mode: lightweight completion without certificate creation
+  return options.controller.complete(undefined, finalWinners)
 }
 
 // ---------------------------------------------------------------------------
@@ -420,50 +432,50 @@ export async function executeLapicBoundedExactSolve(
     let processedCombinationCount = initialProcessed
     let currentFlatIndex = 0
     let pauseDetected = false
-    let pruneCertStepCounter = restoredPruneCertificateIds.length
-    let dominanceCertStepCounter = restoredDominanceCertificateIds.length
-    const pruneCertificateIds: string[] = [...restoredPruneCertificateIds]
-    const branchReachabilityCertificateIds: string[] = [
-      ...restoredBranchReachabilityCertificateIds,
-    ]
-    const dominanceCertificateIds: string[] = [
-      ...restoredDominanceCertificateIds,
-    ]
 
-    // --- A-IR branch reachability inference (pre-solve static analysis) ---
-    if (
-      options.firGraph &&
-      !isResuming &&
-      !options.skipIntermediateCertificates
-    ) {
-      const airGraph = analyzeLapicFirGraph(options.firGraph)
-      const forcedBranches = inferForcedBranches(airGraph)
-      for (let i = 0; i < forcedBranches.length; i++) {
-        const evidence = forcedBranches[i]!
-        const branchCert = createBranchReachabilityCertificate(options, {
-          branchNodeId: evidence.branchNodeId,
-          guardNodeId: evidence.guardNodeId,
-          forcedArm: evidence.forcedArm,
-          ...(evidence.guardLower !== undefined
-            ? { guardLower: evidence.guardLower }
-            : {}),
-          ...(evidence.guardUpper !== undefined
-            ? { guardUpper: evidence.guardUpper }
-            : {}),
-          validityRegionId: evidence.parentRegionId,
-          stepIndex: i + 1,
-        })
-        await persistArtifact(
+    // --- Observer pattern: production vs audit mode ---
+    // Production (skipIntermediateCertificates=true): zero-overhead null observers.
+    // Audit (skipIntermediateCertificates=false): certifying observers that
+    // create certificates synchronously and defer persistence to a queue.
+    let pruneObserver: LapicPruneObserver
+    let dominanceObserver: LapicDominanceObserver
+    let observerState: LapicObserverState
+
+    if (options.skipIntermediateCertificates) {
+      const nullObs = createNullObservers()
+      pruneObserver = nullObs.pruneObserver
+      dominanceObserver = nullObs.dominanceObserver
+      observerState = nullObs.observerState
+    } else {
+      const certPrune = createCertifyingPruneObserver(
+        options,
+        frontierBlockIds,
+        restoredPruneCertificateIds
+      )
+      const certDominance = createCertifyingDominanceObserver(
+        options,
+        frontierBlockIds,
+        restoredDominanceCertificateIds
+      )
+      pruneObserver = certPrune
+      dominanceObserver = certDominance
+
+      // --- A-IR branch reachability inference (pre-solve static analysis) ---
+      let branchIds: readonly string[] =
+        restoredBranchReachabilityCertificateIds
+      if (options.firGraph && !isResuming) {
+        const branchResult = await emitBranchReachabilityCertificates(
           options,
-          'certificate',
-          branchCert.certId,
-          branchCert.evidenceDigest,
-          branchCert,
           frontierBlockIds
         )
-        options.controller.emitCertificate(branchCert)
-        branchReachabilityCertificateIds.push(branchCert.certId)
+        branchIds = branchResult.branchReachabilityCertificateIds
       }
+
+      observerState = createCertifyingObserverState(
+        certPrune,
+        certDominance,
+        branchIds
+      )
     }
 
     // Build a comparator for bound-vs-threshold checks.
@@ -492,16 +504,10 @@ export async function executeLapicBoundedExactSolve(
       return relation < 0
     }
 
-    // -----------------------------------------------------------------------
-    // Deferred persistence queue — certificates are created synchronously
-    // at decision time (architecture §2.1), but serialization + I/O is
-    // batched at safe-point boundaries for performance.
-    // -----------------------------------------------------------------------
-    const pendingPersistence: Array<() => Promise<void>> = []
-
     /**
-     * Commit a bound-prune: skip the subtree, emit BoundPruneCert.
-     * Certificate is created synchronously; persistence is deferred.
+     * Commit a bound-prune: skip the subtree, notify observer.
+     * In production mode, observer is a no-op. In audit mode,
+     * observer creates BoundPruneCert and defers persistence.
      */
     const commitPrune = (
       boundValue: string,
@@ -524,33 +530,13 @@ export async function executeLapicBoundedExactSolve(
         skippedUnits: pruningStats.prunedCombinationCount,
       })
 
-      if (!options.skipIntermediateCertificates) {
-        pruneCertStepCounter += 1
-        const dangerZoneRecord = detection
-          ? buildDangerZoneRecord(detection, false)
-          : undefined
-        const pruneCert = createBoundPruneCertificate(options, {
-          boundValue,
-          boundEvidenceDigest,
-          thresholdValue,
-          domainIndex,
-          stepIndex: pruneCertStepCounter,
-          frontierBlockIds,
-          ...(dangerZoneRecord !== undefined ? { dangerZoneRecord } : {}),
-        })
-        pendingPersistence.push(async () => {
-          await persistArtifact(
-            options,
-            'certificate',
-            pruneCert.certId,
-            pruneCert.evidenceDigest,
-            pruneCert,
-            frontierBlockIds
-          )
-        })
-        options.controller.emitCertificate(pruneCert)
-        pruneCertificateIds.push(pruneCert.certId)
-      }
+      pruneObserver.onPrune({
+        boundValue,
+        boundEvidenceDigest,
+        thresholdValue,
+        domainIndex,
+        dangerZoneDetection: detection,
+      })
     }
 
     // -----------------------------------------------------------------------
@@ -661,34 +647,15 @@ export async function executeLapicBoundedExactSolve(
         })
 
         // Emit DominanceCert when a candidate is evicted from the top-N tracker.
-        if (
-          insertResult.evicted &&
-          !insertResult.insertedWasEvicted &&
-          !options.skipIntermediateCertificates
-        ) {
-          dominanceCertStepCounter += 1
-          const dominanceCert = createDominanceCertificate(options, {
+        if (insertResult.evicted && !insertResult.insertedWasEvicted) {
+          dominanceObserver.onEviction({
             dominatingStateId: stateId,
             dominatedStateId: insertResult.evicted.stateId,
             dominatingEvidenceDigest: evaluation.value.evidenceDigest,
             dominatedEvidenceDigest:
               insertResult.evicted.evaluation.evidenceDigest,
             signatureGroupKey,
-            stepIndex: dominanceCertStepCounter,
-            frontierBlockIds,
           })
-          pendingPersistence.push(async () => {
-            await persistArtifact(
-              options,
-              'certificate',
-              dominanceCert.certId,
-              dominanceCert.evidenceDigest,
-              dominanceCert,
-              frontierBlockIds
-            )
-          })
-          options.controller.emitCertificate(dominanceCert)
-          dominanceCertificateIds.push(dominanceCert.certId)
         }
 
         // Notify coordinated solve when the local threshold improves,
@@ -795,11 +762,8 @@ export async function executeLapicBoundedExactSolve(
       return failSolve(options, err.message, err.diagnostics)
     }
 
-    // Flush all deferred persistence
-    if (pendingPersistence.length > 0) {
-      await Promise.all(pendingPersistence.map((fn) => fn()))
-      pendingPersistence.length = 0
-    }
+    // Flush all deferred persistence (no-op in production mode)
+    await observerState.flush()
 
     // Final progress update
     options.controller.publishProgress({
@@ -818,6 +782,7 @@ export async function executeLapicBoundedExactSolve(
     // If a pause was requested during the join phase, persist checkpoint and return.
     if (pauseDetected) {
       options.controller.reachPauseSafePoint()
+      const certIds = observerState.getCertificateIds()
       const checkpointState = createLapicSolveCheckpointState(
         options.problem.problemDigest,
         processedCombinationCount,
@@ -826,9 +791,9 @@ export async function executeLapicBoundedExactSolve(
         createLapicSolveCursorPosition(currentFlatIndex),
         frontierBlockIds,
         snapshotPruningStatistics(pruningStats),
-        pruneCertificateIds,
-        branchReachabilityCertificateIds,
-        dominanceCertificateIds
+        certIds.pruneCertificateIds,
+        certIds.branchReachabilityCertificateIds,
+        certIds.dominanceCertificateIds
       )
       const checkpointContentHash = `solve-checkpoint:${options.problem.problemDigest}:${currentFlatIndex}`
       await persistArtifact(
@@ -842,14 +807,7 @@ export async function executeLapicBoundedExactSolve(
       return { paused: true, checkpointState }
     }
 
-    return completeSolve(
-      options,
-      tracker,
-      frontierBlockIds,
-      pruneCertificateIds,
-      branchReachabilityCertificateIds,
-      dominanceCertificateIds
-    )
+    return completeSolve(options, tracker, frontierBlockIds, observerState)
   } catch (error) {
     if (error instanceof LapicSessionFailureError) throw error
     const message =
