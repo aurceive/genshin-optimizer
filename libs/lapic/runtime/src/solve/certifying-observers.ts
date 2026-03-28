@@ -29,11 +29,11 @@ export function createCertifyingPruneObserver(
   restoredIds: readonly string[] = []
 ): LapicPruneObserver & {
   getCertificateIds(): readonly string[]
-  getPendingPersistence(): ReadonlyArray<() => Promise<void>>
+  drainPendingPersistence(): Array<() => Promise<void>>
 } {
   let stepCounter = restoredIds.length
   const certificateIds: string[] = [...restoredIds]
-  const pendingPersistence: Array<() => Promise<void>> = []
+  let pendingPersistence: Array<() => Promise<void>> = []
 
   return {
     onPrune(event: LapicPruneEvent): void {
@@ -64,7 +64,11 @@ export function createCertifyingPruneObserver(
       certificateIds.push(cert.certId)
     },
     getCertificateIds: () => certificateIds,
-    getPendingPersistence: () => pendingPersistence,
+    drainPendingPersistence(): Array<() => Promise<void>> {
+      const drained = pendingPersistence
+      pendingPersistence = []
+      return drained
+    },
   }
 }
 
@@ -78,11 +82,11 @@ export function createCertifyingDominanceObserver(
   restoredIds: readonly string[] = []
 ): LapicDominanceObserver & {
   getCertificateIds(): readonly string[]
-  getPendingPersistence(): ReadonlyArray<() => Promise<void>>
+  drainPendingPersistence(): Array<() => Promise<void>>
 } {
   let stepCounter = restoredIds.length
   const certificateIds: string[] = [...restoredIds]
-  const pendingPersistence: Array<() => Promise<void>> = []
+  let pendingPersistence: Array<() => Promise<void>> = []
 
   return {
     onEviction(event: LapicDominanceEvent): void {
@@ -110,7 +114,11 @@ export function createCertifyingDominanceObserver(
       certificateIds.push(cert.certId)
     },
     getCertificateIds: () => certificateIds,
-    getPendingPersistence: () => pendingPersistence,
+    drainPendingPersistence(): Array<() => Promise<void>> {
+      const drained = pendingPersistence
+      pendingPersistence = []
+      return drained
+    },
   }
 }
 
@@ -168,15 +176,26 @@ export async function emitBranchReachabilityCertificates(
 // Composite observer state (audit mode)
 // ---------------------------------------------------------------------------
 
-/** Observer with persistence access (used internally by certifying state). */
+/**
+ * Observer with persistence access (used internally by certifying state).
+ * `drainPendingPersistence()` returns and clears the pending queue,
+ * so flush can be called incrementally without re-processing.
+ */
 interface CertifyingObserverWithPersistence {
   getCertificateIds(): readonly string[]
-  getPendingPersistence(): ReadonlyArray<() => Promise<void>>
+  drainPendingPersistence(): Array<() => Promise<void>>
 }
+
+/** Max concurrent persistence writes per flush chunk. */
+const PERSISTENCE_CHUNK_SIZE = 256
 
 /**
  * Create a composite observer state from certifying prune and dominance
  * observers plus optional branch reachability results.
+ *
+ * Persistence is flushed in chunks of {@link PERSISTENCE_CHUNK_SIZE} to
+ * avoid overwhelming the I/O subsystem when thousands of certificates
+ * are emitted in audit mode.
  */
 export function createCertifyingObserverState(
   pruneObserver: CertifyingObserverWithPersistence,
@@ -192,12 +211,13 @@ export function createCertifyingObserverState(
       }
     },
     async flush(): Promise<void> {
-      const all = [
-        ...pruneObserver.getPendingPersistence(),
-        ...dominanceObserver.getPendingPersistence(),
+      const pending = [
+        ...pruneObserver.drainPendingPersistence(),
+        ...dominanceObserver.drainPendingPersistence(),
       ]
-      if (all.length > 0) {
-        await Promise.all(all.map((fn) => fn()))
+      for (let i = 0; i < pending.length; i += PERSISTENCE_CHUNK_SIZE) {
+        const chunk = pending.slice(i, i + PERSISTENCE_CHUNK_SIZE)
+        await Promise.all(chunk.map((fn) => fn()))
       }
     },
   }
